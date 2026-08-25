@@ -20,7 +20,9 @@ class CartButton extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: defaultPadding, vertical: defaultBorderRadious / 2,),
+          horizontal: defaultPadding,
+          vertical: defaultBorderRadious / 2,
+        ),
         child: SizedBox(
           height: 64,
           child: Material(
@@ -39,7 +41,8 @@ class CartButton extends StatelessWidget {
                     flex: 4,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: defaultPadding,),
+                        horizontal: defaultPadding,
+                      ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,8 +57,9 @@ class CartButton extends StatelessWidget {
                           Text(
                             subTitle,
                             style: const TextStyle(
-                                color: Colors.white54,
-                                fontWeight: FontWeight.w500,),
+                              color: Colors.white54,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),

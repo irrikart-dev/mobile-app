@@ -1,44 +1,43 @@
 import 'package:flutter/material.dart';
 
 import '../../../constants.dart';
+import 'components/info_sheet.dart';
 
+/// Return policy sheet.
+///
+/// Placeholder copy for the Indian market — the upstream template shipped a
+/// US/Canada policy. Real per-product windows come from
+/// `isReturnable` / `returnWindowDays` in the catalogue module.
 class ProductReturnsScreen extends StatelessWidget {
   const ProductReturnsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: defaultPadding),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: defaultPadding / 2),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(
-                    width: 40,
-                    child: BackButton(),
-                  ),
-                  Text(
-                    'Return',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(width: 40),
-                ],
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.all(defaultPadding),
-              child: Text(
-                'Free pre-paid returns and exchanges for orders shipped to the US. Get refunded faster with easy online returns and print a FREE pre-paid return SmartLabel@ online! Return or exchange any unused or defective merchandise by mail or at one of our US or Canada store locations. Made to order items cannot be canceled, exchange or returned.',
-              ),
-            ),
-          ],
+    final theme = Theme.of(context);
+
+    return InfoSheet(
+      title: 'Returns',
+      children: [
+        const SpecRow('Return window', '7 days from delivery'),
+        const SpecRow('Pickup', 'Free reverse pickup where serviceable'),
+        const SpecRow('Refund', 'To source, or IrriKart wallet'),
+        const SizedBox(height: defaultPadding * 1.5),
+        Text('What can be returned', style: theme.textTheme.titleSmall),
+        const SizedBox(height: defaultPadding / 2),
+        const Text(
+          'Unused items in their original packaging, and any item that arrives '
+          'damaged or not as described. Report damage within 48 hours of '
+          'delivery with photographs.',
         ),
-      ),
+        const SizedBox(height: defaultPadding),
+        Text('What cannot be returned', style: theme.textTheme.titleSmall),
+        const SizedBox(height: defaultPadding / 2),
+        const Text(
+          'Opened seed, fertilizer and crop-protection packs cannot be '
+          'returned once the seal is broken, for safety and traceability. '
+          'Made-to-order items are also non-returnable.',
+        ),
+      ],
     );
   }
 }

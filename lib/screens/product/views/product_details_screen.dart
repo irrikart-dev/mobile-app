@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:irrikart/components/buy_full_ui_kit.dart';
 import 'package:irrikart/components/cart_button.dart';
 import 'package:irrikart/components/custom_modal_bottom_sheet.dart';
 import 'package:irrikart/components/product/product_card.dart';
@@ -12,7 +11,9 @@ import '../../../components/review_card.dart';
 import 'components/notify_me_card.dart';
 import 'components/product_images.dart';
 import 'components/product_info.dart';
+import 'components/product_info_sheet.dart';
 import 'components/product_list_tile.dart';
+import 'components/shipping_info_sheet.dart';
 import 'product_buy_now_screen.dart';
 
 class ProductDetailsScreen extends StatelessWidget {
@@ -50,8 +51,10 @@ class ProductDetailsScreen extends StatelessWidget {
               actions: [
                 IconButton(
                   onPressed: () {},
-                  icon: SvgPicture.asset('assets/icons/Bookmark.svg',
-                      color: Theme.of(context).textTheme.bodyLarge!.color,),
+                  icon: SvgPicture.asset(
+                    'assets/icons/Bookmark.svg',
+                    color: Theme.of(context).textTheme.bodyLarge!.color,
+                  ),
                 ),
               ],
             ),
@@ -74,8 +77,7 @@ class ProductDetailsScreen extends StatelessWidget {
                 customModalBottomSheet(
                   context,
                   height: MediaQuery.of(context).size.height * 0.92,
-                  child: const BuyFullKit(
-                      images: ['assets/screens/Product detail.png'],),
+                  child: const ProductInfoSheet(),
                 );
               },
             ),
@@ -86,9 +88,7 @@ class ProductDetailsScreen extends StatelessWidget {
                 customModalBottomSheet(
                   context,
                   height: MediaQuery.of(context).size.height * 0.92,
-                  child: const BuyFullKit(
-                    images: ['assets/screens/Shipping information.png'],
-                  ),
+                  child: const ShippingInfoSheet(),
                 );
               },
             ),
@@ -143,8 +143,9 @@ class ProductDetailsScreen extends StatelessWidget {
                   itemCount: 5,
                   itemBuilder: (context, index) => Padding(
                     padding: EdgeInsets.only(
-                        left: defaultPadding,
-                        right: index == 4 ? defaultPadding : 0,),
+                      left: defaultPadding,
+                      right: index == 4 ? defaultPadding : 0,
+                    ),
                     child: ProductCard(
                       image: productDemoImg2,
                       title: 'Sleeveless Tiered Dobby Swing Dress',

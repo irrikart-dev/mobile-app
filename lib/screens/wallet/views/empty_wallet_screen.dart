@@ -36,7 +36,9 @@ class EmptyWalletScreen extends StatelessWidget {
             ),
             const Padding(
               padding: EdgeInsets.symmetric(
-                  horizontal: defaultPadding * 1.5, vertical: defaultPadding,),
+                horizontal: defaultPadding * 1.5,
+                vertical: defaultPadding,
+              ),
               child: Text(
                 'Customer network effects freemium. Advisor android paradigm shift product management. Customer disruptive crowdsource',
                 textAlign: TextAlign.center,

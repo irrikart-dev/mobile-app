@@ -73,7 +73,8 @@ class _BannerMWithCounterState extends State<BannerMWithCounter> {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: defaultPadding / 4,),
+                    horizontal: defaultPadding / 4,
+                  ),
                   child: SvgPicture.asset('assets/icons/dot.svg'),
                 ),
                 BlurContainer(
@@ -84,7 +85,8 @@ class _BannerMWithCounterState extends State<BannerMWithCounter> {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: defaultPadding / 4,),
+                    horizontal: defaultPadding / 4,
+                  ),
                   child: SvgPicture.asset('assets/icons/dot.svg'),
                 ),
                 BlurContainer(

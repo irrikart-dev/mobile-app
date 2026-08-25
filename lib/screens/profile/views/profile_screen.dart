@@ -28,7 +28,9 @@ class ProfileScreen extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: defaultPadding, vertical: defaultPadding * 1.5,),
+              horizontal: defaultPadding,
+              vertical: defaultPadding * 1.5,
+            ),
             child: GestureDetector(
               onTap: () {},
               child: const AspectRatio(
@@ -88,7 +90,9 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: defaultPadding),
           Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: defaultPadding, vertical: defaultPadding / 2,),
+              horizontal: defaultPadding,
+              vertical: defaultPadding / 2,
+            ),
             child: Text(
               'Personalization',
               style: Theme.of(context).textTheme.titleSmall,
@@ -112,7 +116,9 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: defaultPadding),
           Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: defaultPadding, vertical: defaultPadding / 2,),
+              horizontal: defaultPadding,
+              vertical: defaultPadding / 2,
+            ),
             child: Text(
               'Settings',
               style: Theme.of(context).textTheme.titleSmall,
@@ -133,7 +139,9 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: defaultPadding),
           Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: defaultPadding, vertical: defaultPadding / 2,),
+              horizontal: defaultPadding,
+              vertical: defaultPadding / 2,
+            ),
             child: Text(
               'Help & Support',
               style: Theme.of(context).textTheme.titleSmall,

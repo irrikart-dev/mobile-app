@@ -43,8 +43,9 @@ class WalletHistoryCard extends StatelessWidget {
               child: Text(
                 date,
                 style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).textTheme.bodyMedium!.color,),
+                  fontSize: 12,
+                  color: Theme.of(context).textTheme.bodyMedium!.color,
+                ),
               ),
             ),
             trailing: Text(
@@ -63,9 +64,10 @@ class WalletHistoryCard extends StatelessWidget {
             products.length,
             (index) => Padding(
               padding: const EdgeInsets.only(
-                  bottom: defaultPadding,
-                  left: defaultPadding,
-                  right: defaultPadding,),
+                bottom: defaultPadding,
+                left: defaultPadding,
+                right: defaultPadding,
+              ),
               child: SecondaryProductCard(
                 image: products[index].image,
                 brandName: products[index].brandName,

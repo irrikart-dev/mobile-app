@@ -32,7 +32,8 @@ class SelectedSize extends StatelessWidget {
             sizes.length,
             (index) => Padding(
               padding: EdgeInsets.only(
-                  left: index == 0 ? defaultPadding : defaultPadding / 2,),
+                left: index == 0 ? defaultPadding : defaultPadding / 2,
+              ),
               child: SizeButton(
                 text: sizes[index],
                 isActive: selectedIndex == index,
@@ -73,9 +74,10 @@ class SizeButton extends StatelessWidget {
         child: Text(
           text.toUpperCase(),
           style: TextStyle(
-              color: isActive
-                  ? primaryColor
-                  : Theme.of(context).textTheme.bodyLarge!.color,),
+            color: isActive
+                ? primaryColor
+                : Theme.of(context).textTheme.bodyLarge!.color,
+          ),
         ),
       ),
     );

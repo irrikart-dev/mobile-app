@@ -78,8 +78,9 @@ class BannerLStyle1 extends StatelessWidget {
               if (subtitle != null)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: defaultPadding / 2,
-                      vertical: defaultPadding / 8,),
+                    horizontal: defaultPadding / 2,
+                    vertical: defaultPadding / 8,
+                  ),
                   color: Colors.white70,
                   child: Text(
                     subtitle!,

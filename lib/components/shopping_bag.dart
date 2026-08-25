@@ -28,7 +28,9 @@ class ShoppingBag extends StatelessWidget {
             height: 24,
             width: 24,
             colorFilter: ColorFilter.mode(
-                color ?? Theme.of(context).iconTheme.color!, BlendMode.srcIn,),
+              color ?? Theme.of(context).iconTheme.color!,
+              BlendMode.srcIn,
+            ),
           ),
           if (numOfItem != null)
             Padding(

@@ -47,7 +47,8 @@ class CheckboxUnderlineListTile extends StatelessWidget {
           secondary: trailing != null
               ? Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: defaultPadding / 2,),
+                    horizontal: defaultPadding / 2,
+                  ),
                   child: trailing,
                 )
               : null,

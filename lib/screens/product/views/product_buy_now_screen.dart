@@ -41,7 +41,9 @@ class _ProductBuyNowScreenState extends State<ProductBuyNowScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: defaultPadding / 2, vertical: defaultPadding,),
+              horizontal: defaultPadding / 2,
+              vertical: defaultPadding,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -52,8 +54,10 @@ class _ProductBuyNowScreenState extends State<ProductBuyNowScreen> {
                 ),
                 IconButton(
                   onPressed: () {},
-                  icon: SvgPicture.asset('assets/icons/Bookmark.svg',
-                      color: Theme.of(context).textTheme.bodyLarge!.color,),
+                  icon: SvgPicture.asset(
+                    'assets/icons/Bookmark.svg',
+                    color: Theme.of(context).textTheme.bodyLarge!.color,
+                  ),
                 ),
               ],
             ),
@@ -141,7 +145,8 @@ class _ProductBuyNowScreenState extends State<ProductBuyNowScreen> {
                         ),
                         const SizedBox(height: defaultPadding / 2),
                         const Text(
-                            'Select a size to check store availability and In-Store pickup options.',),
+                          'Select a size to check store availability and In-Store pickup options.',
+                        ),
                       ],
                     ),
                   ),
@@ -162,7 +167,8 @@ class _ProductBuyNowScreenState extends State<ProductBuyNowScreen> {
                   ),
                 ),
                 const SliverToBoxAdapter(
-                    child: SizedBox(height: defaultPadding),),
+                  child: SizedBox(height: defaultPadding),
+                ),
               ],
             ),
           ),

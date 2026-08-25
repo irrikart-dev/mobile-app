@@ -19,7 +19,9 @@ class NotifyMeCard extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: defaultPadding, vertical: defaultPadding / 2,),
+          horizontal: defaultPadding,
+          vertical: defaultPadding / 2,
+        ),
         child: Container(
           decoration: BoxDecoration(
             color: isNotify ? primaryColor : Colors.transparent,
@@ -61,10 +63,11 @@ class NotifyMeCard extends StatelessWidget {
                   child: Text(
                     'Notify when product back to stock.',
                     style: TextStyle(
-                        color: isNotify
-                            ? Colors.white
-                            : Theme.of(context).textTheme.bodyLarge!.color,
-                        fontWeight: FontWeight.w500,),
+                      color: isNotify
+                          ? Colors.white
+                          : Theme.of(context).textTheme.bodyLarge!.color,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
                 CupertinoSwitch(

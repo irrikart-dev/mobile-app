@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:irrikart/components/buy_full_ui_kit.dart';
+import 'package:irrikart/components/coming_soon_view.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const BuyFullKit(
-      images: [
-        'assets/screens/Cart_1.png',
-        'assets/screens/Cart_2.png',
-        'assets/screens/Cart_3.png',
-        'assets/screens/Cart_4.png',
-        'assets/screens/Cart_5.png',
-        'assets/screens/Cart_6.png',
-      ],
+    // Hosted inside the tab shell, so no Scaffold or AppBar here.
+    return const ComingSoonView(
+      icon: Icons.shopping_cart_outlined,
+      title: 'Your cart',
+      message:
+          'Adding items, quantity by pack unit, and the full price breakup are '
+          'being built. You will be able to check out from here soon.',
     );
   }
 }

@@ -58,7 +58,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 recognizer: TapGestureRecognizer()
                                   ..onTap = () {
                                     Navigator.pushNamed(
-                                        context, termsOfServicesScreenRoute,);
+                                      context,
+                                      termsOfServicesScreenRoute,
+                                    );
                                   },
                                 text: ' Terms of service ',
                                 style: const TextStyle(

@@ -45,7 +45,9 @@ class ProfileCard extends StatelessWidget {
           if (isPro)
             Container(
               padding: const EdgeInsets.symmetric(
-                  horizontal: defaultPadding / 2, vertical: defaultPadding / 4,),
+                horizontal: defaultPadding / 2,
+                vertical: defaultPadding / 4,
+              ),
               decoration: const BoxDecoration(
                 color: primaryColor,
                 borderRadius:

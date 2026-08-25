@@ -33,7 +33,8 @@ class SelectedColors extends StatelessWidget {
               colors.length,
               (index) => Padding(
                 padding: EdgeInsets.only(
-                    left: index == 0 ? defaultPadding : defaultPadding / 2,),
+                  left: index == 0 ? defaultPadding : defaultPadding / 2,
+                ),
                 child: ColorDot(
                   color: colors[index],
                   isActive: selectedColorIndex == index,

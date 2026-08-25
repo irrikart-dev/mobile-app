@@ -26,4 +26,3 @@ class ProductsSkelton extends StatelessWidget {
     );
   }
 }
-

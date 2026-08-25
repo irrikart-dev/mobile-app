@@ -63,7 +63,8 @@ class LocationPermissonStoreAvailabilityScreen extends StatelessWidget {
                     Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            vertical: defaultPadding * 1.5,),
+                          vertical: defaultPadding * 1.5,
+                        ),
                         child: Image.asset(
                           Theme.of(context).brightness == Brightness.light
                               ? 'assets/Illustration/Illustration-4.png'
@@ -75,9 +76,10 @@ class LocationPermissonStoreAvailabilityScreen extends StatelessWidget {
                     Text(
                       'Your Location Services are turned off.',
                       style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          color: Theme.of(context).textTheme.bodyLarge!.color,),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).textTheme.bodyLarge!.color,
+                      ),
                     ),
                     const SizedBox(height: defaultPadding),
                     const Text(

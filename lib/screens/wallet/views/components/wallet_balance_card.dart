@@ -35,9 +35,10 @@ class WalletBalanceCard extends StatelessWidget {
                   const Text(
                     'Your current balance',
                     style: TextStyle(
-                        color: whileColor80,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 12,),
+                      color: whileColor80,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: defaultPadding / 2),
                   Text(

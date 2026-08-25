@@ -115,7 +115,8 @@ class RateBar extends StatelessWidget {
             child: Text(
               '$star Star',
               style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                  color: Theme.of(context).textTheme.bodyMedium!.color,),
+                    color: Theme.of(context).textTheme.bodyMedium!.color,
+                  ),
             ),
           ),
           const SizedBox(width: defaultPadding / 2),

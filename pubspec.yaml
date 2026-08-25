@@ -36,7 +36,6 @@ flutter:
     - assets/Illustration/
     - assets/flags/
     - assets/logo/
-    - assets/screens/
 
   fonts:
     - family: Plus Jakarta

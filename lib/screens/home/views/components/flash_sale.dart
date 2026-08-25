@@ -55,8 +55,11 @@ class FlashSale extends StatelessWidget {
                     demoFlashSaleProducts[index].priceAfetDiscount,
                 dicountpercent: demoFlashSaleProducts[index].dicountpercent,
                 press: () {
-                  Navigator.pushNamed(context, productDetailsScreenRoute,
-                      arguments: index.isEven,);
+                  Navigator.pushNamed(
+                    context,
+                    productDetailsScreenRoute,
+                    arguments: index.isEven,
+                  );
                 },
               ),
             ),

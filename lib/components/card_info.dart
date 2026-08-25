@@ -41,7 +41,8 @@ class CardInfo extends StatelessWidget {
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: defaultPadding,),
+                        horizontal: defaultPadding,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -54,7 +55,9 @@ class CardInfo extends StatelessWidget {
                                 height: 32,
                                 width: 32,
                                 colorFilter: const ColorFilter.mode(
-                                    Colors.white, BlendMode.srcIn,),
+                                  Colors.white,
+                                  BlendMode.srcIn,
+                                ),
                               ),
                               if (isSelected)
                                 CircleAvatar(
@@ -62,11 +65,14 @@ class CardInfo extends StatelessWidget {
                                   backgroundColor: Colors.white,
                                   child: Padding(
                                     padding: const EdgeInsets.all(
-                                        defaultPadding / 4,),
+                                      defaultPadding / 4,
+                                    ),
                                     child: SvgPicture.asset(
                                       'assets/icons/Singlecheck.svg',
                                       colorFilter: const ColorFilter.mode(
-                                          primaryColor, BlendMode.srcIn,),
+                                        primaryColor,
+                                        BlendMode.srcIn,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -76,9 +82,10 @@ class CardInfo extends StatelessWidget {
                           Text(
                             '**** **** **** $last4Digits',
                             style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,),
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const SizedBox(height: defaultPadding),
                         ],
@@ -137,15 +144,17 @@ class CardInfo extends StatelessWidget {
                   counterText: '',
                   prefixIcon: Padding(
                     padding: const EdgeInsets.symmetric(
-                        vertical: defaultPadding * 0.75,),
+                      vertical: defaultPadding * 0.75,
+                    ),
                     child: SvgPicture.asset(
                       'assets/icons/CVV.svg',
                       colorFilter: ColorFilter.mode(
-                          Theme.of(context)
-                              .inputDecorationTheme
-                              .hintStyle!
-                              .color!,
-                          BlendMode.srcIn,),
+                        Theme.of(context)
+                            .inputDecorationTheme
+                            .hintStyle!
+                            .color!,
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ),
                 ),

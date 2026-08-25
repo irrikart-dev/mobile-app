@@ -76,9 +76,10 @@ class _ProductImagesState extends State<ProductImages> {
                       widget.images.length,
                       (index) => Padding(
                         padding: EdgeInsets.only(
-                            right: index == (widget.images.length - 1)
-                                ? 0
-                                : defaultPadding / 4,),
+                          right: index == (widget.images.length - 1)
+                              ? 0
+                              : defaultPadding / 4,
+                        ),
                         child: CircleAvatar(
                           radius: 3,
                           backgroundColor: Theme.of(context)

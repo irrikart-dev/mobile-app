@@ -47,8 +47,11 @@ class BestSellers extends StatelessWidget {
                     demoBestSellersProducts[index].priceAfetDiscount,
                 dicountpercent: demoBestSellersProducts[index].dicountpercent,
                 press: () {
-                  Navigator.pushNamed(context, productDetailsScreenRoute,
-                      arguments: index.isEven,);
+                  Navigator.pushNamed(
+                    context,
+                    productDetailsScreenRoute,
+                    arguments: index.isEven,
+                  );
                 },
               ),
             ),

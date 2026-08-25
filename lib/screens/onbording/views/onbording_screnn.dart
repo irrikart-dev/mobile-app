@@ -20,9 +20,9 @@ class _OnBordingScreenState extends State<OnBordingScreen> {
     Onbord(
       image: 'assets/Illustration/Illustration-0.png',
       imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_0.png',
-      title: 'Find the item you’ve \nbeen looking for',
+      title: 'Find the right tool \nfor the job',
       description:
-          'Here you’ll see rich varieties of goods, carefully classified for seamless browsing experience.',
+          'Browse by crop, category or brand, with clear specifications so you know exactly what you are buying.',
     ),
     Onbord(
       image: 'assets/Illustration/Illustration-1.png',
@@ -83,7 +83,8 @@ class _OnBordingScreenState extends State<OnBordingScreen> {
                   child: Text(
                     'Skip',
                     style: TextStyle(
-                        color: Theme.of(context).textTheme.bodyLarge!.color,),
+                      color: Theme.of(context).textTheme.bodyLarge!.color,
+                    ),
                   ),
                 ),
               ),
@@ -124,7 +125,9 @@ class _OnBordingScreenState extends State<OnBordingScreen> {
                       onPressed: () {
                         if (_pageIndex < _onbordData.length - 1) {
                           _pageController.nextPage(
-                              curve: Curves.ease, duration: defaultDuration,);
+                            curve: Curves.ease,
+                            duration: defaultDuration,
+                          );
                         } else {
                           Navigator.pushNamed(context, logInScreenRoute);
                         }

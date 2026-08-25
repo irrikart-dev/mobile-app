@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import '../../constants.dart';
 
 class Skeleton extends StatelessWidget {
-  const Skeleton(
-      {super.key,
-      this.height,
-      this.width,
-      this.layer = 1,
-      this.radious = defaultPadding,});
+  const Skeleton({
+    super.key,
+    this.height,
+    this.width,
+    this.layer = 1,
+    this.radious = defaultPadding,
+  });
 
   final double? height, width;
   final int layer;
@@ -21,8 +22,9 @@ class Skeleton extends StatelessWidget {
       width: width,
       padding: const EdgeInsets.all(defaultPadding / 2),
       decoration: BoxDecoration(
-          color: Theme.of(context).iconTheme.color!.withOpacity(0.04 * layer),
-          borderRadius: BorderRadius.all(Radius.circular(radious)),),
+        color: Theme.of(context).iconTheme.color!.withOpacity(0.04 * layer),
+        borderRadius: BorderRadius.all(Radius.circular(radious)),
+      ),
     );
   }
 }

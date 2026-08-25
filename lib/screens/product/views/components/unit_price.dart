@@ -33,8 +33,9 @@ class UnitPrice extends StatelessWidget {
                 TextSpan(
                   text: '\$${price.toStringAsFixed(2)}',
                   style: Theme.of(context).textTheme.titleSmall!.copyWith(
-                      color: Theme.of(context).textTheme.bodyMedium!.color,
-                      decoration: TextDecoration.lineThrough,),
+                        color: Theme.of(context).textTheme.bodyMedium!.color,
+                        decoration: TextDecoration.lineThrough,
+                      ),
                 ),
             ],
           ),

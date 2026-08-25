@@ -29,10 +29,12 @@ class _EntryPointState extends State<EntryPoint> {
         src,
         height: 24,
         colorFilter: ColorFilter.mode(
-            color ??
-                Theme.of(context).iconTheme.color!.withOpacity(
-                    Theme.of(context).brightness == Brightness.dark ? 0.3 : 1,),
-            BlendMode.srcIn,),
+          color ??
+              Theme.of(context).iconTheme.color!.withOpacity(
+                    Theme.of(context).brightness == Brightness.dark ? 0.3 : 1,
+                  ),
+          BlendMode.srcIn,
+        ),
       );
     }
 
@@ -48,7 +50,9 @@ class _EntryPointState extends State<EntryPoint> {
         title: SvgPicture.asset(
           'assets/logo/irrikart_wordmark.svg',
           colorFilter: ColorFilter.mode(
-              Theme.of(context).iconTheme.color!, BlendMode.srcIn,),
+            Theme.of(context).iconTheme.color!,
+            BlendMode.srcIn,
+          ),
           height: 20,
           width: 100,
         ),
@@ -61,8 +65,9 @@ class _EntryPointState extends State<EntryPoint> {
               'assets/icons/Search.svg',
               height: 24,
               colorFilter: ColorFilter.mode(
-                  Theme.of(context).textTheme.bodyLarge!.color!,
-                  BlendMode.srcIn,),
+                Theme.of(context).textTheme.bodyLarge!.color!,
+                BlendMode.srcIn,
+              ),
             ),
           ),
           IconButton(
@@ -73,8 +78,9 @@ class _EntryPointState extends State<EntryPoint> {
               'assets/icons/Notification.svg',
               height: 24,
               colorFilter: ColorFilter.mode(
-                  Theme.of(context).textTheme.bodyLarge!.color!,
-                  BlendMode.srcIn,),
+                Theme.of(context).textTheme.bodyLarge!.color!,
+                BlendMode.srcIn,
+              ),
             ),
           ),
         ],
