@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:irrikart/theme/input_decoration_theme.dart';
+import 'package:irrikart/core/theme/component_themes/input_borders.dart';
 
 class SearchForm extends StatelessWidget {
   const SearchForm({
@@ -40,14 +40,17 @@ class SearchForm extends StatelessWidget {
         decoration: InputDecoration(
           hintText: 'Find something...',
           filled: false,
-          border: secodaryOutlineInputBorder(context),
-          enabledBorder: secodaryOutlineInputBorder(context),
+          border: secondaryOutlineInputBorder(context),
+          enabledBorder: secondaryOutlineInputBorder(context),
           prefixIcon: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: SvgPicture.asset(
               'assets/icons/Search.svg',
               height: 24,
-              color: Theme.of(context).iconTheme.color!.withOpacity(0.3),
+              colorFilter: ColorFilter.mode(
+                Theme.of(context).iconTheme.color!.withValues(alpha: 0.3),
+                BlendMode.srcIn,
+              ),
             ),
           ),
           suffixIcon: SizedBox(
@@ -64,7 +67,10 @@ class SearchForm extends StatelessWidget {
                     icon: SvgPicture.asset(
                       'assets/icons/Filter.svg',
                       height: 24,
-                      color: Theme.of(context).iconTheme.color,
+                      colorFilter: ColorFilter.mode(
+                        Theme.of(context).iconTheme.color!,
+                        BlendMode.srcIn,
+                      ),
                     ),
                   ),
                 ),

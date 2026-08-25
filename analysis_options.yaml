@@ -17,6 +17,11 @@ analyzer:
   errors:
     # freezed emits @JsonKey on constructor params, which the analyzer flags.
     invalid_annotation_target: ignore
+    # TEMPORARY. lib/constants.dart is a deprecation shim forwarding to
+    # core/theme/tokens; every one of its ~359 call sites reports here and
+    # buries real SDK deprecations. Re-enable (delete this line) as soon as
+    # constants.dart is deleted — that is the signal the migration is done.
+    deprecated_member_use_from_same_package: ignore
     # Unused imports and dead code should block CI, not just inform.
     unused_import: warning
     dead_code: warning

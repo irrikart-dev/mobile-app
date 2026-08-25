@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:irrikart/theme/input_decoration_theme.dart';
+import 'package:irrikart/core/theme/component_themes/input_borders.dart';
 
 import '../../../constants.dart';
 
@@ -43,18 +43,21 @@ class LocationPermissonStoreAvailabilityScreen extends StatelessWidget {
                         decoration: InputDecoration(
                           fillColor: Colors.transparent,
                           hintText: 'Find something...',
-                          border: secodaryOutlineInputBorder(context),
-                          enabledBorder: secodaryOutlineInputBorder(context),
-                          focusedBorder: secodaryOutlineInputBorder(context),
+                          border: secondaryOutlineInputBorder(context),
+                          enabledBorder: secondaryOutlineInputBorder(context),
+                          focusedBorder: secondaryOutlineInputBorder(context),
                           prefixIcon: Padding(
                             padding: const EdgeInsets.all(defaultPadding / 2),
                             child: SvgPicture.asset(
                               'assets/icons/Search.svg',
                               height: 24,
-                              color: Theme.of(context)
-                                  .inputDecorationTheme
-                                  .hintStyle!
-                                  .color,
+                              colorFilter: ColorFilter.mode(
+                                Theme.of(context)
+                                    .inputDecorationTheme
+                                    .hintStyle!
+                                    .color!,
+                                BlendMode.srcIn,
+                              ),
                             ),
                           ),
                         ),

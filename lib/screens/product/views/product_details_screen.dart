@@ -53,7 +53,10 @@ class ProductDetailsScreen extends StatelessWidget {
                   onPressed: () {},
                   icon: SvgPicture.asset(
                     'assets/icons/Bookmark.svg',
-                    color: Theme.of(context).textTheme.bodyLarge!.color,
+                    colorFilter: ColorFilter.mode(
+                      Theme.of(context).textTheme.bodyLarge!.color!,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
               ],
