@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shop/constants.dart';
-import 'package:shop/models/product_model.dart';
+import 'package:irrikart/constants.dart';
+import 'package:irrikart/models/product_model.dart';
 
 import 'components/wallet_balance_card.dart';
 import 'components/wallet_history_card.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shop/entry_point.dart';
+import 'package:irrikart/entry_point.dart';
 
 import 'screen_export.dart';
 

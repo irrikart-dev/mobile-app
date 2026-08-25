@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shop/constants.dart';
-import 'package:shop/route/route_constants.dart';
+import 'package:irrikart/constants.dart';
+import 'package:irrikart/route/route_constants.dart';
 
 import 'components/login_form.dart';
 

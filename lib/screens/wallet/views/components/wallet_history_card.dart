@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:shop/components/product/secondary_product_card.dart';
-import 'package:shop/models/product_model.dart';
+import 'package:irrikart/components/product/secondary_product_card.dart';
+import 'package:irrikart/models/product_model.dart';
 
 import '../../../../constants.dart';
 
