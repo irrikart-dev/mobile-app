@@ -10,8 +10,12 @@ import 'error_codes.dart';
 /// [userMessage] is the only string that should ever be shown to a user.
 /// [message] is for logs and Sentry.
 sealed class Failure implements Exception {
-  const Failure(
-      {required this.message, this.code, this.cause, this.stackTrace});
+  const Failure({
+    required this.message,
+    this.code,
+    this.cause,
+    this.stackTrace,
+  });
 
   /// Developer-facing detail. Never rendered in the UI.
   final String message;

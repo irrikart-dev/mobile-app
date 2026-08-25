@@ -58,7 +58,9 @@ abstract final class ErrorMapper {
 
       case DioExceptionType.connectionError:
         return NetworkFailure(
-            message: e.message ?? 'Connection failed', cause: e);
+          message: e.message ?? 'Connection failed',
+          cause: e,
+        );
 
       case DioExceptionType.cancel:
         return UnknownFailure(message: 'Request cancelled', cause: e);
