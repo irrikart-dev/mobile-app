@@ -25,7 +25,7 @@ class LocationPermissonStoreAvailabilityScreen extends StatelessWidget {
                     child: BackButton(),
                   ),
                   Text(
-                    "Store Pickup Availability",
+                    'Store Pickup Availability',
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(width: 40),
@@ -42,14 +42,14 @@ class LocationPermissonStoreAvailabilityScreen extends StatelessWidget {
                       child: TextFormField(
                         decoration: InputDecoration(
                           fillColor: Colors.transparent,
-                          hintText: "Find something...",
+                          hintText: 'Find something...',
                           border: secodaryOutlineInputBorder(context),
                           enabledBorder: secodaryOutlineInputBorder(context),
                           focusedBorder: secodaryOutlineInputBorder(context),
                           prefixIcon: Padding(
                             padding: const EdgeInsets.all(defaultPadding / 2),
                             child: SvgPicture.asset(
-                              "assets/icons/Search.svg",
+                              'assets/icons/Search.svg',
                               height: 24,
                               color: Theme.of(context)
                                   .inputDecorationTheme
@@ -63,35 +63,35 @@ class LocationPermissonStoreAvailabilityScreen extends StatelessWidget {
                     Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            vertical: defaultPadding * 1.5),
+                            vertical: defaultPadding * 1.5,),
                         child: Image.asset(
                           Theme.of(context).brightness == Brightness.light
-                              ? "assets/Illustration/Illustration-4.png"
-                              : "assets/Illustration/Illustration_darkTheme_4.png",
+                              ? 'assets/Illustration/Illustration-4.png'
+                              : 'assets/Illustration/Illustration_darkTheme_4.png',
                           height: MediaQuery.of(context).size.height * 0.3,
                         ),
                       ),
                     ),
                     Text(
-                      "Your Location Services are turned off.",
+                      'Your Location Services are turned off.',
                       style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w500,
-                          color: Theme.of(context).textTheme.bodyLarge!.color),
+                          color: Theme.of(context).textTheme.bodyLarge!.color,),
                     ),
                     const SizedBox(height: defaultPadding),
                     const Text(
-                      "Turn on Location Services in your device Settings to search for stores by current location. You can still search by Country/Region, City or Zip Code.",
+                      'Turn on Location Services in your device Settings to search for stores by current location. You can still search by Country/Region, City or Zip Code.',
                     ),
                     const SizedBox(height: defaultPadding * 1.5),
                     ElevatedButton(
                       onPressed: () {},
-                      child: const Text("Settings"),
-                    )
+                      child: const Text('Settings'),
+                    ),
                   ],
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),

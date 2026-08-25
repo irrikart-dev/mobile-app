@@ -17,9 +17,9 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         children: [
           ProfileCard(
-            name: "Sepide",
-            email: "theflutterway@gmail.com",
-            imageSrc: "https://i.imgur.com/IXnwbLk.png",
+            name: 'Sepide',
+            email: 'theflutterway@gmail.com',
+            imageSrc: 'https://i.imgur.com/IXnwbLk.png',
             // proLableText: "Sliver",
             // isPro: true, if the user is pro
             press: () {
@@ -28,13 +28,13 @@ class ProfileScreen extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: defaultPadding, vertical: defaultPadding * 1.5),
+                horizontal: defaultPadding, vertical: defaultPadding * 1.5,),
             child: GestureDetector(
               onTap: () {},
               child: const AspectRatio(
                 aspectRatio: 1.8,
                 child:
-                    NetworkImageWithLoader("https://i.imgur.com/dz0BBom.png"),
+                    NetworkImageWithLoader('https://i.imgur.com/dz0BBom.png'),
               ),
             ),
           ),
@@ -42,45 +42,45 @@ class ProfileScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: defaultPadding),
             child: Text(
-              "Account",
+              'Account',
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
           const SizedBox(height: defaultPadding / 2),
           ProfileMenuListTile(
-            text: "Orders",
-            svgSrc: "assets/icons/Order.svg",
+            text: 'Orders',
+            svgSrc: 'assets/icons/Order.svg',
             press: () {
               Navigator.pushNamed(context, ordersScreenRoute);
             },
           ),
           ProfileMenuListTile(
-            text: "Returns",
-            svgSrc: "assets/icons/Return.svg",
+            text: 'Returns',
+            svgSrc: 'assets/icons/Return.svg',
             press: () {},
           ),
           ProfileMenuListTile(
-            text: "Wishlist",
-            svgSrc: "assets/icons/Wishlist.svg",
+            text: 'Wishlist',
+            svgSrc: 'assets/icons/Wishlist.svg',
             press: () {},
           ),
           ProfileMenuListTile(
-            text: "Addresses",
-            svgSrc: "assets/icons/Address.svg",
+            text: 'Addresses',
+            svgSrc: 'assets/icons/Address.svg',
             press: () {
               Navigator.pushNamed(context, addressesScreenRoute);
             },
           ),
           ProfileMenuListTile(
-            text: "Payment",
-            svgSrc: "assets/icons/card.svg",
+            text: 'Payment',
+            svgSrc: 'assets/icons/card.svg',
             press: () {
               Navigator.pushNamed(context, emptyPaymentScreenRoute);
             },
           ),
           ProfileMenuListTile(
-            text: "Wallet",
-            svgSrc: "assets/icons/Wallet.svg",
+            text: 'Wallet',
+            svgSrc: 'assets/icons/Wallet.svg',
             press: () {
               Navigator.pushNamed(context, walletScreenRoute);
             },
@@ -88,23 +88,23 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: defaultPadding),
           Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: defaultPadding, vertical: defaultPadding / 2),
+                horizontal: defaultPadding, vertical: defaultPadding / 2,),
             child: Text(
-              "Personalization",
+              'Personalization',
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
           DividerListTileWithTrilingText(
-            svgSrc: "assets/icons/Notification.svg",
-            title: "Notification",
-            trilingText: "Off",
+            svgSrc: 'assets/icons/Notification.svg',
+            title: 'Notification',
+            trilingText: 'Off',
             press: () {
               Navigator.pushNamed(context, enableNotificationScreenRoute);
             },
           ),
           ProfileMenuListTile(
-            text: "Preferences",
-            svgSrc: "assets/icons/Preferences.svg",
+            text: 'Preferences',
+            svgSrc: 'assets/icons/Preferences.svg',
             press: () {
               Navigator.pushNamed(context, preferencesScreenRoute);
             },
@@ -112,43 +112,43 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: defaultPadding),
           Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: defaultPadding, vertical: defaultPadding / 2),
+                horizontal: defaultPadding, vertical: defaultPadding / 2,),
             child: Text(
-              "Settings",
+              'Settings',
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
           ProfileMenuListTile(
-            text: "Language",
-            svgSrc: "assets/icons/Language.svg",
+            text: 'Language',
+            svgSrc: 'assets/icons/Language.svg',
             press: () {
               Navigator.pushNamed(context, selectLanguageScreenRoute);
             },
           ),
           ProfileMenuListTile(
-            text: "Location",
-            svgSrc: "assets/icons/Location.svg",
+            text: 'Location',
+            svgSrc: 'assets/icons/Location.svg',
             press: () {},
           ),
           const SizedBox(height: defaultPadding),
           Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: defaultPadding, vertical: defaultPadding / 2),
+                horizontal: defaultPadding, vertical: defaultPadding / 2,),
             child: Text(
-              "Help & Support",
+              'Help & Support',
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
           ProfileMenuListTile(
-            text: "Get Help",
-            svgSrc: "assets/icons/Help.svg",
+            text: 'Get Help',
+            svgSrc: 'assets/icons/Help.svg',
             press: () {
               Navigator.pushNamed(context, getHelpScreenRoute);
             },
           ),
           ProfileMenuListTile(
-            text: "FAQ",
-            svgSrc: "assets/icons/FAQ.svg",
+            text: 'FAQ',
+            svgSrc: 'assets/icons/FAQ.svg',
             press: () {},
             isShowDivider: false,
           ),
@@ -159,7 +159,7 @@ class ProfileScreen extends StatelessWidget {
             onTap: () {},
             minLeadingWidth: 24,
             leading: SvgPicture.asset(
-              "assets/icons/Logout.svg",
+              'assets/icons/Logout.svg',
               height: 24,
               width: 24,
               colorFilter: const ColorFilter.mode(
@@ -168,10 +168,10 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             title: const Text(
-              "Log Out",
+              'Log Out',
               style: TextStyle(color: errorColor, fontSize: 14, height: 1),
             ),
-          )
+          ),
         ],
       ),
     );

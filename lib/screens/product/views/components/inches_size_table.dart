@@ -17,7 +17,7 @@ class InchesSizeTable extends StatelessWidget {
             verticalInside: BorderSide(
                 color: Theme.of(context).brightness == Brightness.light
                     ? Colors.black12
-                    : Colors.white10),
+                    : Colors.white10,),
           ),
           columns: const <DataColumn>[
             DataColumn(label: Text('')),

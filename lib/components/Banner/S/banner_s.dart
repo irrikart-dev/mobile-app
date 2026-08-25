@@ -7,7 +7,7 @@ class BannerS extends StatelessWidget {
       {super.key,
       required this.image,
       required this.press,
-      required this.children});
+      required this.children,});
 
   final String image;
   final VoidCallback press;

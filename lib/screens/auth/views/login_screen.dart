@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           children: [
             Image.asset(
-              "assets/images/login_dark.png",
+              'assets/images/login_dark.png',
               fit: BoxFit.cover,
             ),
             Padding(
@@ -32,21 +32,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Welcome back!",
+                    'Welcome back!',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: defaultPadding / 2),
                   const Text(
-                    "Log in with your data that you intered during your registration.",
+                    'Log in with your data that you intered during your registration.',
                   ),
                   const SizedBox(height: defaultPadding),
                   LogInForm(formKey: _formKey),
                   Align(
                     child: TextButton(
-                      child: const Text("Forgot password"),
+                      child: const Text('Forgot password'),
                       onPressed: () {
                         Navigator.pushNamed(
-                            context, passwordRecoveryScreenRoute);
+                            context, passwordRecoveryScreenRoute,);
                       },
                     ),
                   ),
@@ -61,10 +61,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.pushNamedAndRemoveUntil(
                             context,
                             entryPointScreenRoute,
-                            ModalRoute.withName(logInScreenRoute));
+                            ModalRoute.withName(logInScreenRoute),);
                       }
                     },
-                    child: const Text("Log in"),
+                    child: const Text('Log in'),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -74,13 +74,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () {
                           Navigator.pushNamed(context, signUpScreenRoute);
                         },
-                        child: const Text("Sign up"),
-                      )
+                        child: const Text('Sign up'),
+                      ),
                     ],
                   ),
                 ],
               ),
-            )
+            ),
           ],
         ),
       ),

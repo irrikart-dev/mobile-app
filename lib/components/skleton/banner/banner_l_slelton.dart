@@ -31,10 +31,10 @@ class BannerLSkelton extends StatelessWidget {
                   height: 24,
                 ),
                 Spacer(),
-                Skeleton(width: 80)
+                Skeleton(width: 80),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

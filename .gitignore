@@ -41,3 +41,26 @@ app.*.map.json
 
 # Exceptions to above rules.
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
+
+# --- IrriKart additions ---
+
+# Generated code (run `dart run build_runner build --delete-conflicting-outputs`)
+**/*.g.dart
+**/*.freezed.dart
+**/*.mocks.dart
+lib/l10n/generated/
+
+# Secrets — never commit
+android/key.properties
+**/*.jks
+**/*.keystore
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+.env
+.env.*
+config/*.json
+
+# Local tooling
+android/local.properties
+*.log
+coverage/

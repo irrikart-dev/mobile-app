@@ -7,8 +7,8 @@ class OrdersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const BuyFullKit(images: [
-      "assets/screens/Orders.png",
-      "assets/screens/Cancel order - Select a reason.png"
-    ]);
+      'assets/screens/Orders.png',
+      'assets/screens/Cancel order - Select a reason.png',
+    ],);
   }
 }

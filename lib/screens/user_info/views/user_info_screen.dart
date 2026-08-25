@@ -7,8 +7,8 @@ class UserInfoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const BuyFullKit(images: [
-      "assets/screens/Profile.png",
-      "assets/screens/Edit profile.png"
-    ]);
+      'assets/screens/Profile.png',
+      'assets/screens/Edit profile.png',
+    ],);
   }
 }

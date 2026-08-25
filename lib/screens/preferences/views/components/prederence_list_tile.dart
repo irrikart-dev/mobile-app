@@ -38,7 +38,7 @@ class PreferencesListTile extends StatelessWidget {
         onChanged: (value) {
           press;
         },
-        activeColor: primaryColor,
+        activeTrackColor: primaryColor,
         value: isActive,
       ),
     );

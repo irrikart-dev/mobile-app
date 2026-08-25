@@ -33,7 +33,7 @@ class CheckboxUnderlineListTile extends StatelessWidget {
                 if (numOfItems != null)
                   WidgetSpan(
                     child: Text(
-                      "  ($numOfItems)",
+                      '  ($numOfItems)',
                       style: TextStyle(
                         color: value
                             ? Theme.of(context).textTheme.bodyLarge!.color
@@ -47,7 +47,7 @@ class CheckboxUnderlineListTile extends StatelessWidget {
           secondary: trailing != null
               ? Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: defaultPadding / 2),
+                      horizontal: defaultPadding / 2,),
                   child: trailing,
                 )
               : null,

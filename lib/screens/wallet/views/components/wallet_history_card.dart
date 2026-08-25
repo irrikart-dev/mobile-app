@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shop/components/product/secondary_product_card.dart';
+import 'package:shop/models/product_model.dart';
 
 import '../../../../constants.dart';
 
@@ -16,7 +17,7 @@ class WalletHistoryCard extends StatelessWidget {
   final bool isReturn;
   final String date;
   final double amount;
-  final List products;
+  final List<ProductModel> products;
 
   @override
   Widget build(BuildContext context) {
@@ -31,25 +32,25 @@ class WalletHistoryCard extends StatelessWidget {
           ListTile(
             minLeadingWidth: 24,
             leading: SvgPicture.asset(
-              isReturn ? "assets/icons/Return.svg" : "assets/icons/Product.svg",
+              isReturn ? 'assets/icons/Return.svg' : 'assets/icons/Product.svg',
               color: Theme.of(context).iconTheme.color,
               height: 24,
               width: 24,
             ),
-            title: Text(isReturn ? "Return" : "Purchase"),
+            title: Text(isReturn ? 'Return' : 'Purchase'),
             subtitle: Padding(
               padding: const EdgeInsets.only(top: defaultPadding / 4),
               child: Text(
                 date,
                 style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).textTheme.bodyMedium!.color),
+                    color: Theme.of(context).textTheme.bodyMedium!.color,),
               ),
             ),
             trailing: Text(
               isReturn
-                  ? "+ \$${amount.toStringAsFixed(2)}"
-                  : "- \$${amount.toStringAsFixed(2)}",
+                  ? '+ \$${amount.toStringAsFixed(2)}'
+                  : '- \$${amount.toStringAsFixed(2)}',
               style: Theme.of(context)
                   .textTheme
                   .titleSmall!
@@ -64,7 +65,7 @@ class WalletHistoryCard extends StatelessWidget {
               padding: const EdgeInsets.only(
                   bottom: defaultPadding,
                   left: defaultPadding,
-                  right: defaultPadding),
+                  right: defaultPadding,),
               child: SecondaryProductCard(
                 image: products[index].image,
                 brandName: products[index].brandName,

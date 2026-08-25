@@ -27,8 +27,8 @@ class _ProductBuyNowScreenState extends State<ProductBuyNowScreen> {
     return Scaffold(
       bottomNavigationBar: CartButton(
         price: 269.4,
-        title: "Add to cart",
-        subTitle: "Total price",
+        title: 'Add to cart',
+        subTitle: 'Total price',
         press: () {
           customModalBottomSheet(
             context,
@@ -41,19 +41,19 @@ class _ProductBuyNowScreenState extends State<ProductBuyNowScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: defaultPadding / 2, vertical: defaultPadding),
+                horizontal: defaultPadding / 2, vertical: defaultPadding,),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const BackButton(),
                 Text(
-                  "Sleeveless Ruffle",
+                  'Sleeveless Ruffle',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 IconButton(
                   onPressed: () {},
-                  icon: SvgPicture.asset("assets/icons/Bookmark.svg",
-                      color: Theme.of(context).textTheme.bodyLarge!.color),
+                  icon: SvgPicture.asset('assets/icons/Bookmark.svg',
+                      color: Theme.of(context).textTheme.bodyLarge!.color,),
                 ),
               ],
             ),
@@ -107,7 +107,7 @@ class _ProductBuyNowScreenState extends State<ProductBuyNowScreen> {
                 ),
                 SliverToBoxAdapter(
                   child: SelectedSize(
-                    sizes: const ["S", "M", "L", "XL", "XXL"],
+                    sizes: const ['S', 'M', 'L', 'XL', 'XXL'],
                     selectedIndex: 1,
                     press: (value) {},
                   ),
@@ -115,8 +115,8 @@ class _ProductBuyNowScreenState extends State<ProductBuyNowScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(vertical: defaultPadding),
                   sliver: ProductListTile(
-                    title: "Size guide",
-                    svgSrc: "assets/icons/Sizeguid.svg",
+                    title: 'Size guide',
+                    svgSrc: 'assets/icons/Sizeguid.svg',
                     isShowBottomBorder: true,
                     press: () {
                       customModalBottomSheet(
@@ -136,12 +136,12 @@ class _ProductBuyNowScreenState extends State<ProductBuyNowScreen> {
                       children: [
                         const SizedBox(height: defaultPadding / 2),
                         Text(
-                          "Store pickup availability",
+                          'Store pickup availability',
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                         const SizedBox(height: defaultPadding / 2),
                         const Text(
-                            "Select a size to check store availability and In-Store pickup options.")
+                            'Select a size to check store availability and In-Store pickup options.',),
                       ],
                     ),
                   ),
@@ -149,8 +149,8 @@ class _ProductBuyNowScreenState extends State<ProductBuyNowScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(vertical: defaultPadding),
                   sliver: ProductListTile(
-                    title: "Check stores",
-                    svgSrc: "assets/icons/Stores.svg",
+                    title: 'Check stores',
+                    svgSrc: 'assets/icons/Stores.svg',
                     isShowBottomBorder: true,
                     press: () {
                       customModalBottomSheet(
@@ -162,10 +162,10 @@ class _ProductBuyNowScreenState extends State<ProductBuyNowScreen> {
                   ),
                 ),
                 const SliverToBoxAdapter(
-                    child: SizedBox(height: defaultPadding))
+                    child: SizedBox(height: defaultPadding),),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

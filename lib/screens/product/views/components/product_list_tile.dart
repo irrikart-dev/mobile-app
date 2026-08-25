@@ -30,7 +30,7 @@ class ProductListTile extends StatelessWidget {
             ),
             title: Text(title),
             trailing: SvgPicture.asset(
-              "assets/icons/miniRight.svg",
+              'assets/icons/miniRight.svg',
               color: Theme.of(context).textTheme.bodyMedium!.color,
             ),
           ),

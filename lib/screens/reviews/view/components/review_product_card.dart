@@ -39,10 +39,10 @@ class ReviewProductInfoCard extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                   color: Theme.of(context).textTheme.bodyLarge!.color,
                 ),
-              )
+              ),
             ],
           ),
-        )
+        ),
       ],
     );
   }

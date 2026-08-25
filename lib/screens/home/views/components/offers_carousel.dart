@@ -24,26 +24,26 @@ class _OffersCarouselState extends State<OffersCarousel> {
   late Timer _timer;
 
   // Offers List
-  List offers = [
+  List<Widget> offers = [
     BannerMStyle1(
-      text: "New items with \nFree shipping",
+      text: 'New items with \nFree shipping',
       press: () {},
     ),
     BannerMStyle2(
-      title: "Black \nfriday",
-      subtitle: "Collection",
+      title: 'Black \nfriday',
+      subtitle: 'Collection',
       discountParcent: 50,
       press: () {},
     ),
     BannerMStyle3(
-      title: "Grab \nyours now",
+      title: 'Grab \nyours now',
       discountParcent: 50,
       press: () {},
     ),
     BannerMStyle4(
       // image: , user your image
-      title: "SUMMER \nSALE",
-      subtitle: "SPECIAL OFFER",
+      title: 'SUMMER \nSALE',
+      subtitle: 'SPECIAL OFFER',
       discountParcent: 80,
       press: () {},
     ),
@@ -115,7 +115,7 @@ class _OffersCarouselState extends State<OffersCarousel> {
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );

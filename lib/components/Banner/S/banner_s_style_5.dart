@@ -8,7 +8,7 @@ import 'banner_s.dart';
 class BannerSStyle5 extends StatelessWidget {
   const BannerSStyle5({
     super.key,
-    this.image = "https://i.imgur.com/wQ0sNHT.png",
+    this.image = 'https://i.imgur.com/wQ0sNHT.png',
     required this.title,
     required this.press,
     this.subtitle,
@@ -40,7 +40,7 @@ class BannerSStyle5 extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: defaultPadding / 2,
-                            vertical: defaultPadding / 8),
+                            vertical: defaultPadding / 8,),
                         color: Colors.white70,
                         child: Text(
                           subtitle!,
@@ -72,13 +72,13 @@ class BannerSStyle5 extends StatelessWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
-                      )
+                      ),
                   ],
                 ),
               ),
               const SizedBox(width: defaultPadding),
               SvgPicture.asset(
-                "assets/icons/miniRight.svg",
+                'assets/icons/miniRight.svg',
                 height: 28,
                 colorFilter:
                     const ColorFilter.mode(Colors.white, BlendMode.srcIn),

@@ -10,7 +10,7 @@ class EmptyWalletScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Wallet"),
+        title: const Text('Wallet'),
       ),
       body: SafeArea(
         child: Column(
@@ -25,20 +25,20 @@ class EmptyWalletScreen extends StatelessWidget {
             const Spacer(flex: 2),
             Image.asset(
               Theme.of(context).brightness == Brightness.light
-                  ? "assets/Illustration/EmptyState_lightTheme.png"
-                  : "assets/Illustration/EmptyState_darkTheme.png",
+                  ? 'assets/Illustration/EmptyState_lightTheme.png'
+                  : 'assets/Illustration/EmptyState_darkTheme.png',
               width: MediaQuery.of(context).size.width * 0.5,
             ),
             const Spacer(),
             Text(
-              "Empty wallet history",
+              'Empty wallet history',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const Padding(
               padding: EdgeInsets.symmetric(
-                  horizontal: defaultPadding * 1.5, vertical: defaultPadding),
+                  horizontal: defaultPadding * 1.5, vertical: defaultPadding,),
               child: Text(
-                "Customer network effects freemium. Advisor android paradigm shift product management. Customer disruptive crowdsource",
+                'Customer network effects freemium. Advisor android paradigm shift product management. Customer disruptive crowdsource',
                 textAlign: TextAlign.center,
               ),
             ),

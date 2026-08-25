@@ -38,14 +38,14 @@ class SearchForm extends StatelessWidget {
         validator: validator,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
-          hintText: "Find something...",
+          hintText: 'Find something...',
           filled: false,
           border: secodaryOutlineInputBorder(context),
           enabledBorder: secodaryOutlineInputBorder(context),
           prefixIcon: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: SvgPicture.asset(
-              "assets/icons/Search.svg",
+              'assets/icons/Search.svg',
               height: 24,
               color: Theme.of(context).iconTheme.color!.withOpacity(0.3),
             ),
@@ -62,7 +62,7 @@ class SearchForm extends StatelessWidget {
                   child: IconButton(
                     onPressed: onTabFilter,
                     icon: SvgPicture.asset(
-                      "assets/icons/Filter.svg",
+                      'assets/icons/Filter.svg',
                       height: 24,
                       color: Theme.of(context).iconTheme.color,
                     ),

@@ -19,7 +19,7 @@ class BuyFullKit extends StatefulWidget {
 class _BuyFullKitState extends State<BuyFullKit> {
   bool _isCopied = false;
   final Uri _url = Uri.parse(
-      'https://app.gumroad.com/checkout?_gl=1*1j1owy*_ga*Nzc0MTA1NTYwLjE3MjAwMTA3MzM.*_ga_6LJN6D94N6*MTcyMDA0MjQzMC41LjEuMTcyMDA0MjQzMS4wLjAuMA..&product=uxznc&option=B3wWhE6QH46cfm31C7jEmQ%3D%3D&quantity=1&referrer=App');
+      'https://app.gumroad.com/checkout?_gl=1*1j1owy*_ga*Nzc0MTA1NTYwLjE3MjAwMTA3MzM.*_ga_6LJN6D94N6*MTcyMDA0MjQzMC41LjEuMTcyMDA0MjQzMS4wLjAuMA..&product=uxznc&option=B3wWhE6QH46cfm31C7jEmQ%3D%3D&quantity=1&referrer=App',);
   Future<void> buyLink() async {
     if (!await launchUrl(_url)) {
       throw Exception('Could not launch $_url');
@@ -94,14 +94,14 @@ class _BuyFullKitState extends State<BuyFullKit> {
                         color: Colors.black.withOpacity(0.1),
                         blurRadius: 20,
                         offset: const Offset(4, 10),
-                      )
+                      ),
                     ],
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Get the full template",
+                        'Get the full template',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: defaultPadding),
@@ -116,7 +116,7 @@ class _BuyFullKitState extends State<BuyFullKit> {
                               onPressed: () async {
                                 await Clipboard.setData(const ClipboardData(
                                         text:
-                                            "https://app.gumroad.com/checkout?_gl=1*1j1owy*_ga*Nzc0MTA1NTYwLjE3MjAwMTA3MzM.*_ga_6LJN6D94N6*MTcyMDA0MjQzMC41LjEuMTcyMDA0MjQzMS4wLjAuMA..&product=uxznc&option=B3wWhE6QH46cfm31C7jEmQ%3D%3D&quantity=1&referrer=App"))
+                                            'https://app.gumroad.com/checkout?_gl=1*1j1owy*_ga*Nzc0MTA1NTYwLjE3MjAwMTA3MzM.*_ga_6LJN6D94N6*MTcyMDA0MjQzMC41LjEuMTcyMDA0MjQzMS4wLjAuMA..&product=uxznc&option=B3wWhE6QH46cfm31C7jEmQ%3D%3D&quantity=1&referrer=App',),)
                                     .then((value) {
                                   setState(() {
                                     _isCopied = true;
@@ -131,9 +131,9 @@ class _BuyFullKitState extends State<BuyFullKit> {
                               },
                               // child: Text("Get full kit"),
                               label:
-                                  Text(_isCopied ? "Link Copyed" : "Copy link"),
+                                  Text(_isCopied ? 'Link Copyed' : 'Copy link'),
                               icon: SvgPicture.asset(
-                                "assets/icons/world_map.svg",
+                                'assets/icons/world_map.svg',
                                 colorFilter: const ColorFilter.mode(
                                   Colors.white,
                                   BlendMode.srcIn,
@@ -148,9 +148,9 @@ class _BuyFullKitState extends State<BuyFullKit> {
                                 buyLink();
                               },
                               // child: Text("Get full kit"),
-                              label: const Text("Get full code"),
+                              label: const Text('Get full code'),
                               icon: SvgPicture.asset(
-                                "assets/icons/Bag.svg",
+                                'assets/icons/Bag.svg',
                                 colorFilter: const ColorFilter.mode(
                                   primaryColor,
                                   BlendMode.srcIn,
@@ -167,7 +167,7 @@ class _BuyFullKitState extends State<BuyFullKit> {
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

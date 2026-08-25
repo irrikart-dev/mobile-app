@@ -17,7 +17,7 @@ class BookmarkScreen extends StatelessWidget {
           //  BookMarksSlelton(),
           SliverPadding(
             padding: const EdgeInsets.symmetric(
-                horizontal: defaultPadding, vertical: defaultPadding),
+                horizontal: defaultPadding, vertical: defaultPadding,),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 200.0,

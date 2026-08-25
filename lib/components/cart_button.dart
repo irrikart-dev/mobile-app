@@ -6,8 +6,8 @@ class CartButton extends StatelessWidget {
   const CartButton({
     super.key,
     required this.price,
-    this.title = "Buy Now",
-    this.subTitle = "Unit price",
+    this.title = 'Buy Now',
+    this.subTitle = 'Unit price',
     required this.press,
   });
 
@@ -20,7 +20,7 @@ class CartButton extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: defaultPadding, vertical: defaultBorderRadious / 2),
+            horizontal: defaultPadding, vertical: defaultBorderRadious / 2,),
         child: SizedBox(
           height: 64,
           child: Material(
@@ -39,13 +39,13 @@ class CartButton extends StatelessWidget {
                     flex: 4,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: defaultPadding),
+                          horizontal: defaultPadding,),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "\$${price.toStringAsFixed(2)}",
+                            '\$${price.toStringAsFixed(2)}',
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall!
@@ -55,8 +55,8 @@ class CartButton extends StatelessWidget {
                             subTitle,
                             style: const TextStyle(
                                 color: Colors.white54,
-                                fontWeight: FontWeight.w500),
-                          )
+                                fontWeight: FontWeight.w500,),
+                          ),
                         ],
                       ),
                     ),

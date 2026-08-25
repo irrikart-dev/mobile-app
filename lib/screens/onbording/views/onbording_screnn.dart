@@ -18,38 +18,38 @@ class _OnBordingScreenState extends State<OnBordingScreen> {
   int _pageIndex = 0;
   final List<Onbord> _onbordData = [
     Onbord(
-      image: "assets/Illustration/Illustration-0.png",
-      imageDarkTheme: "assets/Illustration/Illustration_darkTheme_0.png",
-      title: "Find the item you’ve \nbeen looking for",
+      image: 'assets/Illustration/Illustration-0.png',
+      imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_0.png',
+      title: 'Find the item you’ve \nbeen looking for',
       description:
-          "Here you’ll see rich varieties of goods, carefully classified for seamless browsing experience.",
+          'Here you’ll see rich varieties of goods, carefully classified for seamless browsing experience.',
     ),
     Onbord(
-      image: "assets/Illustration/Illustration-1.png",
-      imageDarkTheme: "assets/Illustration/Illustration_darkTheme_1.png",
-      title: "Get those shopping \nbags filled",
+      image: 'assets/Illustration/Illustration-1.png',
+      imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_1.png',
+      title: 'Get those shopping \nbags filled',
       description:
-          "Add any item you want to your cart, or save it on your wishlist, so you don’t miss it in your future purchases.",
+          'Add any item you want to your cart, or save it on your wishlist, so you don’t miss it in your future purchases.',
     ),
     Onbord(
-      image: "assets/Illustration/Illustration-2.png",
-      imageDarkTheme: "assets/Illustration/Illustration_darkTheme_2.png",
-      title: "Fast & secure \npayment",
-      description: "There are many payment options available for your ease.",
+      image: 'assets/Illustration/Illustration-2.png',
+      imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_2.png',
+      title: 'Fast & secure \npayment',
+      description: 'There are many payment options available for your ease.',
     ),
     Onbord(
-      image: "assets/Illustration/Illustration-3.png",
-      imageDarkTheme: "assets/Illustration/Illustration_darkTheme_3.png",
-      title: "Package tracking",
+      image: 'assets/Illustration/Illustration-3.png',
+      imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_3.png',
+      title: 'Package tracking',
       description:
-          "In particular, Shoplon can pack your orders, and help you seamlessly manage your shipments.",
+          'In particular, Shoplon can pack your orders, and help you seamlessly manage your shipments.',
     ),
     Onbord(
-      image: "assets/Illustration/Illustration-4.png",
-      imageDarkTheme: "assets/Illustration/Illustration_darkTheme_4.png",
-      title: "Nearby stores",
+      image: 'assets/Illustration/Illustration-4.png',
+      imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_4.png',
+      title: 'Nearby stores',
       description:
-          "Easily track nearby shops, browse through their items and get information about their prodcuts.",
+          'Easily track nearby shops, browse through their items and get information about their prodcuts.',
     ),
   ];
 
@@ -80,9 +80,9 @@ class _OnBordingScreenState extends State<OnBordingScreen> {
                     Navigator.pushNamed(context, logInScreenRoute);
                   },
                   child: Text(
-                    "Skip",
+                    'Skip',
                     style: TextStyle(
-                        color: Theme.of(context).textTheme.bodyLarge!.color),
+                        color: Theme.of(context).textTheme.bodyLarge!.color,),
                   ),
                 ),
               ),
@@ -123,7 +123,7 @@ class _OnBordingScreenState extends State<OnBordingScreen> {
                       onPressed: () {
                         if (_pageIndex < _onbordData.length - 1) {
                           _pageController.nextPage(
-                              curve: Curves.ease, duration: defaultDuration);
+                              curve: Curves.ease, duration: defaultDuration,);
                         } else {
                           Navigator.pushNamed(context, logInScreenRoute);
                         }
@@ -132,7 +132,7 @@ class _OnBordingScreenState extends State<OnBordingScreen> {
                         shape: const CircleBorder(),
                       ),
                       child: SvgPicture.asset(
-                        "assets/icons/Arrow - Right.svg",
+                        'assets/icons/Arrow - Right.svg',
                         colorFilter: const ColorFilter.mode(
                           Colors.white,
                           BlendMode.srcIn,
@@ -158,7 +158,7 @@ class Onbord {
   Onbord({
     required this.image,
     required this.title,
-    this.description = "",
+    this.description = '',
     this.imageDarkTheme,
   });
 }

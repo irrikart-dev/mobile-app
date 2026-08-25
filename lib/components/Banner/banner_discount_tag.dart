@@ -24,13 +24,13 @@ class BannerDiscountTag extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           SvgPicture.asset(
-            "assets/icons/Discount_tag.svg",
+            'assets/icons/Discount_tag.svg',
             fit: BoxFit.fill,
             colorFilter:
                 const ColorFilter.mode(Colors.white70, BlendMode.srcIn),
           ),
           Text(
-            "$percentage%\noff",
+            '$percentage%\noff',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: grandisExtendedFont,
@@ -38,7 +38,7 @@ class BannerDiscountTag extends StatelessWidget {
               fontSize: percentageFontSize,
               fontWeight: FontWeight.bold,
             ),
-          )
+          ),
         ],
       ),
     );

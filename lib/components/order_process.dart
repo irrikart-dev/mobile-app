@@ -27,7 +27,7 @@ class OrderProgress extends StatelessWidget {
         Expanded(
           child: ProcessDotWithLine(
             isShowLeftLine: false,
-            title: "Ordered",
+            title: 'Ordered',
             status: orderStatus,
             nextStatus: processingStatus,
           ),
@@ -35,14 +35,14 @@ class OrderProgress extends StatelessWidget {
         Expanded(
           child: ProcessDotWithLine(
             isActive: processingStatus == OrderProcessStatus.processing,
-            title: "Processing",
+            title: 'Processing',
             status: processingStatus,
             nextStatus: packedStatus,
           ),
         ),
         Expanded(
           child: ProcessDotWithLine(
-            title: "Packed",
+            title: 'Packed',
             status: packedStatus,
             nextStatus: shippedStatus,
             isActive: packedStatus == OrderProcessStatus.processing,
@@ -50,7 +50,7 @@ class OrderProgress extends StatelessWidget {
         ),
         Expanded(
           child: ProcessDotWithLine(
-            title: "Shipped",
+            title: 'Shipped',
             status: shippedStatus,
             nextStatus: isCanceled ? OrderProcessStatus.error : deliveredStatus,
             isActive: shippedStatus == OrderProcessStatus.processing,
@@ -59,7 +59,7 @@ class OrderProgress extends StatelessWidget {
         isCanceled
             ? const Expanded(
                 child: ProcessDotWithLine(
-                  title: "Canceled",
+                  title: 'Canceled',
                   status: OrderProcessStatus.canceled,
                   isShowRightLine: false,
                   isActive: true,
@@ -67,7 +67,7 @@ class OrderProgress extends StatelessWidget {
               )
             : Expanded(
                 child: ProcessDotWithLine(
-                  title: "Delivered",
+                  title: 'Delivered',
                   status: deliveredStatus,
                   isShowRightLine: false,
                   isActive: deliveredStatus == OrderProcessStatus.done,
@@ -134,7 +134,7 @@ class ProcessDotWithLine extends StatelessWidget {
               ),
             if (!isShowRightLine) const Spacer(),
           ],
-        )
+        ),
       ],
     );
   }

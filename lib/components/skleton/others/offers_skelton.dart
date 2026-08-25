@@ -45,7 +45,7 @@ class OffersSkelton extends StatelessWidget {
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );

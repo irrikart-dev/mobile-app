@@ -19,7 +19,7 @@ class PopularProducts extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.all(defaultPadding),
           child: Text(
-            "Popular products",
+            'Popular products',
             style: Theme.of(context).textTheme.titleSmall,
           ),
         ),
@@ -47,12 +47,12 @@ class PopularProducts extends StatelessWidget {
                 dicountpercent: demoPopularProducts[index].dicountpercent,
                 press: () {
                   Navigator.pushNamed(context, productDetailsScreenRoute,
-                      arguments: index.isEven);
+                      arguments: index.isEven,);
                 },
               ),
             ),
           ),
-        )
+        ),
       ],
     );
   }

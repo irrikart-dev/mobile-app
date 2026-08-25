@@ -31,8 +31,8 @@ class HomeScreen extends StatelessWidget {
                   // While loading use 👇
                   // const BannerMSkelton(),‚
                   BannerSStyle1(
-                    title: "New \narrival",
-                    subtitle: "SPECIAL OFFER",
+                    title: 'New \narrival',
+                    subtitle: 'SPECIAL OFFER',
                     discountParcent: 50,
                     press: () {
                       Navigator.pushNamed(context, onSaleScreenRoute);
@@ -54,9 +54,9 @@ class HomeScreen extends StatelessWidget {
                   // While loading use 👇
                   // const BannerSSkelton(),
                   BannerSStyle5(
-                    title: "Black \nfriday",
-                    subtitle: "50% Off",
-                    bottomText: "Collection".toUpperCase(),
+                    title: 'Black \nfriday',
+                    subtitle: '50% Off',
+                    bottomText: 'Collection'.toUpperCase(),
                     press: () {
                       Navigator.pushNamed(context, onSaleScreenRoute);
                     },

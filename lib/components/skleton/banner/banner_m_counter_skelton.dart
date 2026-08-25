@@ -41,7 +41,7 @@ class BannerMWithCounterSkelton extends StatelessWidget {
                     ),
                   ),
                 ),
-              )
+              ),
             ],
           ),
         ],

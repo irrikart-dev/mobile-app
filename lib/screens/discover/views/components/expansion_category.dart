@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shop/models/category_model.dart';
 import 'package:shop/route/screen_export.dart';
 
 import '../../../../constants.dart';
@@ -13,7 +14,7 @@ class ExpansionCategory extends StatelessWidget {
   });
 
   final String title, svgSrc;
-  final List subCategory;
+  final List<CategoryModel> subCategory;
 
   @override
   Widget build(BuildContext context) {

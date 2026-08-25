@@ -78,7 +78,7 @@ class _ProductImagesState extends State<ProductImages> {
                         padding: EdgeInsets.only(
                             right: index == (widget.images.length - 1)
                                 ? 0
-                                : defaultPadding / 4),
+                                : defaultPadding / 4,),
                         child: CircleAvatar(
                           radius: 3,
                           backgroundColor: Theme.of(context)
@@ -91,7 +91,7 @@ class _ProductImagesState extends State<ProductImages> {
                     ),
                   ),
                 ),
-              )
+              ),
           ],
         ),
       ),

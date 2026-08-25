@@ -5,15 +5,14 @@ import 'package:shop/components/cart_button.dart';
 import 'package:shop/components/custom_modal_bottom_sheet.dart';
 import 'package:shop/components/product/product_card.dart';
 import 'package:shop/constants.dart';
+import 'package:shop/route/screen_export.dart';
 import 'package:shop/screens/product/views/product_returns_screen.dart';
 
-import 'package:shop/route/screen_export.dart';
-
+import '../../../components/review_card.dart';
 import 'components/notify_me_card.dart';
 import 'components/product_images.dart';
 import 'components/product_info.dart';
 import 'components/product_list_tile.dart';
-import '../../../components/review_card.dart';
 import 'product_buy_now_screen.dart';
 
 class ProductDetailsScreen extends StatelessWidget {
@@ -51,8 +50,8 @@ class ProductDetailsScreen extends StatelessWidget {
               actions: [
                 IconButton(
                   onPressed: () {},
-                  icon: SvgPicture.asset("assets/icons/Bookmark.svg",
-                      color: Theme.of(context).textTheme.bodyLarge!.color),
+                  icon: SvgPicture.asset('assets/icons/Bookmark.svg',
+                      color: Theme.of(context).textTheme.bodyLarge!.color,),
                 ),
               ],
             ),
@@ -60,8 +59,8 @@ class ProductDetailsScreen extends StatelessWidget {
               images: [productDemoImg1, productDemoImg2, productDemoImg3],
             ),
             ProductInfo(
-              brand: "LIPSY LONDON",
-              title: "Sleeveless Ruffle",
+              brand: 'LIPSY LONDON',
+              title: 'Sleeveless Ruffle',
               isAvailable: isProductAvailable,
               description:
                   "A cool gray cap in soft corduroy. Watch me.' By buying cotton products from Lindex, you’re supporting more responsibly...",
@@ -69,33 +68,33 @@ class ProductDetailsScreen extends StatelessWidget {
               numOfReviews: 126,
             ),
             ProductListTile(
-              svgSrc: "assets/icons/Product.svg",
-              title: "Product Details",
+              svgSrc: 'assets/icons/Product.svg',
+              title: 'Product Details',
               press: () {
                 customModalBottomSheet(
                   context,
                   height: MediaQuery.of(context).size.height * 0.92,
                   child: const BuyFullKit(
-                      images: ["assets/screens/Product detail.png"]),
+                      images: ['assets/screens/Product detail.png'],),
                 );
               },
             ),
             ProductListTile(
-              svgSrc: "assets/icons/Delivery.svg",
-              title: "Shipping Information",
+              svgSrc: 'assets/icons/Delivery.svg',
+              title: 'Shipping Information',
               press: () {
                 customModalBottomSheet(
                   context,
                   height: MediaQuery.of(context).size.height * 0.92,
                   child: const BuyFullKit(
-                    images: ["assets/screens/Shipping information.png"],
+                    images: ['assets/screens/Shipping information.png'],
                   ),
                 );
               },
             ),
             ProductListTile(
-              svgSrc: "assets/icons/Return.svg",
-              title: "Returns",
+              svgSrc: 'assets/icons/Return.svg',
+              title: 'Returns',
               isShowBottomBorder: true,
               press: () {
                 customModalBottomSheet(
@@ -120,8 +119,8 @@ class ProductDetailsScreen extends StatelessWidget {
               ),
             ),
             ProductListTile(
-              svgSrc: "assets/icons/Chat.svg",
-              title: "Reviews",
+              svgSrc: 'assets/icons/Chat.svg',
+              title: 'Reviews',
               isShowBottomBorder: true,
               press: () {
                 Navigator.pushNamed(context, productReviewsScreenRoute);
@@ -131,7 +130,7 @@ class ProductDetailsScreen extends StatelessWidget {
               padding: const EdgeInsets.all(defaultPadding),
               sliver: SliverToBoxAdapter(
                 child: Text(
-                  "You may also like",
+                  'You may also like',
                   style: Theme.of(context).textTheme.titleSmall!,
                 ),
               ),
@@ -145,11 +144,11 @@ class ProductDetailsScreen extends StatelessWidget {
                   itemBuilder: (context, index) => Padding(
                     padding: EdgeInsets.only(
                         left: defaultPadding,
-                        right: index == 4 ? defaultPadding : 0),
+                        right: index == 4 ? defaultPadding : 0,),
                     child: ProductCard(
                       image: productDemoImg2,
-                      title: "Sleeveless Tiered Dobby Swing Dress",
-                      brandName: "LIPSY LONDON",
+                      title: 'Sleeveless Tiered Dobby Swing Dress',
+                      brandName: 'LIPSY LONDON',
                       price: 24.65,
                       priceAfetDiscount: index.isEven ? 20.99 : null,
                       dicountpercent: index.isEven ? 25 : null,
@@ -161,7 +160,7 @@ class ProductDetailsScreen extends StatelessWidget {
             ),
             const SliverToBoxAdapter(
               child: SizedBox(height: defaultPadding),
-            )
+            ),
           ],
         ),
       ),

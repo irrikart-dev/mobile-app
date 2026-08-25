@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_svg/svg.dart';
 
-import 'banner_m.dart';
-
 import '../../../constants.dart';
+import 'banner_m.dart';
 
 class BannerMStyle3 extends StatelessWidget {
   const BannerMStyle3({
     super.key,
-    this.image = "https://i.imgur.com/8REExBV.png",
+    this.image = 'https://i.imgur.com/8REExBV.png',
     required this.title,
     required this.press,
     required this.discountParcent,
@@ -38,10 +36,10 @@ class BannerMStyle3 extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: defaultPadding / 2,
-                          vertical: defaultPadding / 8),
+                          vertical: defaultPadding / 8,),
                       color: Colors.white70,
                       child: Text(
-                        "$discountParcent% off",
+                        '$discountParcent% off',
                         style: const TextStyle(
                           color: Colors.black54,
                           fontWeight: FontWeight.bold,
@@ -74,7 +72,7 @@ class BannerMStyle3 extends StatelessWidget {
                     backgroundColor: Colors.white,
                   ),
                   child: SvgPicture.asset(
-                    "assets/icons/Arrow - Right.svg",
+                    'assets/icons/Arrow - Right.svg',
                     colorFilter:
                         const ColorFilter.mode(Colors.black, BlendMode.srcIn),
                   ),

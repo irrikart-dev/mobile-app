@@ -7,6 +7,6 @@ class NotificationOptionsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const BuyFullKit(
-        images: ["assets/screens/notification setting.png"]);
+        images: ['assets/screens/notification setting.png'],);
   }
 }

@@ -48,7 +48,7 @@ class SeconderyProductSkelton extends StatelessWidget {
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );

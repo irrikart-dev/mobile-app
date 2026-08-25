@@ -22,7 +22,7 @@ class SelectedColors extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.all(defaultPadding),
           child: Text(
-            "Select Color",
+            'Select Color',
             style: Theme.of(context).textTheme.titleSmall,
           ),
         ),
@@ -33,7 +33,7 @@ class SelectedColors extends StatelessWidget {
               colors.length,
               (index) => Padding(
                 padding: EdgeInsets.only(
-                    left: index == 0 ? defaultPadding : defaultPadding / 2),
+                    left: index == 0 ? defaultPadding : defaultPadding / 2,),
                 child: ColorDot(
                   color: colors[index],
                   isActive: selectedColorIndex == index,
@@ -42,7 +42,7 @@ class SelectedColors extends StatelessWidget {
               ),
             ),
           ),
-        )
+        ),
       ],
     );
   }

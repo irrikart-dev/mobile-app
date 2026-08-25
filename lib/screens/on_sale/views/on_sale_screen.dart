@@ -7,7 +7,7 @@ class OnSaleScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const BuyFullKit(
-      images: ["assets/screens/On sales.png"],
+      images: ['assets/screens/On sales.png'],
     );
   }
 }

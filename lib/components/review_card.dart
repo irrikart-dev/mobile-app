@@ -42,20 +42,20 @@ class ReviewCard extends StatelessWidget {
               children: [
                 Text.rich(
                   TextSpan(
-                    text: "$rating ",
+                    text: '$rating ',
                     style: Theme.of(context)
                         .textTheme
                         .headlineSmall!
                         .copyWith(fontWeight: FontWeight.w500),
                     children: [
                       TextSpan(
-                        text: "/5",
+                        text: '/5',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ],
                   ),
                 ),
-                Text("Based on $numOfReviews Reviews"),
+                Text('Based on $numOfReviews Reviews'),
                 const SizedBox(height: defaultPadding),
                 RatingBar.builder(
                   initialRating: rating,
@@ -71,7 +71,7 @@ class ReviewCard extends StatelessWidget {
                   ignoreGestures: true,
                   onRatingUpdate: (value) {},
                   itemBuilder: (context, index) =>
-                      SvgPicture.asset("assets/icons/Star_filled.svg"),
+                      SvgPicture.asset('assets/icons/Star_filled.svg'),
                 ),
               ],
             ),
@@ -113,9 +113,9 @@ class RateBar extends StatelessWidget {
           SizedBox(
             width: 40,
             child: Text(
-              "$star Star",
+              '$star Star',
               style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                  color: Theme.of(context).textTheme.bodyMedium!.color),
+                  color: Theme.of(context).textTheme.bodyMedium!.color,),
             ),
           ),
           const SizedBox(width: defaultPadding / 2),

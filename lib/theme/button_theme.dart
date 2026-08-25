@@ -15,7 +15,7 @@ ElevatedButtonThemeData elevatedButtonThemeData = ElevatedButtonThemeData(
 );
 
 OutlinedButtonThemeData outlinedButtonTheme(
-    {Color borderColor = blackColor10}) {
+    {Color borderColor = blackColor10,}) {
   return OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
       padding: const EdgeInsets.all(defaultPadding),

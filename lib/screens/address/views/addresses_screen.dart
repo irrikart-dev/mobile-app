@@ -7,7 +7,7 @@ class AddressesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const BuyFullKit(
-      images: ["assets/screens/Addresses.png"],
+      images: ['assets/screens/Addresses.png'],
     );
   }
 }

@@ -19,7 +19,7 @@ class BestSellers extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.all(defaultPadding),
           child: Text(
-            "Best sellers",
+            'Best sellers',
             style: Theme.of(context).textTheme.titleSmall,
           ),
         ),
@@ -48,12 +48,12 @@ class BestSellers extends StatelessWidget {
                 dicountpercent: demoBestSellersProducts[index].dicountpercent,
                 press: () {
                   Navigator.pushNamed(context, productDetailsScreenRoute,
-                      arguments: index.isEven);
+                      arguments: index.isEven,);
                 },
               ),
             ),
           ),
-        )
+        ),
       ],
     );
   }

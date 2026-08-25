@@ -12,7 +12,7 @@ class WalletScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Wallet"),
+        title: const Text('Wallet'),
       ),
       body: SafeArea(
         child: Padding(
@@ -32,7 +32,7 @@ class WalletScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(top: defaultPadding / 2),
                 sliver: SliverToBoxAdapter(
                   child: Text(
-                    "Wallet history",
+                    'Wallet history',
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
@@ -43,21 +43,21 @@ class WalletScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(top: defaultPadding),
                     child: WalletHistoryCard(
                       isReturn: index == 1,
-                      date: "JUN 12, 2020",
+                      date: 'JUN 12, 2020',
                       amount: 129,
                       products: [
                         ProductModel(
                           image: productDemoImg1,
-                          title: "Mountain Warehouse for Women",
-                          brandName: "Lipsy london",
+                          title: 'Mountain Warehouse for Women',
+                          brandName: 'Lipsy london',
                           price: 540,
                           priceAfetDiscount: 420,
                           dicountpercent: 20,
                         ),
                         ProductModel(
                           image: productDemoImg4,
-                          title: "Mountain Beta Warehouse",
-                          brandName: "Lipsy london",
+                          title: 'Mountain Beta Warehouse',
+                          brandName: 'Lipsy london',
                           price: 800,
                         ),
                       ],
@@ -65,7 +65,7 @@ class WalletScreen extends StatelessWidget {
                   ),
                   childCount: 4,
                 ),
-              )
+              ),
             ],
           ),
         ),

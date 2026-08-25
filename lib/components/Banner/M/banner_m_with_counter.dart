@@ -10,7 +10,7 @@ import 'banner_m.dart';
 class BannerMWithCounter extends StatefulWidget {
   const BannerMWithCounter({
     super.key,
-    this.image = "https://i.imgur.com/pRgcbpS.png",
+    this.image = 'https://i.imgur.com/pRgcbpS.png',
     required this.text,
     required this.duration,
     required this.press,
@@ -69,32 +69,32 @@ class _BannerMWithCounterState extends State<BannerMWithCounter> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 BlurContainer(
-                  text: _duration.inHours.toString().padLeft(2, "0"),
+                  text: _duration.inHours.toString().padLeft(2, '0'),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: defaultPadding / 4),
-                  child: SvgPicture.asset("assets/icons/dot.svg"),
+                      horizontal: defaultPadding / 4,),
+                  child: SvgPicture.asset('assets/icons/dot.svg'),
                 ),
                 BlurContainer(
                   text: _duration.inMinutes
                       .remainder(60)
                       .toString()
-                      .padLeft(2, "0"),
+                      .padLeft(2, '0'),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: defaultPadding / 4),
-                  child: SvgPicture.asset("assets/icons/dot.svg"),
+                      horizontal: defaultPadding / 4,),
+                  child: SvgPicture.asset('assets/icons/dot.svg'),
                 ),
                 BlurContainer(
                   text: _duration.inSeconds
                       .remainder(60)
                       .toString()
-                      .padLeft(2, "0"),
+                      .padLeft(2, '0'),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ],

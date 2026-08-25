@@ -43,18 +43,18 @@ class ProductInfo extends StatelessWidget {
               children: [
                 ProductAvailabilityTag(isAvailable: isAvailable),
                 const Spacer(),
-                SvgPicture.asset("assets/icons/Star_filled.svg"),
+                SvgPicture.asset('assets/icons/Star_filled.svg'),
                 const SizedBox(width: defaultPadding / 4),
                 Text(
-                  "$rating ",
+                  '$rating ',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                Text("($numOfReviews Reviews)")
+                Text('($numOfReviews Reviews)'),
               ],
             ),
             const SizedBox(height: defaultPadding),
             Text(
-              "Product info",
+              'Product info',
               style: Theme.of(context)
                   .textTheme
                   .titleMedium!

@@ -23,7 +23,7 @@ class CheckMark extends StatelessWidget {
       child: Padding(
         padding: padding,
         child: SvgPicture.asset(
-          "assets/icons/Singlecheck.svg",
+          'assets/icons/Singlecheck.svg',
           colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
         ),
       ),

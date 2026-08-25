@@ -25,12 +25,12 @@ class SignUpForm extends StatelessWidget {
             textInputAction: TextInputAction.next,
             keyboardType: TextInputType.emailAddress,
             decoration: InputDecoration(
-              hintText: "Email address",
+              hintText: 'Email address',
               prefixIcon: Padding(
                 padding:
                     const EdgeInsets.symmetric(vertical: defaultPadding * 0.75),
                 child: SvgPicture.asset(
-                  "assets/icons/Message.svg",
+                  'assets/icons/Message.svg',
                   height: 24,
                   width: 24,
                   colorFilter: ColorFilter.mode(
@@ -53,12 +53,12 @@ class SignUpForm extends StatelessWidget {
             validator: passwordValidator.call,
             obscureText: true,
             decoration: InputDecoration(
-              hintText: "Password",
+              hintText: 'Password',
               prefixIcon: Padding(
                 padding:
                     const EdgeInsets.symmetric(vertical: defaultPadding * 0.75),
                 child: SvgPicture.asset(
-                  "assets/icons/Lock.svg",
+                  'assets/icons/Lock.svg',
                   height: 24,
                   width: 24,
                   colorFilter: ColorFilter.mode(

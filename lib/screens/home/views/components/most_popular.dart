@@ -19,7 +19,7 @@ class MostPopular extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.all(defaultPadding),
           child: Text(
-            "Most popular",
+            'Most popular',
             style: Theme.of(context).textTheme.titleSmall,
           ),
         ),
@@ -47,12 +47,12 @@ class MostPopular extends StatelessWidget {
                 dicountpercent: demoPopularProducts[index].dicountpercent,
                 press: () {
                   Navigator.pushNamed(context, productDetailsScreenRoute,
-                      arguments: index.isEven);
+                      arguments: index.isEven,);
                 },
               ),
             ),
           ),
-        )
+        ),
       ],
     );
   }
