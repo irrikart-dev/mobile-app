@@ -80,7 +80,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     onPressed: () {
                       // There is 2 more screens while user complete their profile
                       // afre sign up, it's available on the pro version get it now
-                      // 🔗 https://theflutterway.gumroad.com/l/fluttershop
                       Navigator.pushNamed(context, entryPointScreenRoute);
                     },
                     child: const Text('Continue'),

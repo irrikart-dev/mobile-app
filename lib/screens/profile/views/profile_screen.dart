@@ -18,7 +18,7 @@ class ProfileScreen extends StatelessWidget {
         children: [
           ProfileCard(
             name: 'Sepide',
-            email: 'theflutterway@gmail.com',
+            email: 'you@example.com',
             imageSrc: 'https://i.imgur.com/IXnwbLk.png',
             // proLableText: "Sliver",
             // isPro: true, if the user is pro

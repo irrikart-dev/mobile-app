@@ -27,29 +27,30 @@ class _OnBordingScreenState extends State<OnBordingScreen> {
     Onbord(
       image: 'assets/Illustration/Illustration-1.png',
       imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_1.png',
-      title: 'Get those shopping \nbags filled',
+      title: 'Everything your \nfarm needs',
       description:
-          'Add any item you want to your cart, or save it on your wishlist, so you don’t miss it in your future purchases.',
+          'Sprayers, pumps, hand tools, seeds and fertilizer — from trusted brands, at the right price for every acre.',
     ),
     Onbord(
       image: 'assets/Illustration/Illustration-2.png',
       imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_2.png',
       title: 'Fast & secure \npayment',
-      description: 'There are many payment options available for your ease.',
+      description:
+          'Pay by UPI, card, netbanking or cash on delivery — whichever suits you best.',
     ),
     Onbord(
       image: 'assets/Illustration/Illustration-3.png',
       imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_3.png',
-      title: 'Package tracking',
+      title: 'Order tracking',
       description:
-          'In particular, Shoplon can pack your orders, and help you seamlessly manage your shipments.',
+          'Follow every order from dispatch to your doorstep, with delivery dates you can plan the season around.',
     ),
     Onbord(
       image: 'assets/Illustration/Illustration-4.png',
       imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_4.png',
-      title: 'Nearby stores',
+      title: 'Buying in bulk?',
       description:
-          'Easily track nearby shops, browse through their items and get information about their prodcuts.',
+          'Request a quote on bulk quantities and get pricing worked out for your whole village or FPO.',
     ),
   ];
 
