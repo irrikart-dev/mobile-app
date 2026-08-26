@@ -292,6 +292,10 @@ Route<dynamic> generateRoute(RouteSettings settings) {
       return MaterialPageRoute(
         builder: (context) => const CartScreen(),
       );
+    case checkoutScreenRoute:
+      return MaterialPageRoute(
+        builder: (context) => const CheckoutScreen(),
+      );
     // case paymentMethodScreenRoute:
     //   return MaterialPageRoute(
     //     builder: (context) => const PaymentMethodScreen(),
@@ -300,10 +304,10 @@ Route<dynamic> generateRoute(RouteSettings settings) {
     //   return MaterialPageRoute(
     //     builder: (context) => const AddNewCardScreen(),
     //   );
-    // case thanksForOrderScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const ThanksForOrderScreen(),
-    //   );
+    case thanksForOrderScreenRoute:
+      return MaterialPageRoute(
+        builder: (context) => const ThanksForOrderScreen(),
+      );
     default:
       return MaterialPageRoute(
         // Make a screen for undefine
