@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_colors_extension.dart';
 import '../../../../core/theme/tokens/spacing_tokens.dart';
 import '../../../../models/catalog_category.dart';
 import '../../../../route/route_constants.dart';
@@ -14,14 +15,16 @@ class CategoryScroller extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 96,
+      height: 110,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.smd),
         itemBuilder: (context, i) {
           final category = categories[i];
+          final theme = Theme.of(context);
+          final ext = theme.extension<AppColorsExt>()!;
           return GestureDetector(
             onTap: () => Navigator.pushNamed(
               context,
@@ -29,30 +32,46 @@ class CategoryScroller extends StatelessWidget {
               arguments: category.id,
             ),
             child: SizedBox(
-              width: 68,
+              width: 72,
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
                     height: 64,
                     width: 64,
+                    padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.08),
-                      image: DecorationImage(
-                        image: AssetImage(category.image),
-                        fit: BoxFit.cover,
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.18,
+                        ),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: 0.06,
+                        ),
+                        image: DecorationImage(
+                          image: AssetImage(category.image),
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     category.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.labelSmall,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: ext.muted,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),

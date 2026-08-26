@@ -78,7 +78,7 @@ class _HomeBannerState extends State<HomeBanner> {
     return Column(
       children: [
         SizedBox(
-          height: 132,
+          height: 152,
           child: PageView.builder(
             controller: _controller,
             itemCount: _slides.length,
@@ -87,14 +87,17 @@ class _HomeBannerState extends State<HomeBanner> {
               final slide = _slides[i];
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 2),
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.smd,
+                ),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
                       theme.colorScheme.primary,
-                      theme.colorScheme.primary.withValues(alpha: 0.82),
+                      theme.colorScheme.primary.withValues(alpha: 0.85),
                     ],
                   ),
                   borderRadius: AppRadius.lgAll,
@@ -106,27 +109,40 @@ class _HomeBannerState extends State<HomeBanner> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             slide.title,
+                            maxLines: 2,
                             style: theme.textTheme.titleLarge?.copyWith(
                               color: Colors.white,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
                           Text(
                             slide.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: Colors.white.withValues(alpha: 0.88),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Icon(
-                      slide.icon,
-                      size: 56,
-                      color: Colors.white.withValues(alpha: 0.35),
+                    const SizedBox(width: AppSpacing.sm),
+                    Container(
+                      height: 56,
+                      width: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        slide.icon,
+                        size: 28,
+                        color: Colors.white.withValues(alpha: 0.95),
+                      ),
                     ),
                   ],
                 ),

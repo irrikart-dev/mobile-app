@@ -53,7 +53,7 @@ abstract final class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0.5,
         centerTitle: false,
-        titleTextStyle: textTheme.titleMedium,
+        titleTextStyle: textTheme.titleLarge,
         systemOverlayStyle:
             isLight ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light,
       ),
@@ -111,9 +111,13 @@ abstract final class AppTheme {
             ? AppColors.lightSurfaceVariant
             : AppColors.darkSurfaceVariant,
         selectedColor: scheme.primary.withValues(alpha: 0.12),
-        labelStyle: textTheme.bodySmall?.copyWith(color: onSurface),
+        labelStyle: textTheme.labelMedium?.copyWith(color: onSurface),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
         side: BorderSide(color: ext.divider),
-        shape: const RoundedRectangleBorder(borderRadius: AppRadius.smAll),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor:

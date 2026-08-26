@@ -6,6 +6,7 @@ import '../../core/theme/app_colors_extension.dart';
 import '../../core/theme/tokens/radius_tokens.dart';
 import '../../core/theme/tokens/shadow_tokens.dart';
 import '../../core/theme/tokens/spacing_tokens.dart';
+import '../../core/theme/tokens/typography_tokens.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/catalog_product.dart';
 import '../../models/wishlist_state.dart';
@@ -14,7 +15,10 @@ import '../../models/wishlist_state.dart';
 ///
 /// The one card every catalogue-facing screen (home, categories, product
 /// list, search, wishlist) uses, so the product grid reads consistently
-/// everywhere.
+/// everywhere. Content below the image is deliberately kept to a single
+/// text line each (name / rating / price) so the card's height is
+/// predictable and never depends on how long a product's name happens to
+/// be — the failure mode that caused real overflow on-device.
 class CatalogProductCard extends ConsumerWidget {
   const CatalogProductCard({
     super.key,
@@ -43,6 +47,7 @@ class CatalogProductCard extends ConsumerWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AspectRatio(
@@ -69,8 +74,8 @@ class CatalogProductCard extends ConsumerWidget {
                       ),
                     ),
                   Positioned(
-                    top: AppSpacing.xxs,
-                    right: AppSpacing.xxs,
+                    top: 6,
+                    right: 6,
                     child: _WishlistButton(
                       isActive: isWishlisted,
                       onTap: () => ref
@@ -82,10 +87,10 @@ class CatalogProductCard extends ConsumerWidget {
                     Positioned.fill(
                       child: ColoredBox(
                         color: Colors.black.withValues(alpha: 0.45),
-                        child: const Center(
+                        child: Center(
                           child: _Badge(
                             text: 'OUT OF STOCK',
-                            color: Colors.black87,
+                            color: Colors.black.withValues(alpha: 0.75),
                           ),
                         ),
                       ),
@@ -94,24 +99,33 @@ class CatalogProductCard extends ConsumerWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.sm),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.sm,
+                AppSpacing.sm,
+                AppSpacing.sm,
+                AppSpacing.sm,
+              ),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     product.name,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleSmall,
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Row(
                     children: [
-                      Icon(Icons.star_rounded, size: 14, color: ext.warning),
+                      Icon(Icons.star_rounded, size: 13, color: ext.warning),
                       const SizedBox(width: 2),
                       Text(
                         '${product.rating}',
-                        style: theme.textTheme.bodySmall,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: ext.muted,
+                        ),
                       ),
                       Text(
                         ' (${product.reviewCount})',
@@ -119,32 +133,33 @@ class CatalogProductCard extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 5),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Text(
-                        formatInr(product.price),
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w700,
+                      Flexible(
+                        child: Text(
+                          formatInr(product.price),
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.price(
+                            theme.colorScheme.primary,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        formatUnit(product.unit),
-                        style: theme.textTheme.bodySmall,
-                      ),
+                      if (product.discountPercent > 0) ...[
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            formatInr(product.mrp),
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.strikePrice(ext.muted),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
-                  if (product.discountPercent > 0)
-                    Text(
-                      formatInr(product.mrp),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        decoration: TextDecoration.lineThrough,
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -164,15 +179,11 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: color, borderRadius: AppRadius.pillAll),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(color: color, borderRadius: AppRadius.smAll),
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
+        style: AppTypography.overline(Colors.white, fontSize: 9.5),
       ),
     );
   }
@@ -189,15 +200,15 @@ class _WishlistButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.all(6),
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.9),
+          color: Colors.white.withValues(alpha: 0.92),
           shape: BoxShape.circle,
+          boxShadow: AppShadows.sm,
         ),
         child: Icon(
           isActive ? Icons.favorite : Icons.favorite_border,
-          size: 16,
+          size: 15,
           color: isActive ? Colors.redAccent : Colors.black54,
         ),
       ),

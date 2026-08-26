@@ -27,13 +27,14 @@ class HomeScreen extends ConsumerWidget {
           children: [
             Text(
               'Namaste 🙏',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
+                  ),
             ),
             Text(
               'Grow more with IrriKart',
-              style: Theme.of(context).textTheme.titleSmall,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
           ],
         ),

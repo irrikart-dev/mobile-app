@@ -108,7 +108,7 @@ class _CartLineTile extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: const EdgeInsets.all(AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.smd),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: AppRadius.mdAll,
@@ -246,7 +246,7 @@ class _CouponFieldState extends State<_CouponField> {
 
     if (_applied != null) {
       return Container(
-        padding: const EdgeInsets.all(AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.smd),
         decoration: BoxDecoration(
           color: ext.success.withValues(alpha: 0.1),
           borderRadius: AppRadius.mdAll,

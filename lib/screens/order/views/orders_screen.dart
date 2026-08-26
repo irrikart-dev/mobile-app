@@ -56,7 +56,7 @@ class _OrderCard extends StatelessWidget {
         arguments: order.id,
       ),
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.smd),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: AppRadius.mdAll,

@@ -5,6 +5,7 @@ import '../../../components/glass/glass_sheet.dart';
 import '../../../core/theme/app_colors_extension.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
+import '../../../core/theme/tokens/typography_tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/cart_state.dart';
 import '../../../models/catalog_data.dart';
@@ -150,8 +151,9 @@ class _ProductDetailsBody extends ConsumerWidget {
                       children: [
                         Text(
                           formatInr(product.price),
-                          style: theme.textTheme.displayMedium?.copyWith(
-                            color: theme.colorScheme.primary,
+                          style: AppTypography.price(
+                            theme.colorScheme.primary,
+                            fontSize: 28,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -163,9 +165,9 @@ class _ProductDetailsBody extends ConsumerWidget {
                           const SizedBox(width: 8),
                           Text(
                             formatInr(product.mrp),
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              decoration: TextDecoration.lineThrough,
-                              color: ext.muted,
+                            style: AppTypography.strikePrice(
+                              ext.muted,
+                              fontSize: 14,
                             ),
                           ),
                         ],
