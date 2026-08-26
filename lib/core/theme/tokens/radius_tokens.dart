@@ -1,15 +1,13 @@
 import 'package:flutter/widgets.dart';
 
-/// Corner radius scale.
-///
-/// [md] is 12 — the template's `defaultBorderRadious` (sic) — so migrated
-/// widgets keep their existing shape.
+/// Corner radius scale, matched to the "Botanical Classic" reference theme's
+/// `--radius-sm/md/lg/pill` (10 / 16 / 26 / 999).
 abstract final class AppRadius {
-  static const double xs = 4;
-  static const double sm = 8;
-  static const double md = 12;
-  static const double lg = 16;
-  static const double xl = 24;
+  static const double xs = 6;
+  static const double sm = 10;
+  static const double md = 16;
+  static const double lg = 26;
+  static const double xl = 32;
   static const double pill = 999;
 
   static const BorderRadius smAll = BorderRadius.all(Radius.circular(sm));

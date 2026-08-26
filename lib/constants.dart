@@ -35,8 +35,8 @@ const productDemoImg6 = 'https://i.imgur.com/JfyZlnO.png';
 // ---------------------------------------------------------------------------
 // Typography
 // ---------------------------------------------------------------------------
-@Deprecated('Use AppTypography.displayFont')
-const grandisExtendedFont = AppTypography.displayFont;
+@Deprecated('Use AppTypography.headingFont')
+const grandisExtendedFont = AppTypography.headingFont;
 
 // ---------------------------------------------------------------------------
 // Colours

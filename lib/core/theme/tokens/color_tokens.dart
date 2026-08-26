@@ -2,40 +2,55 @@ import 'package:flutter/material.dart';
 
 /// The single source of truth for IrriKart's colour palette.
 ///
-/// **This is the one file to edit when the client's real brand palette
-/// arrives.** Nothing else in the app should declare a raw [Color]; everything
-/// resolves through here, [AppTheme], or `context.colors`.
+/// **This is the one file to edit when the brand palette changes.** Nothing
+/// else in the app should declare a raw [Color]; everything resolves through
+/// here, [AppTheme], or `context.colors`.
 ///
-/// The greens below are a considered placeholder — an agricultural leaf green
-/// with an earthy amber accent — chosen so the app reads as agri rather than
-/// the upstream template's purple.
+/// [primary] and [secondary] are sampled directly from the client's existing
+/// corporate mark (My Irigacio World — a green + blue droplet logo), pixel
+///-picked from the source PNG so this is their real brand green and blue, not
+/// an approximation. [tertiary] is an olive accent borrowed from the
+/// "Botanical Classic" reference theme, reserved for organic/eco badging so
+/// it reads as a deliberate accent rather than competing with the primary.
 abstract final class AppColors {
   // ---------------------------------------------------------------------
   // Brand
   // ---------------------------------------------------------------------
 
-  /// Primary brand green. Buttons, active states, selected tabs.
-  static const Color primary = Color(0xFF1F7A3D);
-  static const Color primaryDark = Color(0xFF15602E);
-  static const Color primaryLight = Color(0xFF43A05C);
+  /// Client brand green, sampled from their droplet logo (#67BD50).
+  /// Buttons, active states, selected tabs, primary CTAs.
+  static const Color primary = Color(0xFF67BD50);
+  static const Color primaryDark = Color(0xFF4A9C37);
+  static const Color primaryLight = Color(0xFF8ACD78);
 
   /// Tonal ramp, used for tinted surfaces and the MaterialColor swatch.
-  static const MaterialColor primarySwatch = MaterialColor(0xFF1F7A3D, {
-    50: Color(0xFFE8F4EC),
-    100: Color(0xFFC6E4D0),
-    200: Color(0xFF9FD2B2),
-    300: Color(0xFF78C093),
-    400: Color(0xFF5BB37C),
-    500: Color(0xFF1F7A3D),
-    600: Color(0xFF1B6F37),
-    700: Color(0xFF16612F),
-    800: Color(0xFF125327),
-    900: Color(0xFF0A3B1A),
+  static const MaterialColor primarySwatch = MaterialColor(0xFF67BD50, {
+    50: Color(0xFFEEF8EB),
+    100: Color(0xFFD5EDCD),
+    200: Color(0xFFB8E0AC),
+    300: Color(0xFF9AD388),
+    400: Color(0xFF83C96C),
+    500: Color(0xFF67BD50),
+    600: Color(0xFF5CAB47),
+    700: Color(0xFF4E953C),
+    800: Color(0xFF418032),
+    900: Color(0xFF2C5E20),
   });
 
-  /// Harvest amber. Offers, ratings, "bulk enquiry" accents.
-  static const Color accent = Color(0xFFE8A33D);
-  static const Color accentDark = Color(0xFFC5842A);
+  /// Client brand blue, sampled from their droplet logo (#00AFEF). Water /
+  /// hydration motifs, links, secondary CTAs, informational accents.
+  static const Color secondary = Color(0xFF00AFEF);
+  static const Color secondaryDark = Color(0xFF0089BC);
+  static const Color secondaryLight = Color(0xFF4FCBFA);
+
+  /// Reference-theme olive, reserved for "organic"/eco badges only — kept
+  /// distinct from [primary] so it never competes with the main brand green.
+  static const Color tertiary = Color(0xFF71A600);
+  static const Color tertiaryDark = Color(0xFF5C8800);
+
+  /// Legacy alias — the theme layer historically called this `accent`.
+  static const Color accent = secondary;
+  static const Color accentDark = secondaryDark;
 
   // ---------------------------------------------------------------------
   // Neutrals
@@ -90,6 +105,7 @@ abstract final class AppColors {
   static const Color lowStock = warning;
   static const Color outOfStock = Color(0xFF9CA3AF);
   static const Color vendorBadge = Color(0xFF0F766E);
-  static const Color rfqBadge = accent;
+  static const Color rfqBadge = tertiary;
   static const Color codBadge = Color(0xFF7C3AED);
+  static const Color organicBadge = tertiary;
 }

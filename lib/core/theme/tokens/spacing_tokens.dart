@@ -12,4 +12,12 @@ abstract final class AppSpacing {
   static const double xl = 32;
   static const double xxl = 48;
   static const double xxxl = 64;
+
+  /// Vertical padding for a full home-screen section. Matched to the
+  /// reference theme's generous `--section-py: 6.5rem` on web; halved for a
+  /// mobile viewport where that much whitespace would push content off-screen.
+  static const double sectionPy = 40;
+
+  /// Card interior padding, matched to the reference theme's `--card-pad`.
+  static const double cardPad = 20;
 }
