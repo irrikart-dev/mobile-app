@@ -11,11 +11,11 @@ enum _SortOption { featured, priceAsc, priceDesc, rating }
 
 extension on _SortOption {
   String get label => switch (this) {
-    _SortOption.featured => 'Featured',
-    _SortOption.priceAsc => 'Price: Low to High',
-    _SortOption.priceDesc => 'Price: High to Low',
-    _SortOption.rating => 'Top Rated',
-  };
+        _SortOption.featured => 'Featured',
+        _SortOption.priceAsc => 'Price: Low to High',
+        _SortOption.priceDesc => 'Price: High to Low',
+        _SortOption.rating => 'Top Rated',
+      };
 }
 
 /// Product listing for one category. Matches the reference theme's
@@ -95,7 +95,9 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
               ),
               Expanded(
                 child: products.isEmpty
-                    ? const Center(child: Text('No products match these filters.'))
+                    ? const Center(
+                        child: Text('No products match these filters.'),
+                      )
                     : GridView.builder(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.md,
@@ -103,11 +105,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                         itemCount: products.length,
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: AppSpacing.sm,
-                              crossAxisSpacing: AppSpacing.sm,
-                              childAspectRatio: 0.62,
-                            ),
+                          crossAxisCount: 2,
+                          mainAxisSpacing: AppSpacing.sm,
+                          crossAxisSpacing: AppSpacing.sm,
+                          childAspectRatio: 0.62,
+                        ),
                         itemBuilder: (context, i) => CatalogProductCard(
                           product: products[i],
                           onTap: () => Navigator.pushNamed(

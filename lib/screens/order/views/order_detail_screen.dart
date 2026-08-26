@@ -35,7 +35,10 @@ class OrderDetailScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [
-              Text('Placed ${order.date}', style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                'Placed ${order.date}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               const SizedBox(height: AppSpacing.md),
               _TrackingTimeline(steps: order.trackingSteps),
               const SizedBox(height: AppSpacing.lg),
@@ -56,8 +59,8 @@ class OrderDetailScreen extends ConsumerWidget {
                   Text(
                     formatInr(order.total),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                   ),
                 ],
               ),
@@ -98,7 +101,11 @@ class _TrackingTimeline extends StatelessWidget {
                             : ext.divider,
                       ),
                       child: steps[i].done
-                          ? const Icon(Icons.check, size: 14, color: Colors.white)
+                          ? const Icon(
+                              Icons.check,
+                              size: 14,
+                              color: Colors.white,
+                            )
                           : null,
                     ),
                     if (i < steps.length - 1)
@@ -128,7 +135,10 @@ class _TrackingTimeline extends StatelessWidget {
                         ),
                         const Spacer(),
                         if (steps[i].date != null)
-                          Text(steps[i].date!, style: theme.textTheme.bodySmall),
+                          Text(
+                            steps[i].date!,
+                            style: theme.textTheme.bodySmall,
+                          ),
                       ],
                     ),
                   ),
@@ -161,12 +171,22 @@ class _OrderItemRow extends StatelessWidget {
           ClipRRect(
             borderRadius: AppRadius.smAll,
             child: productImage != null
-                ? Image.asset(productImage!, width: 48, height: 48, fit: BoxFit.cover)
-                : Container(width: 48, height: 48, color: Colors.grey.shade200),
+                ? Image.asset(
+                    productImage!,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                  )
+                : Container(
+                    width: 48,
+                    height: 48,
+                    color: Colors.grey.shade200,
+                  ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(productName, maxLines: 1, overflow: TextOverflow.ellipsis),
+            child:
+                Text(productName, maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
           Text('× ${item.qty}'),
           const SizedBox(width: AppSpacing.sm),

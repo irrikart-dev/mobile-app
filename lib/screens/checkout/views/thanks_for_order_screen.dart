@@ -31,7 +31,8 @@ class ThanksForOrderScreen extends StatelessWidget {
                     color: ext.success.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.check_rounded, size: 52, color: ext.success),
+                  child:
+                      Icon(Icons.check_rounded, size: 52, color: ext.success),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Text(

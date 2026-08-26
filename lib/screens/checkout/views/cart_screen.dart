@@ -181,7 +181,8 @@ class _QtyStepper extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
+          color:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
         ),
         borderRadius: AppRadius.pillAll,
       ),

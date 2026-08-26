@@ -12,16 +12,16 @@ enum _PaymentMethod { cod, upi, card }
 
 extension on _PaymentMethod {
   String get label => switch (this) {
-    _PaymentMethod.cod => 'Cash on Delivery',
-    _PaymentMethod.upi => 'UPI',
-    _PaymentMethod.card => 'Credit / Debit Card',
-  };
+        _PaymentMethod.cod => 'Cash on Delivery',
+        _PaymentMethod.upi => 'UPI',
+        _PaymentMethod.card => 'Credit / Debit Card',
+      };
 
   IconData get icon => switch (this) {
-    _PaymentMethod.cod => Icons.payments_outlined,
-    _PaymentMethod.upi => Icons.qr_code,
-    _PaymentMethod.card => Icons.credit_card,
-  };
+        _PaymentMethod.cod => Icons.payments_outlined,
+        _PaymentMethod.upi => Icons.qr_code,
+        _PaymentMethod.card => Icons.credit_card,
+      };
 }
 
 /// Single-page checkout: delivery address, order items, payment method,
@@ -64,7 +64,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.location_on_outlined, color: theme.colorScheme.primary),
+                  Icon(
+                    Icons.location_on_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
                   const SizedBox(width: AppSpacing.sm),
                   const Expanded(
                     child: Text(
@@ -136,7 +139,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                 _SummaryRow(
                   'Delivery Fee',
-                  cart.deliveryFee_ == 0 ? 'FREE' : formatInr(cart.deliveryFee_),
+                  cart.deliveryFee_ == 0
+                      ? 'FREE'
+                      : formatInr(cart.deliveryFee_),
                   valueColor: cart.deliveryFee_ == 0 ? ext.success : null,
                 ),
                 const Divider(height: AppSpacing.lg),
@@ -256,7 +261,8 @@ class _SummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final style = isTotal ? theme.textTheme.titleMedium : theme.textTheme.bodyMedium;
+    final style =
+        isTotal ? theme.textTheme.titleMedium : theme.textTheme.bodyMedium;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(

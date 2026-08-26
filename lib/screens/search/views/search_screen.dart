@@ -123,7 +123,10 @@ class _RecentAndPopular extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           const AppKicker('You might like'),
-          Text('Popular right now', style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            'Popular right now',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           const SizedBox(height: AppSpacing.sm),
           GridView.builder(
             shrinkWrap: true,

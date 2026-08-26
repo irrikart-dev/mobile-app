@@ -20,7 +20,10 @@ class ProfileScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Account'), automaticallyImplyLeading: false),
+      appBar: AppBar(
+        title: const Text('Account'),
+        automaticallyImplyLeading: false,
+      ),
       body: ListView(
         children: [
           ProfileCard(

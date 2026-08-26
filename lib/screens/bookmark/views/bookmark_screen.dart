@@ -21,11 +21,11 @@ class BookmarkScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Wishlist')),
       body: catalog.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, st) => Center(child: Text('Could not load wishlist: $err')),
+        error: (err, st) =>
+            Center(child: Text('Could not load wishlist: $err')),
         data: (data) {
-          final products = data.products
-              .where((p) => wishlist.contains(p.slug))
-              .toList();
+          final products =
+              data.products.where((p) => wishlist.contains(p.slug)).toList();
 
           if (products.isEmpty) {
             return Center(

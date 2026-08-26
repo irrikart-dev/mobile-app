@@ -25,7 +25,8 @@ class DiscoverScreen extends ConsumerWidget {
       ),
       body: catalog.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, st) => Center(child: Text('Could not load categories: $err')),
+        error: (err, st) =>
+            Center(child: Text('Could not load categories: $err')),
         data: (data) => ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
@@ -81,7 +82,11 @@ class _CategoryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Image.asset(category.image, fit: BoxFit.cover, width: double.infinity),
+              child: Image.asset(
+                category.image,
+                fit: BoxFit.cover,
+                width: double.infinity,
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(AppSpacing.sm),
