@@ -256,10 +256,13 @@ Route<dynamic> generateRoute(RouteSettings settings) {
     //   return MaterialPageRoute(
     //     builder: (context) => const OrderProcessingScreen(),
     //   );
-    // case orderDetailsScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const OrderDetailsScreen(),
-    //   );
+    case orderDetailsScreenRoute:
+      return MaterialPageRoute(
+        builder: (context) {
+          final orderId = settings.arguments as String;
+          return OrderDetailScreen(orderId: orderId);
+        },
+      );
     // case cancleOrderScreenRoute:
     //   return MaterialPageRoute(
     //     builder: (context) => const CancleOrderScreen(),

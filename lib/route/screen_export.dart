@@ -16,6 +16,7 @@ export '/screens/notification/view/notification_ontions_screen.dart';
 export '/screens/notification/view/notificatios_screen.dart';
 export '/screens/on_sale/views/on_sale_screen.dart';
 export '/screens/onbording/views/onbording_screnn.dart';
+export '/screens/order/views/order_detail_screen.dart';
 export '/screens/order/views/orders_screen.dart';
 export '/screens/preferences/views/preferences_screen.dart';
 export '/screens/product/views/product_details_screen.dart';
