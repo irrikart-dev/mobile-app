@@ -1,168 +1,73 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:irrikart/components/list_tile/divider_list_tile.dart';
-import 'package:irrikart/components/network_image_with_loader.dart';
-import 'package:irrikart/constants.dart';
-import 'package:irrikart/route/screen_export.dart';
 
+import '../../../core/theme/tokens/spacing_tokens.dart';
+import '../../../models/wishlist_state.dart';
+import '../../../route/screen_export.dart';
 import 'components/profile_card.dart';
 import 'components/profile_menu_item_list_tile.dart';
 
-class ProfileScreen extends StatelessWidget {
+/// Account tab. Matches the reference theme's `account-screen`: profile
+/// summary, orders/wishlist/addresses, preferences, help, sign out.
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wishlistCount = ref.watch(
+      wishlistControllerProvider.select((s) => s.length),
+    );
+
     return Scaffold(
+      appBar: AppBar(title: const Text('Account'), automaticallyImplyLeading: false),
       body: ListView(
         children: [
           ProfileCard(
-            name: 'Sepide',
-            email: 'you@example.com',
+            name: 'Farmer',
+            email: 'Add your phone number and email',
             imageSrc: 'https://i.imgur.com/IXnwbLk.png',
-            // proLableText: "Sliver",
-            // isPro: true, if the user is pro
-            press: () {
-              Navigator.pushNamed(context, userInfoScreenRoute);
-            },
+            press: () => Navigator.pushNamed(context, userInfoScreenRoute),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: defaultPadding,
-              vertical: defaultPadding * 1.5,
-            ),
-            child: GestureDetector(
-              onTap: () {},
-              child: const AspectRatio(
-                aspectRatio: 1.8,
-                child:
-                    NetworkImageWithLoader('https://i.imgur.com/dz0BBom.png'),
-              ),
-            ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: defaultPadding),
-            child: Text(
-              'Account',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
-          const SizedBox(height: defaultPadding / 2),
+          const SizedBox(height: AppSpacing.sm),
+          const _SectionLabel('Orders & Wishlist'),
           ProfileMenuListTile(
-            text: 'Orders',
+            text: 'My Orders',
             svgSrc: 'assets/icons/Order.svg',
-            press: () {
-              Navigator.pushNamed(context, ordersScreenRoute);
-            },
+            press: () => Navigator.pushNamed(context, ordersScreenRoute),
           ),
           ProfileMenuListTile(
-            text: 'Returns',
-            svgSrc: 'assets/icons/Return.svg',
-            press: () {},
-          ),
-          ProfileMenuListTile(
-            text: 'Wishlist',
+            text: wishlistCount > 0 ? 'Wishlist ($wishlistCount)' : 'Wishlist',
             svgSrc: 'assets/icons/Wishlist.svg',
-            press: () {},
+            press: () => Navigator.pushNamed(context, bookmarkScreenRoute),
           ),
           ProfileMenuListTile(
-            text: 'Addresses',
+            text: 'Saved Addresses',
             svgSrc: 'assets/icons/Address.svg',
-            press: () {
-              Navigator.pushNamed(context, addressesScreenRoute);
-            },
+            press: () => Navigator.pushNamed(context, addressesScreenRoute),
           ),
+          const SizedBox(height: AppSpacing.sm),
+          const _SectionLabel('Preferences'),
           ProfileMenuListTile(
-            text: 'Payment',
-            svgSrc: 'assets/icons/card.svg',
-            press: () {
-              Navigator.pushNamed(context, emptyPaymentScreenRoute);
-            },
-          ),
-          ProfileMenuListTile(
-            text: 'Wallet',
-            svgSrc: 'assets/icons/Wallet.svg',
-            press: () {
-              Navigator.pushNamed(context, walletScreenRoute);
-            },
-          ),
-          const SizedBox(height: defaultPadding),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: defaultPadding,
-              vertical: defaultPadding / 2,
-            ),
-            child: Text(
-              'Personalization',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
-          DividerListTileWithTrilingText(
+            text: 'Notifications',
             svgSrc: 'assets/icons/Notification.svg',
-            title: 'Notification',
-            trilingText: 'Off',
-            press: () {
-              Navigator.pushNamed(context, enableNotificationScreenRoute);
-            },
+            press: () => Navigator.pushNamed(context, notificationsScreenRoute),
           ),
           ProfileMenuListTile(
-            text: 'Preferences',
+            text: 'App Preferences',
             svgSrc: 'assets/icons/Preferences.svg',
-            press: () {
-              Navigator.pushNamed(context, preferencesScreenRoute);
-            },
+            press: () => Navigator.pushNamed(context, preferencesScreenRoute),
+            isShowDivider: false,
           ),
-          const SizedBox(height: defaultPadding),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: defaultPadding,
-              vertical: defaultPadding / 2,
-            ),
-            child: Text(
-              'Settings',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
-          ProfileMenuListTile(
-            text: 'Language',
-            svgSrc: 'assets/icons/Language.svg',
-            press: () {
-              Navigator.pushNamed(context, selectLanguageScreenRoute);
-            },
-          ),
-          ProfileMenuListTile(
-            text: 'Location',
-            svgSrc: 'assets/icons/Location.svg',
-            press: () {},
-          ),
-          const SizedBox(height: defaultPadding),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: defaultPadding,
-              vertical: defaultPadding / 2,
-            ),
-            child: Text(
-              'Help & Support',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
+          const SizedBox(height: AppSpacing.sm),
+          const _SectionLabel('Help & Support'),
           ProfileMenuListTile(
             text: 'Get Help',
             svgSrc: 'assets/icons/Help.svg',
-            press: () {
-              Navigator.pushNamed(context, getHelpScreenRoute);
-            },
-          ),
-          ProfileMenuListTile(
-            text: 'FAQ',
-            svgSrc: 'assets/icons/FAQ.svg',
             press: () {},
             isShowDivider: false,
           ),
-          const SizedBox(height: defaultPadding),
-
-          // Log Out
+          const SizedBox(height: AppSpacing.md),
           ListTile(
             onTap: () {},
             minLeadingWidth: 24,
@@ -170,18 +75,40 @@ class ProfileScreen extends StatelessWidget {
               'assets/icons/Logout.svg',
               height: 24,
               width: 24,
-              colorFilter: const ColorFilter.mode(
-                errorColor,
+              colorFilter: ColorFilter.mode(
+                Theme.of(context).colorScheme.error,
                 BlendMode.srcIn,
               ),
             ),
-            title: const Text(
+            title: Text(
               'Log Out',
-              style: TextStyle(color: errorColor, fontSize: 14, height: 1),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 14,
+                height: 1,
+              ),
             ),
           ),
+          const SizedBox(height: AppSpacing.lg),
         ],
       ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      child: Text(text, style: Theme.of(context).textTheme.titleSmall),
     );
   }
 }
