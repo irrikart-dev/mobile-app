@@ -129,8 +129,15 @@ Route<dynamic> generateRoute(RouteSettings settings) {
     case productDetailsScreenRoute:
       return MaterialPageRoute(
         builder: (context) {
-          final bool isProductAvailable = settings.arguments as bool? ?? true;
-          return ProductDetailsScreen(isProductAvailable: isProductAvailable);
+          final slug = settings.arguments as String;
+          return ProductDetailsScreen(slug: slug);
+        },
+      );
+    case productListScreenRoute:
+      return MaterialPageRoute(
+        builder: (context) {
+          final categoryId = settings.arguments as String;
+          return ProductListScreen(categoryId: categoryId);
         },
       );
     case productReviewsScreenRoute:

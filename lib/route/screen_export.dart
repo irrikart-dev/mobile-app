@@ -17,6 +17,7 @@ export '/screens/onbording/views/onbording_screnn.dart';
 export '/screens/order/views/orders_screen.dart';
 export '/screens/preferences/views/preferences_screen.dart';
 export '/screens/product/views/product_details_screen.dart';
+export '/screens/product/views/product_list_screen.dart';
 export '/screens/profile/views/profile_screen.dart';
 export '/screens/reviews/view/product_reviews_screen.dart';
 export '/screens/search/views/search_screen.dart';
