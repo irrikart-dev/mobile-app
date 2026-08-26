@@ -99,10 +99,10 @@ abstract final class AppTypography {
 
   /// The recurring "kicker" style: a script eyebrow line above a heading.
   static TextStyle kicker(Color color) => TextStyle(
-    fontFamily: scriptFont,
-    fontSize: 22,
-    fontWeight: FontWeight.w600,
-    color: color,
-    height: 1,
-  );
+        fontFamily: scriptFont,
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
+        color: color,
+        height: 1,
+      );
 }

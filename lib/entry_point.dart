@@ -1,158 +1,121 @@
-import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:irrikart/constants.dart';
-import 'package:irrikart/route/screen_export.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class EntryPoint extends StatefulWidget {
+import 'components/glass/glass_bottom_nav.dart';
+import 'models/cart_state.dart';
+import 'route/screen_export.dart';
+
+/// The tabbed shell: Home, Categories, Cart, Orders, Account — matching the
+/// reference theme's bottom-tab-bar exactly (`xr` in its bundle). Wishlist
+/// and Search are one tap away (from Home's app bar and product hearts)
+/// rather than tabs of their own, same as the reference.
+class EntryPoint extends ConsumerStatefulWidget {
   const EntryPoint({super.key});
 
   @override
-  State<EntryPoint> createState() => _EntryPointState();
+  ConsumerState<EntryPoint> createState() => _EntryPointState();
 }
 
-class _EntryPointState extends State<EntryPoint> {
-  final List<Widget> _pages = const [
+class _EntryPointState extends ConsumerState<EntryPoint> {
+  int _currentIndex = 0;
+
+  static const _pages = [
     HomeScreen(),
     DiscoverScreen(),
-    BookmarkScreen(),
-    // EmptyCartScreen(), // if Cart is empty
     CartScreen(),
+    OrdersScreen(),
     ProfileScreen(),
   ];
-  int _currentIndex = 0;
+
+  static const _items = [
+    GlassNavItem(
+      icon: Icon(Icons.home_outlined),
+      activeIcon: Icon(Icons.home),
+      label: 'Home',
+    ),
+    GlassNavItem(
+      icon: Icon(Icons.grid_view_outlined),
+      activeIcon: Icon(Icons.grid_view_rounded),
+      label: 'Categories',
+    ),
+    GlassNavItem(
+      icon: Icon(Icons.shopping_bag_outlined),
+      activeIcon: Icon(Icons.shopping_bag),
+      label: 'Cart',
+    ),
+    GlassNavItem(
+      icon: Icon(Icons.receipt_long_outlined),
+      activeIcon: Icon(Icons.receipt_long),
+      label: 'Orders',
+    ),
+    GlassNavItem(
+      icon: Icon(Icons.person_outline),
+      activeIcon: Icon(Icons.person),
+      label: 'Account',
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    SvgPicture svgIcon(String src, {Color? color}) {
-      return SvgPicture.asset(
-        src,
-        height: 24,
-        colorFilter: ColorFilter.mode(
-          color ??
-              Theme.of(context).iconTheme.color!.withValues(
-                    alpha: Theme.of(context).brightness == Brightness.dark
-                        ? 0.3
-                        : 1,
-                  ),
-          BlendMode.srcIn,
-        ),
-      );
-    }
+    final cartCount = ref.watch(cartTotalItemsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        // pinned: true,
-        // floating: true,
-        // snap: true,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        leading: const SizedBox(),
-        leadingWidth: 0,
-        centerTitle: false,
-        title: SvgPicture.asset(
-          'assets/logo/irrikart_wordmark.svg',
-          colorFilter: ColorFilter.mode(
-            Theme.of(context).iconTheme.color!,
-            BlendMode.srcIn,
-          ),
-          height: 20,
-          width: 100,
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.pushNamed(context, searchScreenRoute);
-            },
-            icon: SvgPicture.asset(
-              'assets/icons/Search.svg',
-              height: 24,
-              colorFilter: ColorFilter.mode(
-                Theme.of(context).textTheme.bodyLarge!.color!,
-                BlendMode.srcIn,
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: () {
-              Navigator.pushNamed(context, notificationsScreenRoute);
-            },
-            icon: SvgPicture.asset(
-              'assets/icons/Notification.svg',
-              height: 24,
-              colorFilter: ColorFilter.mode(
-                Theme.of(context).textTheme.bodyLarge!.color!,
-                BlendMode.srcIn,
-              ),
-            ),
-          ),
+      extendBody: true,
+      body: IndexedStack(index: _currentIndex, children: _pages),
+      bottomNavigationBar: GlassBottomNav(
+        items: [
+          for (var i = 0; i < _items.length; i++)
+            if (i == 2 && cartCount > 0)
+              GlassNavItem(
+                icon: _CartIconWithBadge(count: cartCount, filled: false),
+                activeIcon: _CartIconWithBadge(count: cartCount, filled: true),
+                label: 'Cart',
+              )
+            else
+              _items[i],
         ],
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
       ),
-      // body: _pages[_currentIndex],
-      body: PageTransitionSwitcher(
-        duration: defaultDuration,
-        transitionBuilder: (child, animation, secondAnimation) {
-          return FadeThroughTransition(
-            animation: animation,
-            secondaryAnimation: secondAnimation,
-            child: child,
-          );
-        },
-        child: _pages[_currentIndex],
-      ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.only(top: defaultPadding / 2),
-        color: Theme.of(context).brightness == Brightness.light
-            ? Colors.white
-            : const Color(0xFF101015),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            if (index != _currentIndex) {
-              setState(() {
-                _currentIndex = index;
-              });
-            }
-          },
-          backgroundColor: Theme.of(context).brightness == Brightness.light
-              ? Colors.white
-              : const Color(0xFF101015),
-          type: BottomNavigationBarType.fixed,
-          // selectedLabelStyle: TextStyle(color: primaryColor),
-          selectedFontSize: 12,
-          selectedItemColor: primaryColor,
-          unselectedItemColor: Colors.transparent,
-          items: [
-            BottomNavigationBarItem(
-              icon: svgIcon('assets/icons/Shop.svg'),
-              activeIcon: svgIcon('assets/icons/Shop.svg', color: primaryColor),
-              label: 'Shop',
+    );
+  }
+}
+
+class _CartIconWithBadge extends StatelessWidget {
+  const _CartIconWithBadge({required this.count, required this.filled});
+
+  final int count;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(filled ? Icons.shopping_bag : Icons.shopping_bag_outlined),
+        Positioned(
+          top: -6,
+          right: -8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+            decoration: const BoxDecoration(
+              color: Colors.redAccent,
+              shape: BoxShape.circle,
             ),
-            BottomNavigationBarItem(
-              icon: svgIcon('assets/icons/Category.svg'),
-              activeIcon:
-                  svgIcon('assets/icons/Category.svg', color: primaryColor),
-              label: 'Discover',
+            alignment: Alignment.center,
+            child: Text(
+              count > 99 ? '99+' : '$count',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                height: 1,
+              ),
             ),
-            BottomNavigationBarItem(
-              icon: svgIcon('assets/icons/Bookmark.svg'),
-              activeIcon:
-                  svgIcon('assets/icons/Bookmark.svg', color: primaryColor),
-              label: 'Bookmark',
-            ),
-            BottomNavigationBarItem(
-              icon: svgIcon('assets/icons/Bag.svg'),
-              activeIcon: svgIcon('assets/icons/Bag.svg', color: primaryColor),
-              label: 'Cart',
-            ),
-            BottomNavigationBarItem(
-              icon: svgIcon('assets/icons/Profile.svg'),
-              activeIcon:
-                  svgIcon('assets/icons/Profile.svg', color: primaryColor),
-              label: 'Profile',
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

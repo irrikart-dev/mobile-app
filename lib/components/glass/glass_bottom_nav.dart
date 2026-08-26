@@ -123,9 +123,9 @@ class _NavTapTarget extends StatelessWidget {
               Text(
                 item.label,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: isActive ? activeColor : inactiveColor,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                ),
+                      color: isActive ? activeColor : inactiveColor,
+                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                    ),
               ),
             ],
           ),

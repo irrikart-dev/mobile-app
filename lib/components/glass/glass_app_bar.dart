@@ -66,6 +66,6 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => Size.fromHeight(
-    kToolbarHeight + (bottom != null ? kToolbarHeight * 0.7 : 0),
-  );
+        kToolbarHeight + (bottom != null ? kToolbarHeight * 0.7 : 0),
+      );
 }

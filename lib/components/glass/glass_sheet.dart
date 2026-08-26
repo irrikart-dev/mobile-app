@@ -35,8 +35,7 @@ class GlassSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final maxHeight =
-        MediaQuery.of(context).size.height * maxHeightFraction;
+    final maxHeight = MediaQuery.of(context).size.height * maxHeightFraction;
 
     return SafeArea(
       top: false,
