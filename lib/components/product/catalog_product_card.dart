@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +9,7 @@ import '../../core/theme/tokens/typography_tokens.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/catalog_product.dart';
 import '../../models/wishlist_state.dart';
+import '../catalog_image.dart';
 
 /// A product card for grids: image, wishlist heart, name, rating, price.
 ///
@@ -57,12 +57,14 @@ class CatalogProductCard extends ConsumerWidget {
                 children: [
                   ColoredBox(
                     color: theme.colorScheme.surfaceContainerHighest,
-                    child: product.image.startsWith('http')
-                        ? CachedNetworkImage(
-                            imageUrl: product.image,
-                            fit: BoxFit.cover,
-                          )
-                        : Image.asset(product.image, fit: BoxFit.cover),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      child: CatalogImage(
+                        source: product.displayImage,
+                        isRemote: product.hasRemoteImage,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
                   if (product.discountPercent > 0)
                     Positioned(

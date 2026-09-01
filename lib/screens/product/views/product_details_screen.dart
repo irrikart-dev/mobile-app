@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../components/catalog_image.dart';
 import '../../../components/glass/glass_sheet.dart';
 import '../../../core/theme/app_colors_extension.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
@@ -106,7 +107,10 @@ class _ProductDetailsBody extends ConsumerWidget {
                   borderRadius: AppRadius.lgAll,
                   child: AspectRatio(
                     aspectRatio: 1,
-                    child: Image.asset(product.image, fit: BoxFit.cover),
+                    child: CatalogImage(
+                      source: product.displayImage,
+                      isRemote: product.hasRemoteImage,
+                    ),
                   ),
                 ),
               ),

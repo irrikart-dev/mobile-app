@@ -40,6 +40,53 @@ flutter build apk --release -t lib/main_prod.dart --flavor prod
 The app runs against **mock data sources** by default (`FeatureFlags.useMockData`) because the
 backend API does not exist yet. Nothing above the data source layer knows the difference.
 
+## Authentication
+
+Email + password, via **Firebase Authentication** (`firebase_core` +
+`firebase_auth`). Sign-up, sign-in, password reset and email verification are
+wired to the existing auth screens.
+
+`lib/core/firebase/firebase_options.dart` is checked in with **placeholder
+values** so the repo builds without the Firebase project. Until it is replaced,
+the auth screens disable themselves with a notice and the rest of the app works
+as normal — a Firebase failure never crashes the launch screen.
+
+Run `flutterfire configure` to wire up the real project. Full runbook:
+[`docs/FIREBASE_SETUP.md`](docs/FIREBASE_SETUP.md).
+
+```
+lib/core/firebase/   firebase_options.dart, firebase_bootstrap.dart (safe init)
+lib/core/auth/       auth_service.dart — providers + error mapping
+```
+
+No screen touches `FirebaseAuth` directly; failures surface as `AuthException`
+with a `userMessage` that is already safe to render.
+
+## Catalogue data
+
+The catalogue loads from the backend (`GET /api/v1/catalog`), which returns the
+43 products carried over from the IrriKart site **and** everything added in the
+admin dashboard in one response. A product added or repriced in the dashboard
+therefore reaches the app on its next catalogue load — pull to refresh on the
+home screen, or a cold start — with no app release.
+
+If the API is unreachable the app falls back to the bundled `assets/mock/`
+fixtures and shows a "showing the saved catalogue" notice on the home screen.
+
+Point a build at a different API:
+
+```bash
+flutter run --dart-define=IRRIKART_API_BASE_URL=https://api.irrikart.in/api/v1
+```
+
+With no override, release builds use `https://api.irrikart.in/api/v1` and debug
+builds use the local backend (`10.0.2.2:4000` on the Android emulator). See
+`lib/core/network/api_config.dart`.
+
+Seed products keep their bundled image assets, so they render instantly and
+offline; products added in the dashboard carry a remote `imageUrl`.
+`CatalogImage` handles both.
+
 ## Architecture
 
 Feature-first, with a shared core. Each feature is self-contained:

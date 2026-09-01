@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../components/catalog_image.dart';
 import '../../../core/theme/app_colors_extension.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
@@ -89,11 +90,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       children: [
                         ClipRRect(
                           borderRadius: AppRadius.smAll,
-                          child: Image.asset(
-                            line.product.image,
+                          child: SizedBox(
                             width: 44,
                             height: 44,
-                            fit: BoxFit.cover,
+                            child: CatalogImage(
+                              source: line.product.displayImage,
+                              isRemote: line.product.hasRemoteImage,
+                            ),
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),

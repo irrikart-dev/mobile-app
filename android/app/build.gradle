@@ -53,6 +53,7 @@ android {
         applicationId "com.irrikart.app"
         // minSdk 23: flutter_secure_storage needs 18, Razorpay 21, Firebase 23.
         // Android 6.0+ covers effectively the whole Indian device base.
+        // Pinned rather than `flutter.minSdkVersion` (21) — firebase_auth needs 23.
         minSdkVersion flutter.minSdkVersion
         targetSdk 34
         versionCode flutterVersionCode.toInteger()

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../components/catalog_image.dart';
 import '../../../../core/theme/app_colors_extension.dart';
 import '../../../../core/theme/tokens/spacing_tokens.dart';
 import '../../../../models/catalog_category.dart';
@@ -49,15 +50,14 @@ class CategoryScroller extends StatelessWidget {
                         width: 1.5,
                       ),
                     ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                    child: ClipOval(
+                      child: ColoredBox(
                         color: theme.colorScheme.primary.withValues(
                           alpha: 0.06,
                         ),
-                        image: DecorationImage(
-                          image: AssetImage(category.image),
-                          fit: BoxFit.cover,
+                        child: CatalogImage(
+                          source: category.displayImage,
+                          isRemote: category.hasRemoteImage,
                         ),
                       ),
                     ),

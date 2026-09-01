@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../components/app_kicker.dart';
+import '../../../components/catalog_image.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
 import '../../../core/theme/tokens/shadow_tokens.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
@@ -44,7 +45,7 @@ class DiscoverScreen extends ConsumerWidget {
                 crossAxisCount: 2,
                 mainAxisSpacing: AppSpacing.sm,
                 crossAxisSpacing: AppSpacing.sm,
-                childAspectRatio: 0.92,
+                childAspectRatio: 0.74,
               ),
               itemBuilder: (context, i) =>
                   _CategoryCard(category: data.categories[i]),
@@ -79,13 +80,21 @@ class _CategoryCard extends StatelessWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Image.asset(
-                category.image,
-                fit: BoxFit.cover,
-                width: double.infinity,
+            AspectRatio(
+              aspectRatio: 1,
+              child: ColoredBox(
+                color: theme.colorScheme.surfaceContainerHighest,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: CatalogImage(
+                    source: category.displayImage,
+                    isRemote: category.hasRemoteImage,
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
             ),
             Padding(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../components/catalog_image.dart';
 import '../../../core/theme/app_colors_extension.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
@@ -119,11 +120,13 @@ class _CartLineTile extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: AppRadius.smAll,
-            child: Image.asset(
-              product.image,
+            child: SizedBox(
               width: 76,
               height: 76,
-              fit: BoxFit.cover,
+              child: CatalogImage(
+                source: product.displayImage,
+                isRemote: product.hasRemoteImage,
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),

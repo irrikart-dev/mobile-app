@@ -23,6 +23,10 @@ dependencies:
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
 
+  # --- auth ---
+  firebase_core: ^3.8.0
+  firebase_auth: ^5.3.4
+
   # --- networking ---
   dio: ^5.7.0
   pretty_dio_logger: ^1.4.0
@@ -112,3 +116,35 @@ flutter:
       fonts:
         - asset: assets/fonts/caveat/Caveat-SemiBold.ttf
           weight: 600
+
+# App icon. Source PNGs are pre-composed (assets/icon/, built from the
+# client's droplet mark) rather than left to the tool's own auto-cropping:
+# icon_foreground.png is transparent with the mark inset to Android's
+# adaptive-icon safe zone; icon_master.png is the same mark flattened onto
+# opaque white, since iOS icons must not carry an alpha channel.
+# Regenerate with: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon_master.png"
+  min_sdk_android: 23
+  remove_alpha_ios: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+
+# Splash screen. Uses the full lockup (mark + wordmark), per the client's
+# corporate branding, unlike the launcher icon which uses the mark alone.
+# Regenerate with: dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/logo/irrikart_logo_full.png
+  color_dark: "#0F1311"
+  image_dark: assets/logo/irrikart_logo_full.png
+  android_12:
+    image: assets/logo/irrikart_logo_full.png
+    icon_background_color: "#FFFFFF"
+    image_dark: assets/logo/irrikart_logo_full.png
+    icon_background_color_dark: "#0F1311"
+  android: true
+  ios: true
+  web: false

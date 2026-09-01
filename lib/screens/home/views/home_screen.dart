@@ -64,6 +64,9 @@ class HomeScreen extends ConsumerWidget {
               bottom: 120,
             ),
             children: [
+              // The catalogue fell back to the bundled fixtures, so anything
+              // added in the admin dashboard is missing until a refresh works.
+              if (data.isOffline) const _OfflineCatalogueNotice(),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: HomeBanner(),
@@ -146,6 +149,46 @@ class _TrustStrip extends StatelessWidget {
                 ),
               ],
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown when the live catalogue could not be reached and the app is rendering
+/// its bundled copy. Pull to refresh retries.
+class _OfflineCatalogueNotice extends StatelessWidget {
+  const _OfflineCatalogueNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        0,
+        AppSpacing.md,
+        AppSpacing.sm,
+      ),
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.cloud_off_outlined,
+              size: 18, color: scheme.onSurfaceVariant),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'Showing the saved catalogue — pull down to refresh once you are '
+              'back online.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+            ),
+          ),
         ],
       ),
     );
