@@ -6,7 +6,8 @@ import '../firebase/firebase_bootstrap.dart';
 /// Set once in `main()` from [bootstrapFirebase]. Overridden in `ProviderScope`.
 final firebaseStatusProvider = Provider<FirebaseStatus>(
   (_) => throw UnimplementedError(
-      'firebaseStatusProvider must be overridden in main()'),
+    'firebaseStatusProvider must be overridden in main()',
+  ),
 );
 
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
@@ -72,8 +73,10 @@ class AuthService {
     return FirebaseAuth.instance;
   }
 
-  Future<UserCredential> signIn(
-      {required String email, required String password}) {
+  Future<UserCredential> signIn({
+    required String email,
+    required String password,
+  }) {
     return _guard(
       () => _auth.signInWithEmailAndPassword(
         email: email.trim(),
@@ -82,32 +85,20 @@ class AuthService {
     );
   }
 
-  Future<UserCredential> signUp({
-    required String email,
-    required String password,
-    String? displayName,
-  }) async {
-    final credential = await _guard(
-      () => _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      ),
-    );
-    if (displayName != null && displayName.trim().isNotEmpty) {
-      await credential.user?.updateDisplayName(displayName.trim());
-    }
-    // Sent on sign-up rather than gated behind it: the catalogue is browsable
-    // unverified, and blocking a new farmer at the door loses the signup.
-    await _guard(
-        () => credential.user?.sendEmailVerification() ?? Future.value());
-    return credential;
-  }
+  /// Signs into the account the backend just created, at the end of the
+  /// OTP sign-up flow (see [SignupApi]). The backend proves the email was
+  /// verified before creating anything, so there is no separate
+  /// `createUserWithEmailAndPassword` call here — that would either race the
+  /// server's account or throw `email-already-in-use` against it.
+  Future<UserCredential> signInWithCustomToken(String token) =>
+      _guard(() => _auth.signInWithCustomToken(token));
 
   Future<void> sendPasswordReset(String email) =>
       _guard(() => _auth.sendPasswordResetEmail(email: email.trim()));
 
   Future<void> sendEmailVerification() => _guard(
-      () => _auth.currentUser?.sendEmailVerification() ?? Future.value());
+        () => _auth.currentUser?.sendEmailVerification() ?? Future.value(),
+      );
 
   /// Re-reads the user from the server — use after asking someone to click the
   /// verification link, since the cached `emailVerified` will still be false.

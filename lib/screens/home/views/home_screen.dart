@@ -177,8 +177,11 @@ class _OfflineCatalogueNotice extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.cloud_off_outlined,
-              size: 18, color: scheme.onSurfaceVariant),
+          Icon(
+            Icons.cloud_off_outlined,
+            size: 18,
+            color: scheme.onSurfaceVariant,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(

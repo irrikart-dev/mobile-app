@@ -34,7 +34,8 @@ class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       throw UnsupportedError(
-          'IrriKart does not target web — no Firebase web config exists.');
+        'IrriKart does not target web — no Firebase web config exists.',
+      );
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:

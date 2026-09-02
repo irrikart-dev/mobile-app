@@ -24,8 +24,8 @@ dependencies:
   json_annotation: ^4.9.0
 
   # --- auth ---
-  firebase_core: ^3.8.0
-  firebase_auth: ^5.3.4
+  firebase_core: ^3.15.2
+  firebase_auth: ^5.7.0
 
   # --- networking ---
   dio: ^5.7.0

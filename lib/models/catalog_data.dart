@@ -48,8 +48,9 @@ class CatalogData {
     try {
       final response = await dio.get<Map<String, dynamic>>('/catalog');
       final data = response.data?['data'] as Map<String, dynamic>?;
-      if (data == null)
+      if (data == null) {
         throw const FormatException('Malformed /catalog response');
+      }
 
       final catalog = CatalogData._(
         categories: (data['categories'] as List)
@@ -65,7 +66,8 @@ class CatalogData {
       if (catalog.products.isNotEmpty) return catalog;
     } catch (error) {
       debugPrint(
-          'IrriKart: catalogue API unavailable ($error) — using bundled fixtures.');
+        'IrriKart: catalogue API unavailable ($error) — using bundled fixtures.',
+      );
     }
     return loadBundled();
   }

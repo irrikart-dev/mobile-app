@@ -194,8 +194,10 @@ class _VerifyEmailBannerState extends ConsumerState<_VerifyEmailBanner> {
       ),
       child: Row(
         children: [
-          Icon(Icons.mark_email_unread_outlined,
-              color: scheme.onSecondaryContainer),
+          Icon(
+            Icons.mark_email_unread_outlined,
+            color: scheme.onSecondaryContainer,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(

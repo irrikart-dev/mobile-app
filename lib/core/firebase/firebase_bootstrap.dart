@@ -33,7 +33,8 @@ Future<FirebaseStatus> bootstrapFirebase() async {
   try {
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform);
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
     }
     return FirebaseStatus.ready;
   } catch (error, stackTrace) {
