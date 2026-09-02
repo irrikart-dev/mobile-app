@@ -1,7 +1,21 @@
+import 'dart:io' show Platform;
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../firebase/firebase_bootstrap.dart';
+import '../firebase/firebase_options.dart';
+
+/// Firebase's auto-provisioned **Web** OAuth client for this project. Passed
+/// as `serverClientId` on every platform — that's what makes Google hand back
+/// an ID token whose audience Firebase accepts, without a
+/// `google-services.json` / `GoogleService-Info.plist` in the repo. Not a
+/// secret: safe to ship in the client, same as any other OAuth client id.
+const _googleWebClientId =
+    '505911392963-1iute5rngd8foc7fqcmshkkoglmcab69.apps.googleusercontent.com';
 
 /// Set once in `main()` from [bootstrapFirebase]. Overridden in `ProviderScope`.
 final firebaseStatusProvider = Provider<FirebaseStatus>(
@@ -30,8 +44,22 @@ final isSignedInProvider = Provider<bool>(
   (ref) => ref.watch(authStateProvider).valueOrNull != null,
 );
 
+final googleSignInProvider = Provider<GoogleSignIn>((ref) {
+  return GoogleSignIn(
+    serverClientId: _googleWebClientId,
+    // iOS additionally needs its own client id — Google Sign-In won't
+    // complete the redirect without it, even with serverClientId set.
+    clientId: (!kIsWeb && Platform.isIOS)
+        ? DefaultFirebaseOptions.ios.iosClientId
+        : null,
+  );
+});
+
 final authServiceProvider = Provider<AuthService>(
-  (ref) => AuthService(ref.watch(firebaseStatusProvider)),
+  (ref) => AuthService(
+    ref.watch(firebaseStatusProvider),
+    ref.watch(googleSignInProvider),
+  ),
 );
 
 /// Thrown when a sign-in is attempted while Firebase is not usable.
@@ -59,9 +87,38 @@ class AuthException implements Exception {
 /// Email/password authentication, wrapped so no screen touches FirebaseAuth
 /// directly and every failure arrives as a farmer-readable [AuthException].
 class AuthService {
-  AuthService(this._status);
+  AuthService(this._status, [GoogleSignIn? googleSignIn])
+      : _googleSignIn =
+            googleSignIn ?? GoogleSignIn(serverClientId: _googleWebClientId);
 
   final FirebaseStatus _status;
+  final GoogleSignIn _googleSignIn;
+
+  /// Both new and returning users go through the same call — Firebase
+  /// creates the account on first sign-in and just authenticates it every
+  /// time after. Google has already verified the email, so this needs
+  /// neither the OTP flow nor a password.
+  ///
+  /// Returns null if the user closed the account picker without choosing
+  /// one — that's a change of mind, not a failure worth surfacing as an error.
+  Future<UserCredential?> signInWithGoogle() async {
+    if (!isAvailable) throw const AuthUnavailableException();
+
+    GoogleSignInAccount? account;
+    try {
+      account = await _googleSignIn.signIn();
+    } on PlatformException catch (e) {
+      throw AuthException(_messageForGoogle(e), code: e.code);
+    }
+    if (account == null) return null;
+
+    final googleAuth = await account.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+    return _guard(() => _auth.signInWithCredential(credential));
+  }
 
   bool get isAvailable => _status == FirebaseStatus.ready;
 
@@ -143,8 +200,23 @@ class AuthService {
         return 'No internet connection. Check your network and try again.';
       case 'operation-not-allowed':
         return 'Email sign-in is not enabled for this app yet.';
+      case 'account-exists-with-different-credential':
+        return 'This email is already registered a different way. Try logging in with a password instead.';
       default:
         return 'Could not complete that request. Please try again.';
+    }
+  }
+
+  static String _messageForGoogle(PlatformException e) {
+    switch (e.code) {
+      case GoogleSignIn.kNetworkError:
+        return 'No internet connection. Check your network and try again.';
+      case GoogleSignIn.kSignInFailedError:
+        // On Android this is what a missing/mismatched SHA fingerprint
+        // surfaces as — see docs/FIREBASE_SETUP.md.
+        return 'Google sign-in could not start. Please try again or use your email instead.';
+      default:
+        return 'Could not sign in with Google. Please try again.';
     }
   }
 }

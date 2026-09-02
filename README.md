@@ -42,25 +42,35 @@ backend API does not exist yet. Nothing above the data source layer knows the di
 
 ## Authentication
 
-Email + password, via **Firebase Authentication** (`firebase_core` +
-`firebase_auth`). Sign-up, sign-in, password reset and email verification are
-wired to the existing auth screens.
+**Firebase Authentication** (`firebase_core` + `firebase_auth`), two ways in:
 
-`lib/core/firebase/firebase_options.dart` is checked in with **placeholder
-values** so the repo builds without the Firebase project. Until it is replaced,
-the auth screens disable themselves with a notice and the rest of the app works
-as normal — a Firebase failure never crashes the launch screen.
+- **Email OTP sign-up** — email → a 6-digit code emailed via the backend →
+  set a password. The account is only created (server-side, via the backend's
+  Admin SDK) once the code is verified. Log in afterwards is plain
+  email/password against the client SDK directly.
+- **Google Sign-In** (`google_sign_in`) — on the login *and* sign-up screens;
+  same call handles both new and returning accounts, since Google has already
+  verified the email.
 
-Run `flutterfire configure` to wire up the real project. Full runbook:
+`lib/core/firebase/firebase_options.dart` carries this repo's real
+`irrikart-auth` project config — not placeholders. A fresh Firebase project
+would need `flutterfire configure` rerun; until then (or if it ever fails) the
+auth screens disable themselves with a notice and the rest of the app works as
+normal — a Firebase failure never crashes the launch screen.
+
+Full runbook, including the backend's Admin SDK/SMTP setup and Google
+Sign-In's Android SHA-fingerprint requirement:
 [`docs/FIREBASE_SETUP.md`](docs/FIREBASE_SETUP.md).
 
 ```
 lib/core/firebase/   firebase_options.dart, firebase_bootstrap.dart (safe init)
-lib/core/auth/       auth_service.dart — providers + error mapping
+lib/core/auth/       auth_service.dart (providers + error mapping), signup_api.dart (backend OTP calls)
+lib/screens/auth/views/components/google_sign_in_button.dart   shared button, both screens
 ```
 
 No screen touches `FirebaseAuth` directly; failures surface as `AuthException`
-with a `userMessage` that is already safe to render.
+(or `SignupApiException` for the OTP endpoints) with a `userMessage` that is
+already safe to render.
 
 ## Catalogue data
 

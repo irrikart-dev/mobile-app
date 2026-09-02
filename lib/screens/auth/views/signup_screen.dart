@@ -8,6 +8,7 @@ import 'package:irrikart/route/route_constants.dart';
 
 import '../../../constants.dart';
 import 'components/auth_unavailable_notice.dart';
+import 'components/google_sign_in_button.dart';
 
 enum _SignupStep { email, otp, password }
 
@@ -38,6 +39,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   String? _signupToken;
   bool _busy = false;
+  bool _googleBusy = false;
   String? _error;
 
   Timer? _cooldownTimer;
@@ -84,6 +86,33 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       if (mounted) setState(() => _error = e.userMessage);
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Skips the email/OTP/password steps entirely — Google has already
+  /// verified the address, and Firebase creates the account on first sign-in.
+  Future<void> _continueWithGoogle() async {
+    if (_googleBusy) return;
+    setState(() {
+      _googleBusy = true;
+      _error = null;
+    });
+    try {
+      final credential = await ref.read(authServiceProvider).signInWithGoogle();
+      if (!mounted || credential == null) return; // null = picker was closed
+      unawaited(
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          entryPointScreenRoute,
+          (route) => false,
+        ),
+      );
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.userMessage);
+    } on AuthUnavailableException catch (e) {
+      if (mounted) setState(() => _error = e.userMessage);
+    } finally {
+      if (mounted) setState(() => _googleBusy = false);
     }
   }
 
@@ -259,6 +288,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         ElevatedButton(
           onPressed: authAvailable && !_busy ? _requestOtp : null,
           child: _busy ? const _ButtonSpinner() : const Text('Send code'),
+        ),
+        const SizedBox(height: defaultPadding),
+        const OrDivider(),
+        const SizedBox(height: defaultPadding),
+        GoogleSignInButton(
+          busy: _googleBusy,
+          onPressed: authAvailable ? _continueWithGoogle : null,
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,

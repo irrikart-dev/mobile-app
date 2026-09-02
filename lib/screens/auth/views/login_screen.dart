@@ -7,6 +7,7 @@ import 'package:irrikart/core/auth/auth_service.dart';
 import 'package:irrikart/route/route_constants.dart';
 
 import 'components/auth_unavailable_notice.dart';
+import 'components/google_sign_in_button.dart';
 import 'components/login_form.dart';
 
 /// Email + password sign-in, backed by Firebase Authentication.
@@ -23,6 +24,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _password = TextEditingController();
 
   bool _busy = false;
+  bool _googleBusy = false;
   String? _error;
 
   @override
@@ -48,13 +50,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             password: _password.text,
           );
       if (!mounted) return;
-      unawaited(
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          entryPointScreenRoute,
-          ModalRoute.withName(logInScreenRoute),
-        ),
-      );
+      _goToApp();
     } on AuthException catch (e) {
       if (mounted) setState(() => _error = e.userMessage);
     } on AuthUnavailableException catch (e) {
@@ -62,6 +58,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _continueWithGoogle() async {
+    if (_googleBusy) return;
+    setState(() {
+      _googleBusy = true;
+      _error = null;
+    });
+    try {
+      final credential = await ref.read(authServiceProvider).signInWithGoogle();
+      if (!mounted || credential == null) return; // null = picker was closed
+      _goToApp();
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.userMessage);
+    } on AuthUnavailableException catch (e) {
+      if (mounted) setState(() => _error = e.userMessage);
+    } finally {
+      if (mounted) setState(() => _googleBusy = false);
+    }
+  }
+
+  void _goToApp() {
+    unawaited(
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        entryPointScreenRoute,
+        ModalRoute.withName(logInScreenRoute),
+      ),
+    );
   }
 
   @override
@@ -130,6 +155,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Text('Log in'),
+                  ),
+                  const SizedBox(height: defaultPadding),
+                  const OrDivider(),
+                  const SizedBox(height: defaultPadding),
+                  GoogleSignInButton(
+                    busy: _googleBusy,
+                    onPressed: authAvailable ? _continueWithGoogle : null,
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

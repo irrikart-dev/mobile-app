@@ -61,15 +61,23 @@ flutterfire configure \
   --platforms=android,ios
 ```
 
-That overwrites the placeholder file. `DefaultFirebaseOptions.isConfigured`
-then returns true and `bootstrapFirebase()` initialises Firebase for real —
-login, password reset, and the final step of sign-up all light up with no
-further code change.
+That overwrites the placeholder file with real values, and
+`bootstrapFirebase()` starts returning `FirebaseStatus.ready` — login,
+password reset, and the final step of sign-up all light up with no further
+code change. (This repo's `irrikart-auth` project is already configured this
+way — `firebase_options.dart` carries real values, not placeholders.)
 
-No `google-services.json` / `GoogleService-Info.plist` needed:
-`Firebase.initializeApp(options: …)` passes config from Dart, which is all
-`firebase_auth` needs. Those platform files (and Analytics/Crashlytics/FCM)
-are a later concern.
+`flutterfire configure` also drops `android/app/google-services.json` and
+would drop `ios/Runner/GoogleService-Info.plist` — both **gitignored on
+purpose** (`.gitignore` lines 57–58), so regenerate them locally by rerunning
+the command above rather than expecting them from git. `Firebase.initializeApp
+(options: …)` uses the Dart config either way, so nothing breaks between a
+machine that has them and one that doesn't for `firebase_auth` itself — but
+`google_sign_in`'s Android build applies the `google-services` Gradle plugin
+(wired into `android/app/build.gradle` / `android/settings.gradle` by
+`flutterfire configure`, which **are** committed), and that plugin fails the
+build if `google-services.json` is missing. Run `flutterfire configure` on
+every machine that builds the Android target.
 
 ## 4. Admin SDK + SMTP — makes sign-up actually work (backend repo)
 
@@ -92,6 +100,33 @@ In the **backend** repo, not this one:
 
 Full details: `backend/README.md` and `backend/.env.example`.
 
+## 4b. Google Sign-In
+
+Enabled on `irrikart-auth` already (Console → Authentication → Sign-in
+method → Google), which auto-provisions a **Web** OAuth client — that client
+id is what `AuthService`/`googleSignInProvider` pass as `serverClientId` on
+every platform, which is what makes `google_sign_in` hand back a token
+Firebase accepts without a `google-services.json` in the repo.
+
+What each platform additionally needs, already done for `irrikart-auth`:
+
+- **Android** — the signing certificate's SHA-1 *and* SHA-256 fingerprints
+  registered against the Firebase Android app (Project settings → Your apps →
+  Android → Add fingerprint). Missing/wrong fingerprint is the single most
+  common cause of Google Sign-In failing on Android — it shows up as
+  `PlatformException(sign_in_failed, ...)`, mapped to "Google sign-in could
+  not start" in `AuthService._messageForGoogle`. Get the debug keystore's:
+  ```bash
+  keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+  ```
+  **Do this again for the release keystore before shipping** — its
+  fingerprint is different from debug's, and Google Sign-In will fail on a
+  release build until it's registered too.
+- **iOS** — the iOS OAuth client id (`firebase_options.dart`'s
+  `ios.iosClientId`) reversed and added as a URL scheme in `Info.plist`
+  (`CFBundleURLTypes`) — already there, generated from the same client id
+  `flutterfire configure` wrote.
+
 ## 5. Verify
 
 ```bash
@@ -100,6 +135,9 @@ flutter run
 
 - Sign up with a throwaway address: email → code (check your inbox, or the
   backend's terminal if SMTP isn't set) → set a password → lands signed in.
+- "Continue with Google" on either the login or sign-up screen should open the
+  account picker and land signed in either way — same call handles new and
+  returning accounts.
 - Log out from the Account tab, log back in.
 - "Forgot password" should send a reset link.
 
@@ -133,9 +171,10 @@ none of this is allowed to take the launch screen down with it.
 ```
 lib/core/firebase/firebase_options.dart    generated client config (placeholders today)
 lib/core/firebase/firebase_bootstrap.dart  safe one-shot init, called from main()
-lib/core/auth/auth_service.dart            sign in / reset / sign out / sign in with custom token
+lib/core/auth/auth_service.dart            sign in / reset / sign out / custom-token sign-in / Google sign-in
 lib/core/auth/signup_api.dart              talks to the backend's OTP endpoints
 lib/screens/auth/views/                    login, signup (3-step), password recovery
+lib/screens/auth/views/components/google_sign_in_button.dart   shared "Continue with Google" button
 
 backend/src/services/signup-service.js     OTP generation/verification, orchestrates the above
 backend/src/services/firebase-admin.js     Admin SDK init (service account)
