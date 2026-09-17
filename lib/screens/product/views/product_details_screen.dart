@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../components/catalog_image.dart';
 import '../../../components/glass/glass_sheet.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/network/api_envelope.dart';
 import '../../../core/theme/app_colors_extension.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
@@ -12,6 +16,7 @@ import '../../../models/cart_state.dart';
 import '../../../models/catalog_data.dart';
 import '../../../models/catalog_product.dart';
 import '../../../models/wishlist_state.dart';
+import '../../../route/route_constants.dart';
 import 'components/info_sheet.dart';
 import 'components/product_list_tile.dart';
 import 'components/shipping_info_sheet.dart';
@@ -145,7 +150,7 @@ class _ProductDetailsBody extends ConsumerWidget {
                           style: theme.textTheme.bodySmall,
                         ),
                         const Spacer(),
-                        _StockPill(inStock: product.inStock),
+                        _StockPill(inStock: product.buyable),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -165,26 +170,8 @@ class _ProductDetailsBody extends ConsumerWidget {
                           formatUnit(product.unit),
                           style: theme.textTheme.bodyMedium,
                         ),
-                        if (product.discountPercent > 0) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            formatInr(product.mrp),
-                            style: AppTypography.strikePrice(
-                              ext.muted,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
-                    if (product.discountPercent > 0)
-                      Text(
-                        '${product.discountPercent}% off MRP',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: ext.discount,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
                     const SizedBox(height: AppSpacing.md),
                     _QuantityStepper(qty: qty, onChanged: onQtyChanged),
                     const SizedBox(height: AppSpacing.md),
@@ -303,14 +290,72 @@ class _QuantityStepper extends StatelessWidget {
   }
 }
 
-class _AddToCartBar extends ConsumerWidget {
+class _AddToCartBar extends ConsumerStatefulWidget {
   const _AddToCartBar({required this.product, required this.qty});
 
   final CatalogProduct product;
   final int qty;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AddToCartBar> createState() => _AddToCartBarState();
+}
+
+class _AddToCartBarState extends ConsumerState<_AddToCartBar> {
+  bool _busy = false;
+
+  Future<void> _addToCart() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      // Contract rule: re-read the product live immediately before adding to
+      // cart — price and stock are what's most likely to have moved since
+      // this screen loaded.
+      final fresh = await CatalogData.fetchFreshProduct(
+        ref.read(dioProvider),
+        widget.product.id,
+      );
+      if (!fresh.buyable) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This product just went out of stock.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      await ref
+          .read(cartControllerProvider.notifier)
+          .add(fresh.variantId, quantity: widget.qty);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Added ${fresh.name} to cart')),
+      );
+    } on AuthRequiredException {
+      if (!mounted) return;
+      unawaited(
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          logInScreenRoute,
+          (route) => false,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final message =
+          e is ApiException ? e.message : 'Could not add this to your cart.';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final product = widget.product;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -320,21 +365,18 @@ class _AddToCartBar extends ConsumerWidget {
           AppSpacing.sm,
         ),
         child: ElevatedButton.icon(
-          onPressed: product.inStock
-              ? () {
-                  ref
-                      .read(cartControllerProvider.notifier)
-                      .add(product, qty: qty);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Added ${product.name} to cart')),
-                  );
-                }
-              : null,
-          icon: const Icon(Icons.shopping_bag_outlined),
+          onPressed: product.buyable && !_busy ? _addToCart : null,
+          icon: _busy
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.shopping_bag_outlined),
           label: Text(
-            product.inStock
-                ? 'Add to cart · ${formatInr(product.price * qty)}'
-                : 'Out of stock',
+            !product.buyable
+                ? 'Out of stock'
+                : 'Add to cart · ${formatInr(product.price * widget.qty)}',
           ),
         ),
       ),

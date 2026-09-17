@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../components/catalog_image.dart';
 import '../../../core/theme/app_colors_extension.dart';
+import '../../../core/theme/component_themes/button_styles.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
 import '../../../core/utils/formatters.dart';
@@ -17,38 +18,165 @@ class CartScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lines = ref.watch(cartControllerProvider);
+    final cartAsync = ref.watch(cartControllerProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('My Cart (${lines.length})'),
+        title: Text('My Cart (${cartAsync.valueOrNull?.items.length ?? 0})'),
         automaticallyImplyLeading: false,
       ),
-      body: lines.isEmpty
-          ? const _EmptyCart()
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                160,
-              ),
-              children: [
-                for (final line in lines)
-                  _CartLineTile(
-                    line: line,
-                    onQtyChanged: (q) => ref
-                        .read(cartControllerProvider.notifier)
-                        .setQty(line.product.slug, q),
-                    onRemove: () => ref
-                        .read(cartControllerProvider.notifier)
-                        .remove(line.product.slug),
-                  ),
-                const SizedBox(height: AppSpacing.md),
-                const _CouponField(),
-              ],
+      // A plain Column, deliberately not Scaffold's bottomNavigationBar slot.
+      // CartScreen lives inside entry_point.dart's IndexedStack, which keeps
+      // every tab's Element tree alive — and rebuilding on provider changes
+      // — even while offstage and unpainted. Scaffold's bottomNavigationBar
+      // has its own transition/measurement machinery that assumes normal
+      // paint visibility; a shadow-painting box rebuilt there while offstage
+      // hit "RenderBox was not laid out — hasSize" (its shadow paint pass
+      // needs `size` before this subtree has had a layout pass). A bottom
+      // bar that is just another child in the body's layout has no such
+      // special-cased code path to collide with.
+      body: Column(
+        children: [
+          Expanded(
+            child: cartAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, st) => _CartError(error: err),
+              data: (cart) => cart.isEmpty
+                  ? const _EmptyCart()
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                        AppSpacing.md,
+                        AppSpacing.md,
+                      ),
+                      children: [
+                        // Coupon entry lives on the checkout screen, where the
+                        // code is actually sent to /orders/checkout — there is
+                        // nothing here that could apply one.
+                        for (final line in cart.items)
+                          _CartLineTile(
+                            line: line,
+                            onQtyChanged: (q) =>
+                                _updateQty(context, ref, line, q),
+                            onRemove: () => _remove(context, ref, line),
+                          ),
+                      ],
+                    ),
             ),
-      bottomNavigationBar: lines.isEmpty ? null : const _CartSummaryBar(),
+          ),
+          const _CartSummaryBar(),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _updateQty(
+    BuildContext context,
+    WidgetRef ref,
+    CartLine line,
+    int quantity,
+  ) async {
+    try {
+      if (quantity <= 0) {
+        await ref.read(cartControllerProvider.notifier).remove(line.id);
+      } else {
+        await ref
+            .read(cartControllerProvider.notifier)
+            .setQuantity(line.id, quantity);
+      }
+    } catch (e) {
+      if (context.mounted) _showCartError(context, e);
+    }
+  }
+
+  Future<void> _remove(
+    BuildContext context,
+    WidgetRef ref,
+    CartLine line,
+  ) async {
+    try {
+      await ref.read(cartControllerProvider.notifier).remove(line.id);
+    } catch (e) {
+      if (context.mounted) _showCartError(context, e);
+    }
+  }
+}
+
+void _showCartError(BuildContext context, Object error) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(cartErrorMessage(error))),
+  );
+}
+
+class _CartError extends ConsumerWidget {
+  const _CartError({required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (error is AuthRequiredException) {
+      return _SignInRequiredNotice(
+        onSignIn: () => Navigator.pushNamedAndRemoveUntil(
+          context,
+          logInScreenRoute,
+          (route) => false,
+        ),
+      );
+    }
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(cartErrorMessage(error), textAlign: TextAlign.center),
+            const SizedBox(height: AppSpacing.md),
+            ElevatedButton(
+              onPressed: () =>
+                  ref.read(cartControllerProvider.notifier).refresh(),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SignInRequiredNotice extends StatelessWidget {
+  const _SignInRequiredNotice({required this.onSignIn});
+
+  final VoidCallback onSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.lock_outline,
+              size: 56,
+              color: theme.colorScheme.primary.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text('Sign in to see your cart', style: theme.textTheme.titleLarge),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Your session has expired. Sign in again to pick up where you left off.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            ElevatedButton(onPressed: onSignIn, child: const Text('Sign in')),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -105,7 +233,7 @@ class _CartLineTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ext = theme.extension<AppColorsExt>()!;
-    final product = line.product;
+    final short = line.available < line.quantity;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -113,60 +241,74 @@ class _CartLineTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: AppRadius.mdAll,
-        border: Border.all(color: ext.divider),
+        border: Border.all(color: short ? ext.warning : ext.divider),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: AppRadius.smAll,
-            child: SizedBox(
-              width: 76,
-              height: 76,
-              child: CatalogImage(
-                source: product.displayImage,
-                isRemote: product.hasRemoteImage,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: AppRadius.smAll,
+                child: SizedBox(
+                  width: 76,
+                  height: 76,
+                  child: CatalogImage(
+                    source: line.image,
+                    isRemote: line.hasRemoteImage,
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  style: theme.textTheme.titleSmall,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  product.tagline,
-                  style: theme.textTheme.bodySmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                Row(
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      formatInr(line.lineTotal),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                      ),
+                      line.name,
+                      style: theme.textTheme.titleSmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
-                    _QtyStepper(qty: line.qty, onChanged: onQtyChanged),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(
+                          formatInr(line.lineTotal),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        const Spacer(),
+                        _QtyStepper(
+                          qty: line.quantity,
+                          onChanged: onQtyChanged,
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
+              IconButton(
+                onPressed: onRemove,
+                icon: const Icon(Icons.close, size: 18),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          if (short) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              line.available <= 0
+                  ? 'Out of stock — remove or wait for restock'
+                  : 'Only ${line.available} left — you have ${line.quantity} in cart',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: ext.warning,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          IconButton(
-            onPressed: onRemove,
-            icon: const Icon(Icons.close, size: 18),
-            visualDensity: VisualDensity.compact,
-          ),
+          ],
         ],
       ),
     );
@@ -226,146 +368,62 @@ class _StepButton extends StatelessWidget {
   }
 }
 
-class _CouponField extends StatefulWidget {
-  const _CouponField();
-
-  @override
-  State<_CouponField> createState() => _CouponFieldState();
-}
-
-class _CouponFieldState extends State<_CouponField> {
-  final _controller = TextEditingController();
-  String? _applied;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ext = Theme.of(context).extension<AppColorsExt>()!;
-
-    if (_applied != null) {
-      return Container(
-        padding: const EdgeInsets.all(AppSpacing.smd),
-        decoration: BoxDecoration(
-          color: ext.success.withValues(alpha: 0.1),
-          borderRadius: AppRadius.mdAll,
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.local_offer, size: 18, color: ext.success),
-            const SizedBox(width: 8),
-            Expanded(child: Text("'$_applied' applied")),
-            TextButton(
-              onPressed: () => setState(() => _applied = null),
-              child: const Text('Remove'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _controller,
-            textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(
-              hintText: 'Enter coupon code (try IRRI10)',
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        ElevatedButton(
-          onPressed: () {
-            if (_controller.text.trim().toUpperCase() == 'IRRI10') {
-              setState(() => _applied = 'IRRI10');
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Invalid coupon code')),
-              );
-            }
-          },
-          child: const Text('Apply'),
-        ),
-      ],
-    );
-  }
-}
-
 class _CartSummaryBar extends ConsumerWidget {
   const _CartSummaryBar();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartControllerProvider.notifier);
-    final theme = Theme.of(context);
-    final ext = theme.extension<AppColorsExt>()!;
+    final cart = ref.watch(cartControllerProvider).valueOrNull ?? Cart.empty;
+    if (cart.isEmpty) return const SizedBox.shrink();
 
-    return SafeArea(
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (cart.deliveryFee_ == 0)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                child: Row(
+    final theme = Theme.of(context);
+
+    // RepaintBoundary matters here, not decorative: CartScreen sits inside
+    // entry_point.dart's IndexedStack, which keeps every tab's Element tree
+    // alive (and rebuilding on provider changes) even while offstage and
+    // unpainted. A shadow-painting RenderDecoratedBox rebuilt in that state
+    // hits Flutter's "RenderBox was not laid out — hasSize" assertion — its
+    // shadow paint pass needs `size` before this subtree's had a layout
+    // pass. Giving it its own compositing layer keeps that paint attempt
+    // scoped to a boundary that's actually been laid out.
+    return RepaintBoundary(
+      child: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.local_shipping, size: 14, color: ext.success),
-                    const SizedBox(width: 4),
                     Text(
-                      'You qualify for free delivery',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: ext.success,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      formatInr(cart.total),
+                      style: theme.textTheme.titleLarge,
                     ),
+                    Text('Total amount', style: theme.textTheme.bodySmall),
                   ],
                 ),
               ),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        formatInr(cart.grandTotal),
-                        style: theme.textTheme.titleLarge,
-                      ),
-                      Text(
-                        cart.savings > 0
-                            ? 'You save ${formatInr(cart.savings)}'
-                            : 'Total amount',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () =>
-                      Navigator.pushNamed(context, checkoutScreenRoute),
-                  child: const Text('Checkout'),
-                ),
-              ],
-            ),
-          ],
+              ElevatedButton(
+                // In a Row — see AppButtonStyles.inline for why this is not
+                // optional.
+                style: AppButtonStyles.inline,
+                onPressed: () =>
+                    Navigator.pushNamed(context, checkoutScreenRoute),
+                child: const Text('Checkout'),
+              ),
+            ],
+          ),
         ),
       ),
     );
