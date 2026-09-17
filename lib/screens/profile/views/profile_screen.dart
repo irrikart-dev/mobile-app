@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
 
@@ -42,7 +44,6 @@ class ProfileScreen extends ConsumerWidget {
               signedIn ? userInfoScreenRoute : logInScreenRoute,
             ),
           ),
-          if (signedIn && !user.emailVerified) const _VerifyEmailBanner(),
           const SizedBox(height: AppSpacing.sm),
           const _SectionLabel('Orders & Wishlist'),
           ProfileMenuListTile(
@@ -79,8 +80,9 @@ class ProfileScreen extends ConsumerWidget {
             text: 'Get Help',
             svgSrc: 'assets/icons/Help.svg',
             press: () {},
-            isShowDivider: false,
+            isShowDivider: signedIn && kDebugMode,
           ),
+          if (signedIn && kDebugMode) const _CopyIdTokenTile(),
           const SizedBox(height: AppSpacing.md),
           ListTile(
             onTap: () => signedIn
@@ -148,70 +150,63 @@ Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
   );
 }
 
-/// Nudge to confirm the address Firebase mailed a verification link to.
-class _VerifyEmailBanner extends ConsumerStatefulWidget {
-  const _VerifyEmailBanner();
+/// Debug-only: copies the raw Firebase ID token so it can be tested against
+/// the backend directly (`curl -H "Authorization: Bearer <token>" ...`) —
+/// the fastest way to tell apart a client bug from the backend verifying
+/// against the wrong Firebase project. Never shown in a release build.
+class _CopyIdTokenTile extends ConsumerStatefulWidget {
+  const _CopyIdTokenTile();
 
   @override
-  ConsumerState<_VerifyEmailBanner> createState() => _VerifyEmailBannerState();
+  ConsumerState<_CopyIdTokenTile> createState() => _CopyIdTokenTileState();
 }
 
-class _VerifyEmailBannerState extends ConsumerState<_VerifyEmailBanner> {
-  bool _sending = false;
+class _CopyIdTokenTileState extends ConsumerState<_CopyIdTokenTile> {
+  bool _busy = false;
 
-  Future<void> _resend() async {
-    setState(() => _sending = true);
+  Future<void> _copy() async {
+    setState(() => _busy = true);
     try {
-      await ref.read(authServiceProvider).sendEmailVerification();
+      final user = ref.read(authServiceProvider).currentUser;
+      final token = await user?.getIdToken(true);
+      if (token == null) throw StateError('No signed-in user');
+      await Clipboard.setData(ClipboardData(text: token));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Verification email sent.')),
+          const SnackBar(content: Text('ID token copied to clipboard')),
         );
       }
-    } on AuthException catch (e) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.userMessage)));
+        ).showSnackBar(SnackBar(content: Text('Could not get token: $e')));
       }
     } finally {
-      if (mounted) setState(() => _sending = false);
+      if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
+    return ListTile(
+      onTap: _busy ? null : _copy,
+      minLeadingWidth: 24,
+      leading: Icon(
+        Icons.bug_report_outlined,
+        color: Theme.of(context).colorScheme.primary,
       ),
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: scheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(12),
+      title: const Text(
+        'Copy ID token (debug)',
+        style: TextStyle(fontSize: 14, height: 1),
       ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.mark_email_unread_outlined,
-            color: scheme.onSecondaryContainer,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              'Verify your email to secure your account.',
-              style:
-                  TextStyle(color: scheme.onSecondaryContainer, fontSize: 13),
-            ),
-          ),
-          TextButton(
-            onPressed: _sending ? null : _resend,
-            child: Text(_sending ? 'Sending…' : 'Resend'),
-          ),
-        ],
-      ),
+      trailing: _busy
+          ? const SizedBox(
+              height: 16,
+              width: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : null,
     );
   }
 }

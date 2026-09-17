@@ -44,12 +44,28 @@ abstract final class AppTypography {
         height: 1.2,
         color: onSurface,
       ),
+      headlineLarge: TextStyle(
+        fontFamily: headingFont,
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+        height: 1.22,
+        color: onSurface,
+      ),
       headlineMedium: TextStyle(
         fontFamily: headingFont,
         fontSize: 21,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.3,
         height: 1.24,
+        color: onSurface,
+      ),
+      headlineSmall: TextStyle(
+        fontFamily: headingFont,
+        fontSize: 19,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.2,
+        height: 1.26,
         color: onSurface,
       ),
       titleLarge: TextStyle(

@@ -84,8 +84,9 @@ class AuthException implements Exception {
   String toString() => 'AuthException($code): $userMessage';
 }
 
-/// Email/password authentication, wrapped so no screen touches FirebaseAuth
-/// directly and every failure arrives as a farmer-readable [AuthException].
+/// Google Sign-In is the only way in — wrapped so no screen touches
+/// FirebaseAuth or GoogleSignIn directly and every failure arrives as a
+/// farmer-readable [AuthException].
 class AuthService {
   AuthService(this._status, [GoogleSignIn? googleSignIn])
       : _googleSignIn =
@@ -94,10 +95,20 @@ class AuthService {
   final FirebaseStatus _status;
   final GoogleSignIn _googleSignIn;
 
+  bool get isAvailable => _status == FirebaseStatus.ready;
+
+  User? get currentUser =>
+      isAvailable ? FirebaseAuth.instance.currentUser : null;
+
+  FirebaseAuth get _auth {
+    if (!isAvailable) throw const AuthUnavailableException();
+    return FirebaseAuth.instance;
+  }
+
   /// Both new and returning users go through the same call — Firebase
   /// creates the account on first sign-in and just authenticates it every
-  /// time after. Google has already verified the email, so this needs
-  /// neither the OTP flow nor a password.
+  /// time after. Google has already verified the email, so nothing else
+  /// (a password, an OTP) is needed.
   ///
   /// Returns null if the user closed the account picker without choosing
   /// one — that's a change of mind, not a failure worth surfacing as an error.
@@ -120,52 +131,6 @@ class AuthService {
     return _guard(() => _auth.signInWithCredential(credential));
   }
 
-  bool get isAvailable => _status == FirebaseStatus.ready;
-
-  User? get currentUser =>
-      isAvailable ? FirebaseAuth.instance.currentUser : null;
-
-  FirebaseAuth get _auth {
-    if (!isAvailable) throw const AuthUnavailableException();
-    return FirebaseAuth.instance;
-  }
-
-  Future<UserCredential> signIn({
-    required String email,
-    required String password,
-  }) {
-    return _guard(
-      () => _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      ),
-    );
-  }
-
-  /// Signs into the account the backend just created, at the end of the
-  /// OTP sign-up flow (see [SignupApi]). The backend proves the email was
-  /// verified before creating anything, so there is no separate
-  /// `createUserWithEmailAndPassword` call here — that would either race the
-  /// server's account or throw `email-already-in-use` against it.
-  Future<UserCredential> signInWithCustomToken(String token) =>
-      _guard(() => _auth.signInWithCustomToken(token));
-
-  Future<void> sendPasswordReset(String email) =>
-      _guard(() => _auth.sendPasswordResetEmail(email: email.trim()));
-
-  Future<void> sendEmailVerification() => _guard(
-        () => _auth.currentUser?.sendEmailVerification() ?? Future.value(),
-      );
-
-  /// Re-reads the user from the server — use after asking someone to click the
-  /// verification link, since the cached `emailVerified` will still be false.
-  Future<bool> refreshEmailVerified() async {
-    final user = _auth.currentUser;
-    if (user == null) return false;
-    await user.reload();
-    return _auth.currentUser?.emailVerified ?? false;
-  }
-
   Future<void> signOut() => _guard(() => _auth.signOut());
 
   /// Runs [action], translating Firebase's error codes into user-facing copy.
@@ -180,28 +145,14 @@ class AuthService {
 
   static String _messageFor(FirebaseAuthException e) {
     switch (e.code) {
-      // Firebase returns `invalid-credential` for both a wrong password and an
-      // unknown email when email enumeration protection is on (the default).
-      case 'invalid-credential':
-      case 'wrong-password':
-      case 'user-not-found':
-        return 'Incorrect email or password.';
-      case 'invalid-email':
-        return 'That email address does not look right.';
-      case 'email-already-in-use':
-        return 'An account already exists with this email. Try logging in.';
-      case 'weak-password':
-        return 'Choose a stronger password — at least 8 characters.';
       case 'user-disabled':
         return 'This account has been disabled. Contact IrriKart support.';
       case 'too-many-requests':
         return 'Too many attempts. Wait a few minutes and try again.';
       case 'network-request-failed':
         return 'No internet connection. Check your network and try again.';
-      case 'operation-not-allowed':
-        return 'Email sign-in is not enabled for this app yet.';
       case 'account-exists-with-different-credential':
-        return 'This email is already registered a different way. Try logging in with a password instead.';
+        return 'This email is already registered a different way.';
       default:
         return 'Could not complete that request. Please try again.';
     }
@@ -214,7 +165,7 @@ class AuthService {
       case GoogleSignIn.kSignInFailedError:
         // On Android this is what a missing/mismatched SHA fingerprint
         // surfaces as — see docs/FIREBASE_SETUP.md.
-        return 'Google sign-in could not start. Please try again or use your email instead.';
+        return 'Google sign-in could not start. Please try again shortly.';
       default:
         return 'Could not sign in with Google. Please try again.';
     }
