@@ -66,15 +66,6 @@ class CatalogProductCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  if (product.discountPercent > 0)
-                    Positioned(
-                      top: AppSpacing.xs,
-                      left: AppSpacing.xs,
-                      child: _Badge(
-                        text: '${product.discountPercent}% OFF',
-                        color: ext.discount,
-                      ),
-                    ),
                   Positioned(
                     top: 6,
                     right: 6,
@@ -85,7 +76,7 @@ class CatalogProductCard extends ConsumerWidget {
                           .toggle(product.slug),
                     ),
                   ),
-                  if (!product.inStock)
+                  if (!product.buyable)
                     Positioned.fill(
                       child: ColoredBox(
                         color: Colors.black.withValues(alpha: 0.45),
@@ -136,31 +127,13 @@ class CatalogProductCard extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 5),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          formatInr(product.price),
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.price(
-                            theme.colorScheme.primary,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                      if (product.discountPercent > 0) ...[
-                        const SizedBox(width: 5),
-                        Flexible(
-                          child: Text(
-                            formatInr(product.mrp),
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.strikePrice(ext.muted),
-                          ),
-                        ),
-                      ],
-                    ],
+                  Text(
+                    formatInr(product.price),
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.price(
+                      theme.colorScheme.primary,
+                      fontSize: 15,
+                    ),
                   ),
                 ],
               ),

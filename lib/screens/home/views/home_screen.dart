@@ -5,11 +5,35 @@ import '../../../components/app_kicker.dart';
 import '../../../components/glass/glass_app_bar.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
+import '../../../models/catalog_category.dart';
 import '../../../models/catalog_data.dart';
+import '../../../models/catalog_product.dart';
 import '../../../route/route_constants.dart';
 import 'components/category_scroller.dart';
 import 'components/home_banner.dart';
 import 'components/product_section.dart';
+
+/// There is no `featured` flag any more (removed from the catalogue contract
+/// 2026-09-11) — "a category rail instead" is the contract's own suggestion,
+/// so this picks whichever category currently has the most buyable products
+/// and shows that.
+({CatalogCategory category, List<CatalogProduct> products})? _topCategoryRail(
+  CatalogData data,
+) {
+  CatalogCategory? best;
+  var bestProducts = const <CatalogProduct>[];
+  for (final category in data.categories) {
+    final products =
+        data.productsInCategory(category.id).where((p) => p.buyable).toList();
+    if (products.length > bestProducts.length) {
+      best = category;
+      bestProducts = products;
+    }
+  }
+  final category = best;
+  if (category == null) return null;
+  return (category: category, products: bestProducts.take(8).toList());
+}
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -90,12 +114,14 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.sm),
               CategoryScroller(categories: data.categories),
               const SizedBox(height: AppSpacing.lg),
-              ProductSection(
-                kicker: 'Handpicked',
-                title: 'Featured for you',
-                products: data.featuredProducts,
-              ),
-              const SizedBox(height: AppSpacing.lg),
+              if (_topCategoryRail(data) case final rail?) ...[
+                ProductSection(
+                  kicker: rail.category.name,
+                  title: 'Popular in ${rail.category.name}',
+                  products: rail.products,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+              ],
               ProductSection(
                 kicker: 'Just in',
                 title: 'New & noteworthy',

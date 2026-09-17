@@ -58,7 +58,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         error: (err, st) => Center(child: Text('Could not search: $err')),
         data: (data) {
           if (_query.trim().isEmpty) {
-            return _RecentAndPopular(products: data.featuredProducts);
+            // No `featured` flag any more — highest-rated buyable products
+            // stand in for "Popular right now".
+            final popular = data.products.where((p) => p.buyable).toList()
+              ..sort((a, b) => b.rating.compareTo(a.rating));
+            return _RecentAndPopular(products: popular.take(8).toList());
           }
           final results = data.search(_query);
           if (results.isEmpty) {

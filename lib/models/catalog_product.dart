@@ -15,23 +15,25 @@ class CatalogSpec {
 
 /// A product.
 ///
-/// Loaded either from the live API (`GET /api/v1/catalog`) or, when the API is
-/// unreachable, from the bundled `assets/mock/products.json`. [fromJson]
-/// accepts both shapes: the bundled fixtures predate [id], [sku] and
+/// Loaded either from the live API (`GET /api/v1/catalog/products*`) or, when
+/// the API is unreachable, from the bundled `assets/mock/products.json`.
+/// [fromJson] accepts both shapes: the bundled fixtures predate [id] and
 /// [imageUrl], so those fall back rather than throwing.
 ///
-/// Interim model for the UI revamp — deliberately simpler than the planned
-/// `features/catalog` domain (single [price]/[unit] rather than a list of
-/// [ProductVariant]s). Field names match where they overlap so this is a
-/// straightforward upgrade path, not a rewrite, once the real catalog
-/// feature lands.
+/// There is deliberately no `mrp`/`discountPercent`/`featured` here — the
+/// backend removed all three from the catalogue contract on 2026-09-11.
+/// There is one price, no discount concept (that returns as its own
+/// promotions feature later), and no home-screen pin flag (a category rail
+/// replaces it).
 class CatalogProduct {
   const CatalogProduct({
     required this.id,
+    required this.variantId,
     required this.sku,
     required this.slug,
     required this.name,
     required this.category,
+    required this.categoryName,
     required this.image,
     required this.imageUrl,
     required this.tagline,
@@ -39,32 +41,48 @@ class CatalogProduct {
     required this.features,
     required this.specs,
     required this.unit,
-    required this.mrp,
     required this.price,
     required this.rating,
     required this.reviewCount,
     required this.inStock,
-    required this.featured,
-    required this.source,
+    required this.stockQty,
   });
 
-  /// Server id. Empty for products read from the bundled fixtures.
+  /// Stable primary key — a product, **not** a cart line. Use [variantId] for
+  /// `POST /cart/items`; this id is a different table and the cart API
+  /// rejects it with "Product variant not found."
   final String id;
 
-  /// Stock keeping unit, editable from the admin dashboard.
+  /// What the cart API actually keys off — single-variant-per-product model,
+  /// so this is a 1:1 stand-in for the product from the app's point of view,
+  /// but it is a genuinely different id server-side. Empty string on the
+  /// bundled offline fixtures (they predate this field entirely); the "Add
+  /// to cart" flow always re-fetches the live product first regardless (see
+  /// `CatalogData.fetchFreshProduct`), so this only matters online.
+  final String variantId;
+
+  /// Human-readable code, shown in support flows. May change if an admin
+  /// edits it.
   final String sku;
 
+  /// URL-safe, used for deep links.
   final String slug;
+
   final String name;
 
   /// [CatalogCategory.id] this product belongs to.
   final String category;
 
-  /// Bundled asset path, e.g. `assets/mock/products/img012-….webp`. Null for
-  /// products created in the admin dashboard, which carry an [imageUrl].
+  /// Denormalised category name, for list rendering with no second call.
+  final String categoryName;
+
+  /// Bundled asset path, e.g. `assets/mock/products/img012-….webp`. Set only
+  /// on the bundled offline fixtures — the live API never returns this, only
+  /// [imageUrl].
   final String? image;
 
-  /// Remote image, set on products added from the admin dashboard.
+  /// Absolute image URL, as the live API always returns it. `null` means no
+  /// image — render a placeholder.
   final String? imageUrl;
 
   final String tagline;
@@ -72,44 +90,46 @@ class CatalogProduct {
   final List<String> features;
   final List<CatalogSpec> specs;
 
-  /// Pack unit label: `piece`, `set`, `roll`, ... See `PackUnit` in the
-  /// catalog domain plan for the full enum this will become.
+  /// Pack unit label: `piece`, `set`, `roll`, `pack`, `box`, `metre`, `kg`,
+  /// `litre`.
   final String unit;
 
-  /// Whole rupees. MRP and selling price, not paise — money-as-paise lands
-  /// with the real payments feature; this mock layer keeps it simple.
-  final int mrp;
-  final int price;
+  /// Selling price, INR. A JSON number with up to 2 decimal places — never
+  /// cache this across sessions; always re-read it before checkout.
+  final num price;
 
   final double rating;
   final int reviewCount;
+
+  /// The admin's manual "In stock" switch.
   final bool inStock;
-  final bool featured;
 
-  /// `seed` for the catalogue carried over from the IrriKart site, `admin`
-  /// for anything added in the dashboard. Both render identically; this is
-  /// only here for debugging and analytics.
-  final String source;
+  /// Units on hand. Can be `> 0` while [inStock] is `false`.
+  final int stockQty;
 
-  int get discountPercent =>
-      mrp <= price ? 0 : (((mrp - price) / mrp) * 100).round();
+  /// Show "Add to cart" only when this is true — [inStock] **and**
+  /// [stockQty] `> 0`. Either alone being falsy means display-only.
+  bool get buyable => inStock && stockQty > 0;
 
   /// True when the image must be fetched over the network rather than read
   /// from the bundle. Drives the `Image.asset` / `CachedNetworkImage` choice.
   bool get hasRemoteImage => image == null && (imageUrl?.isNotEmpty ?? false);
 
-  /// The asset path or URL to render. Prefers the bundled asset — seed
-  /// products then display instantly and offline.
+  /// The asset path or URL to render. Prefers the bundled asset — offline
+  /// fixtures then display instantly and without a network call.
   String? get displayImage => image ?? imageUrl;
 
   factory CatalogProduct.fromJson(Map<String, dynamic> json) {
     final image = json['image'] as String?;
+    final inStock = json['inStock'] as bool? ?? true;
     return CatalogProduct(
       id: json['id'] as String? ?? '',
+      variantId: json['variantId'] as String? ?? '',
       sku: json['sku'] as String? ?? '',
       slug: json['slug'] as String,
       name: json['name'] as String,
       category: json['category'] as String,
+      categoryName: json['categoryName'] as String? ?? '',
       image: (image != null && image.isNotEmpty) ? image : null,
       imageUrl: json['imageUrl'] as String?,
       tagline: json['tagline'] as String? ?? '',
@@ -119,13 +139,14 @@ class CatalogProduct {
           .map((e) => CatalogSpec.fromJson(e as Map<String, dynamic>))
           .toList(),
       unit: json['unit'] as String? ?? 'piece',
-      mrp: (json['mrp'] as num).toInt(),
-      price: (json['price'] as num).toInt(),
+      price: (json['price'] as num?) ?? 0,
       rating: (json['rating'] as num?)?.toDouble() ?? 0,
       reviewCount: (json['reviewCount'] as num?)?.toInt() ?? 0,
-      inStock: json['inStock'] as bool? ?? true,
-      featured: json['featured'] as bool? ?? false,
-      source: json['source'] as String? ?? 'seed',
+      inStock: inStock,
+      // The bundled offline fixtures predate stockQty entirely — assume
+      // "plenty" when the admin's switch says in stock, none otherwise, so
+      // the buyability rule still behaves sensibly offline.
+      stockQty: (json['stockQty'] as num?)?.toInt() ?? (inStock ? 999 : 0),
     );
   }
 }

@@ -1,24 +1,25 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart';
-
 /// Where the IrriKart API lives.
 ///
-/// Override at build time, which is how CI points a build at staging or prod:
+/// Debug and release both default to the hosted Vercel backend now — that's
+/// what's actually running. Override at build/run time to point at a local
+/// backend instead (the Android emulator reaches the host machine on
+/// 10.0.2.2, not localhost):
 ///
-///   flutter run --dart-define=IRRIKART_API_BASE_URL=https://api.irrikart.in/api/v1
+///   flutter run --dart-define=IRRIKART_API_BASE_URL=http://10.0.2.2:4000/api/v1
 ///
-/// With no override, debug builds fall back to a local backend. The Android
-/// emulator reaches the host machine on 10.0.2.2, not localhost.
+/// or CI pointing a build at a different environment:
+///
+///   flutter run --dart-define=IRRIKART_API_BASE_URL=https://backend-pied-zeta-12.vercel.app/api/v1
 abstract final class ApiConfig {
   static const String _override =
       String.fromEnvironment('IRRIKART_API_BASE_URL');
 
+  static const String _hostedBaseUrl =
+      'https://backend-pied-zeta-12.vercel.app/api/v1';
+
   static String get baseUrl {
     if (_override.isNotEmpty) return _override;
-    if (kReleaseMode) return 'https://api.irrikart.in/api/v1';
-    if (!kIsWeb && Platform.isAndroid) return 'http://10.0.2.2:4000/api/v1';
-    return 'http://localhost:4000/api/v1';
+    return _hostedBaseUrl;
   }
 
   /// The API serves catalogue images from `/static/...` on this origin.

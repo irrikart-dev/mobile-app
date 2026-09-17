@@ -7,11 +7,13 @@ import '../../../models/catalog_data.dart';
 import '../../../models/catalog_product.dart';
 import '../../../route/route_constants.dart';
 
-enum _SortOption { featured, priceAsc, priceDesc, rating }
+// The catalogue is server-sorted by `updatedAt` descending, so "Recommended"
+// is a no-op — it just leaves the list in whatever order the API returned.
+enum _SortOption { recommended, priceAsc, priceDesc, rating }
 
 extension on _SortOption {
   String get label => switch (this) {
-        _SortOption.featured => 'Featured',
+        _SortOption.recommended => 'Recommended',
         _SortOption.priceAsc => 'Price: Low to High',
         _SortOption.priceDesc => 'Price: High to Low',
         _SortOption.rating => 'Top Rated',
@@ -30,15 +32,15 @@ class ProductListScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductListScreenState extends ConsumerState<ProductListScreen> {
-  _SortOption _sort = _SortOption.featured;
+  _SortOption _sort = _SortOption.recommended;
   bool _inStockOnly = false;
 
   List<CatalogProduct> _apply(List<CatalogProduct> products) {
     var list = [...products];
-    if (_inStockOnly) list = list.where((p) => p.inStock).toList();
+    if (_inStockOnly) list = list.where((p) => p.buyable).toList();
     switch (_sort) {
-      case _SortOption.featured:
-        list.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+      case _SortOption.recommended:
+        break; // already server-sorted
       case _SortOption.priceAsc:
         list.sort((a, b) => a.price.compareTo(b.price));
       case _SortOption.priceDesc:
