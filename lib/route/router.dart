@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:irrikart/entry_point.dart';
+import 'package:irrikart/models/order_data.dart';
 
 import 'screen_export.dart';
 
@@ -71,21 +72,16 @@ Route<dynamic> generateRoute(RouteSettings settings) {
     //     builder: (context) => const PreferredLanguageScreen(),
     //   );
     case logInScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const LoginScreen(),
-      );
     case signUpScreenRoute:
+      // One screen, Google-only — Firebase treats a new and a returning
+      // account identically, so there is nothing left to tell apart.
       return MaterialPageRoute(
-        builder: (context) => const SignUpScreen(),
+        builder: (context) => const AuthScreen(),
       );
     // case profileSetupScreenRoute:
     //   return MaterialPageRoute(
     //     builder: (context) => const ProfileSetupScreen(),
     //   );
-    case passwordRecoveryScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const PasswordRecoveryScreen(),
-      );
     // case verificationMethodScreenRoute:
     //   return MaterialPageRoute(
     //     builder: (context) => const VerificationMethodScreen(),
@@ -252,10 +248,13 @@ Route<dynamic> generateRoute(RouteSettings settings) {
       return MaterialPageRoute(
         builder: (context) => const OrdersScreen(),
       );
-    // case orderProcessingScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const OrderProcessingScreen(),
-    //   );
+    case orderProcessingScreenRoute:
+      return MaterialPageRoute(
+        builder: (context) {
+          final args = settings.arguments as OrderProcessingArgs;
+          return OrderProcessingScreen(args: args);
+        },
+      );
     case orderDetailsScreenRoute:
       return MaterialPageRoute(
         builder: (context) {
@@ -309,7 +308,10 @@ Route<dynamic> generateRoute(RouteSettings settings) {
     //   );
     case thanksForOrderScreenRoute:
       return MaterialPageRoute(
-        builder: (context) => const ThanksForOrderScreen(),
+        builder: (context) {
+          final order = settings.arguments as Order;
+          return ThanksForOrderScreen(order: order);
+        },
       );
     default:
       return MaterialPageRoute(

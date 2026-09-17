@@ -1,33 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../components/catalog_image.dart';
+import '../../../core/payments/razorpay_checkout.dart';
 import '../../../core/theme/app_colors_extension.dart';
+import '../../../core/theme/component_themes/button_styles.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/cart_state.dart';
+import '../../../models/order_data.dart';
 import '../../../route/route_constants.dart';
+import 'order_processing_screen.dart';
 
-enum _PaymentMethod { cod, upi, card }
-
-extension on _PaymentMethod {
-  String get label => switch (this) {
-        _PaymentMethod.cod => 'Cash on Delivery',
-        _PaymentMethod.upi => 'UPI',
-        _PaymentMethod.card => 'Credit / Debit Card',
-      };
-
-  IconData get icon => switch (this) {
-        _PaymentMethod.cod => Icons.payments_outlined,
-        _PaymentMethod.upi => Icons.qr_code,
-        _PaymentMethod.card => Icons.credit_card,
-      };
-}
-
-/// Single-page checkout: delivery address, order items, payment method,
-/// price breakup, place order. Matches the reference theme's IA - payment
-/// method is chosen inline here, not on a separate route.
+/// Single-page checkout: delivery address, order items, coupon, price
+/// breakup, pay. Payment method itself (UPI/card/wallet) is chosen inside
+/// the Razorpay widget, not here — there is no COD; the checkout contract
+/// only ever returns a Razorpay order.
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
 
@@ -36,139 +27,300 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 }
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
-  _PaymentMethod _method = _PaymentMethod.cod;
+  final _couponController = TextEditingController();
+  String? _appliedCoupon;
+  bool _paying = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // Contract rule: always re-read the cart immediately before checkout —
+    // the totals charged must be current, not whatever was last cached.
+    unawaited(
+      Future.microtask(
+        () => ref.read(cartControllerProvider.notifier).refresh(),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _couponController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pay() async {
+    if (_paying) return;
+    setState(() {
+      _paying = true;
+      _error = null;
+    });
+
+    try {
+      // Has side effects even before payment — re-validates stock/price live
+      // and reserves stock — which is exactly why this only runs on the
+      // explicit tap, never speculatively.
+      final checkoutOrder = await ref
+          .read(ordersRepositoryProvider)
+          .checkout(couponCode: _appliedCoupon);
+
+      final result = await openRazorpayCheckout(
+        keyId: checkoutOrder.keyId,
+        providerOrderId: checkoutOrder.providerOrderId,
+        amountRupees: checkoutOrder.amount,
+        currency: checkoutOrder.currency,
+      );
+
+      if (!mounted) return;
+
+      switch (result.outcome) {
+        case RazorpayOutcome.failure:
+          // The order this checkout call created resolves to CANCELLED on
+          // its own via the webhook; the cart is untouched, so staying here
+          // and letting the user retry is safe.
+          setState(() => _error = result.message);
+        case RazorpayOutcome.success:
+        case RazorpayOutcome.externalWallet:
+          // Neither means the order is actually confirmed yet — the
+          // processing screen verifies it immediately (falling back to
+          // polling for the external-wallet case, which has no payment id
+          // yet), per the checkout contract §4.
+          unawaited(
+            Navigator.pushReplacementNamed(
+              context,
+              orderProcessingScreenRoute,
+              arguments: OrderProcessingArgs(
+                orderId: checkoutOrder.orderId,
+                providerPaymentId: result.paymentId,
+                signature: result.signature,
+              ),
+            ),
+          );
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = orderErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _paying = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final cart = ref.watch(cartControllerProvider.notifier);
-    final lines = ref.watch(cartControllerProvider);
+    final cartAsync = ref.watch(cartControllerProvider);
     final theme = Theme.of(context);
     final ext = theme.extension<AppColorsExt>()!;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Checkout')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md,
-          AppSpacing.sm,
-          AppSpacing.md,
-          140,
-        ),
-        children: [
-          _Section(
-            title: 'Delivery Address',
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                border: Border.all(color: ext.divider),
-                borderRadius: AppRadius.mdAll,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.location_on_outlined,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Expanded(
-                    child: Text(
-                      'Add a delivery address to continue.\nAddress book is coming soon.',
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      body: cartAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, st) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Text(cartErrorMessage(err), textAlign: TextAlign.center),
           ),
-          _Section(
-            title: 'Order Items (${lines.length})',
-            child: Column(
-              children: [
-                for (final line in lines)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: AppRadius.smAll,
-                          child: SizedBox(
-                            width: 44,
-                            height: 44,
-                            child: CatalogImage(
-                              source: line.product.displayImage,
-                              isRemote: line.product.hasRemoteImage,
+        ),
+        data: (cart) {
+          final lines = cart.items;
+          final short = lines.any((l) => l.available < l.quantity);
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              140,
+            ),
+            children: [
+              _Section(
+                title: 'Delivery Address',
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: ext.divider),
+                    borderRadius: AppRadius.mdAll,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      const Expanded(
+                        child: Text(
+                          'Add a delivery address to continue.\nAddress book is coming soon.',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (short)
+                Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: ext.warning.withValues(alpha: 0.1),
+                    borderRadius: AppRadius.mdAll,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: ext.warning,
+                        size: 18,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      const Expanded(
+                        child: Text(
+                          'Some items in your cart have less stock than you '
+                          'requested. Update quantities before paying.',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              _Section(
+                title: 'Order Items (${lines.length})',
+                child: Column(
+                  children: [
+                    for (final line in lines)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: AppRadius.smAll,
+                              child: SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: CatalogImage(
+                                  source: line.image,
+                                  isRemote: line.hasRemoteImage,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                line.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text('× ${line.quantity}'),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(formatInr(line.lineTotal)),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              _Section(
+                title: 'Coupon',
+                child: _appliedCoupon != null
+                    ? Container(
+                        padding: const EdgeInsets.all(AppSpacing.smd),
+                        decoration: BoxDecoration(
+                          color: ext.success.withValues(alpha: 0.1),
+                          borderRadius: AppRadius.mdAll,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.local_offer,
+                              size: 18,
+                              color: ext.success,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text("'$_appliedCoupon' applied")),
+                            TextButton(
+                              onPressed: _paying
+                                  ? null
+                                  : () => setState(() => _appliedCoupon = null),
+                              child: const Text('Remove'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _couponController,
+                              enabled: !_paying,
+                              textCapitalization: TextCapitalization.characters,
+                              decoration: const InputDecoration(
+                                hintText: 'Enter coupon code',
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Text(
-                            line.product.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          const SizedBox(width: AppSpacing.sm),
+                          ElevatedButton(
+                            // In a Row — see AppButtonStyles.inline.
+                            style: AppButtonStyles.inline,
+                            onPressed: _paying
+                                ? null
+                                : () {
+                                    final code = _couponController.text.trim();
+                                    if (code.isEmpty) return;
+                                    // Not validated locally — the checkout
+                                    // call is the only place that knows if a
+                                    // code is real; an invalid one surfaces
+                                    // as an error there, with the coupon
+                                    // still editable to fix or remove.
+                                    setState(() => _appliedCoupon = code);
+                                  },
+                            child: const Text('Apply'),
                           ),
-                        ),
-                        Text('× ${line.qty}'),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(formatInr(line.lineTotal)),
-                      ],
+                        ],
+                      ),
+              ),
+              _Section(
+                title: 'Order Summary',
+                child: Column(
+                  children: [
+                    _SummaryRow('Subtotal', formatInr(cart.subtotal)),
+                    const Divider(height: AppSpacing.lg),
+                    _SummaryRow('Total', formatInr(cart.total), isTotal: true),
+                    Text(
+                      'Coupon discounts, if any, are applied when you pay.',
+                      style:
+                          theme.textTheme.bodySmall?.copyWith(color: ext.muted),
                     ),
-                  ),
-              ],
-            ),
-          ),
-          _Section(
-            title: 'Payment Method',
-            child: Column(
-              children: [
-                for (final method in _PaymentMethod.values)
-                  _PaymentMethodTile(
-                    method: method,
-                    isSelected: method == _method,
-                    onTap: () => setState(() => _method = method),
-                  ),
-              ],
-            ),
-          ),
-          _Section(
-            title: 'Order Summary',
-            child: Column(
-              children: [
-                _SummaryRow('Subtotal', formatInr(cart.subtotal)),
-                if (cart.savings > 0)
-                  _SummaryRow(
-                    'Discount',
-                    '-${formatInr(cart.savings)}',
-                    valueColor: ext.discount,
-                  ),
-                _SummaryRow(
-                  'Delivery Fee',
-                  cart.deliveryFee_ == 0
-                      ? 'FREE'
-                      : formatInr(cart.deliveryFee_),
-                  valueColor: cart.deliveryFee_ == 0 ? ext.success : null,
+                  ],
                 ),
-                const Divider(height: AppSpacing.lg),
-                _SummaryRow('Total', formatInr(cart.grandTotal), isTotal: true),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _ErrorBanner(_error!),
               ],
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: ElevatedButton(
-            onPressed: lines.isEmpty
-                ? null
-                : () {
-                    cart.clear();
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      thanksForOrderScreenRoute,
-                      (route) => false,
-                    );
-                  },
-            child: Text('Place Order · ${formatInr(cart.grandTotal)}'),
+            onPressed: switch (cartAsync) {
+              AsyncData(value: final cart)
+                  when cart.items.isNotEmpty && !_paying =>
+                _pay,
+              _ => null,
+            },
+            child: Text(
+              _paying
+                  ? 'Opening payment…'
+                  : switch (cartAsync) {
+                      AsyncData(value: final cart) =>
+                        'Pay · ${formatInr(cart.total)}',
+                      _ => 'Pay',
+                    },
+            ),
           ),
         ),
       ),
@@ -176,51 +328,35 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 }
 
-class _PaymentMethodTile extends StatelessWidget {
-  const _PaymentMethodTile({
-    required this.method,
-    required this.isSelected,
-    required this.onTap,
-  });
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner(this.message);
 
-  final _PaymentMethod method;
-  final bool isSelected;
-  final VoidCallback onTap;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final ext = theme.extension<AppColorsExt>()!;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: AppRadius.mdAll,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: isSelected ? theme.colorScheme.primary : ext.divider,
-            width: isSelected ? 1.4 : 1,
-          ),
-          borderRadius: AppRadius.mdAll,
-        ),
-        child: Row(
-          children: [
-            Icon(method.icon, color: theme.colorScheme.primary),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: Text(method.label)),
-            Icon(
-              isSelected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_unchecked,
-              color: isSelected ? theme.colorScheme.primary : ext.muted,
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.smd,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.errorContainer,
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, size: 18, color: scheme.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(color: scheme.onErrorContainer, fontSize: 13),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -249,17 +385,11 @@ class _Section extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow(
-    this.label,
-    this.value, {
-    this.isTotal = false,
-    this.valueColor,
-  });
+  const _SummaryRow(this.label, this.value, {this.isTotal = false});
 
   final String label;
   final String value;
   final bool isTotal;
-  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -272,7 +402,7 @@ class _SummaryRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: style),
-          Text(value, style: style?.copyWith(color: valueColor)),
+          Text(value, style: style),
         ],
       ),
     );

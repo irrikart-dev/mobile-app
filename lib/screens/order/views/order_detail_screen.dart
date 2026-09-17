@@ -1,14 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../components/catalog_image.dart';
 import '../../../core/theme/app_colors_extension.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
 import '../../../core/utils/formatters.dart';
-import '../../../models/catalog_data.dart';
 import '../../../models/order_data.dart';
 
-/// Order detail: tracking timeline + line items + total.
+/// The normal fulfillment progression. A cancelled/returned order (or a
+/// status this build doesn't recognise) shows a status banner instead —
+/// see [_StatusSection].
+const _flow = [
+  OrderStatus.placed,
+  OrderStatus.confirmed,
+  OrderStatus.packed,
+  OrderStatus.shipped,
+  OrderStatus.delivered,
+];
+
+/// Order detail: status + line items + total, from `GET /orders/{id}`.
+///
+/// Unlike the old mock data, there is no per-step timestamp from the API —
+/// only the current [OrderStatus] — so the timeline shows *which* steps are
+/// done, not *when* each one happened.
 class OrderDetailScreen extends ConsumerWidget {
   const OrderDetailScreen({super.key, required this.orderId});
 
@@ -16,66 +31,138 @@ class OrderDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final order = mockOrders.where((o) => o.id == orderId).firstOrNull;
-
-    if (order == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Order')),
-        body: const Center(child: Text('Order not found')),
-      );
-    }
-
-    final catalog = ref.watch(catalogDataProvider);
+    final orderAsync = ref.watch(orderDetailProvider(orderId));
 
     return Scaffold(
-      appBar: AppBar(title: Text(order.id)),
-      body: Builder(
-        builder: (context) {
-          final data = catalog.valueOrNull;
-          return ListView(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            children: [
-              Text(
-                'Placed ${order.date}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _TrackingTimeline(steps: order.trackingSteps),
-              const SizedBox(height: AppSpacing.lg),
-              Text('Items', style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: AppSpacing.sm),
-              for (final item in order.items)
-                _OrderItemRow(
-                  item: item,
-                  productName: data?.productBySlug(item.productSlug)?.name ??
-                      item.productSlug,
-                  productImage: data?.productBySlug(item.productSlug)?.image,
+      appBar:
+          AppBar(title: Text(orderAsync.valueOrNull?.orderNumber ?? 'Order')),
+      body: orderAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, st) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(orderErrorMessage(err), textAlign: TextAlign.center),
+                const SizedBox(height: AppSpacing.md),
+                ElevatedButton(
+                  onPressed: () => ref.invalidate(orderDetailProvider(orderId)),
+                  child: const Text('Retry'),
                 ),
-              const Divider(height: AppSpacing.xl),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Total', style: Theme.of(context).textTheme.titleMedium),
-                  Text(
-                    formatInr(order.total),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                  ),
-                ],
-              ),
-            ],
-          );
-        },
+              ],
+            ),
+          ),
+        ),
+        data: (order) => ListView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: [
+            Text(
+              'Placed ${_formatDateTime(order.createdAt)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _StatusSection(order: order),
+            const SizedBox(height: AppSpacing.lg),
+            Text('Items', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: AppSpacing.sm),
+            for (final item in order.items) _OrderItemRow(item: item),
+            const Divider(height: AppSpacing.xl),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  formatInr(order.amount),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _TrackingTimeline extends StatelessWidget {
-  const _TrackingTimeline({required this.steps});
+String _formatDateTime(DateTime date) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${date.day} ${months[date.month - 1]} ${date.year}';
+}
 
-  final List<OrderTrackingStep> steps;
+class _StatusSection extends StatelessWidget {
+  const _StatusSection({required this.order});
+
+  final Order order;
+
+  @override
+  Widget build(BuildContext context) {
+    final flowIndex = _flow.indexOf(order.status);
+    if (flowIndex == -1) {
+      // Cancelled, returned, or a status this build doesn't recognise —
+      // show it as a banner rather than a misleading timeline.
+      return _StatusBanner(order: order);
+    }
+    return _Timeline(currentIndex: flowIndex);
+  }
+}
+
+class _StatusBanner extends StatelessWidget {
+  const _StatusBanner({required this.order});
+
+  final Order order;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ext = theme.extension<AppColorsExt>()!;
+    final isCancelled = order.status == OrderStatus.cancelled;
+    final color = isCancelled ? ext.outOfStock : ext.info;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isCancelled ? Icons.cancel_outlined : Icons.info_outline,
+            color: color,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              orderStatusLabel(order.status, order.rawStatus),
+              style: theme.textTheme.titleSmall?.copyWith(color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Timeline extends StatelessWidget {
+  const _Timeline({required this.currentIndex});
+
+  final int currentIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +171,7 @@ class _TrackingTimeline extends StatelessWidget {
 
     return Column(
       children: [
-        for (var i = 0; i < steps.length; i++)
+        for (var i = 0; i < _flow.length; i++)
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,11 +183,11 @@ class _TrackingTimeline extends StatelessWidget {
                       height: 20,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: steps[i].done
+                        color: i <= currentIndex
                             ? theme.colorScheme.primary
                             : ext.divider,
                       ),
-                      child: steps[i].done
+                      child: i <= currentIndex
                           ? const Icon(
                               Icons.check,
                               size: 14,
@@ -108,11 +195,11 @@ class _TrackingTimeline extends StatelessWidget {
                             )
                           : null,
                     ),
-                    if (i < steps.length - 1)
+                    if (i < _flow.length - 1)
                       Expanded(
                         child: Container(
                           width: 2,
-                          color: steps[i + 1].done
+                          color: i < currentIndex
                               ? theme.colorScheme.primary
                               : ext.divider,
                         ),
@@ -123,23 +210,13 @@ class _TrackingTimeline extends StatelessWidget {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: Row(
-                      children: [
-                        Text(
-                          steps[i].label,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: steps[i].done
-                                ? FontWeight.w700
-                                : FontWeight.w400,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (steps[i].date != null)
-                          Text(
-                            steps[i].date!,
-                            style: theme.textTheme.bodySmall,
-                          ),
-                      ],
+                    child: Text(
+                      orderStatusLabel(_flow[i], ''),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: i <= currentIndex
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                      ),
                     ),
                   ),
                 ),
@@ -152,15 +229,9 @@ class _TrackingTimeline extends StatelessWidget {
 }
 
 class _OrderItemRow extends StatelessWidget {
-  const _OrderItemRow({
-    required this.item,
-    required this.productName,
-    this.productImage,
-  });
+  const _OrderItemRow({required this.item});
 
-  final OrderLineItem item;
-  final String productName;
-  final String? productImage;
+  final OrderItem item;
 
   @override
   Widget build(BuildContext context) {
@@ -170,27 +241,23 @@ class _OrderItemRow extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: AppRadius.smAll,
-            child: productImage != null
-                ? Image.asset(
-                    productImage!,
-                    width: 48,
-                    height: 48,
-                    fit: BoxFit.cover,
-                  )
-                : Container(
-                    width: 48,
-                    height: 48,
-                    color: Colors.grey.shade200,
-                  ),
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: CatalogImage(
+                source: item.image,
+                isRemote: item.hasRemoteImage,
+              ),
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child:
-                Text(productName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
-          Text('× ${item.qty}'),
+          Text('× ${item.quantity}'),
           const SizedBox(width: AppSpacing.sm),
-          Text(formatInr(item.lineTotal)),
+          Text(formatInr(item.totalPrice)),
         ],
       ),
     );
