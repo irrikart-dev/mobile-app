@@ -45,11 +45,23 @@
 		<true/>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
+		<!-- http/https: general link handling. The rest: UPI apps Razorpay's
+		     checkout widget may hand off to (tez=Google Pay, phonepe, paytm,
+		     bhim/upi). Without these, iOS silently refuses to open them and
+		     the user is stuck on Razorpay's fallback web flow instead. -->
 		<key>LSApplicationQueriesSchemes</key>
 		<array>
 			<string>http</string>
 			<string>https</string>
+			<string>tez</string>
+			<string>phonepe</string>
+			<string>paytm</string>
+			<string>upi</string>
+			<string>credpay</string>
 		</array>
+		<!-- Razorpay's checkout widget can scan a card via the camera. -->
+		<key>NSCameraUsageDescription</key>
+		<string>IrriKart uses the camera during checkout to scan your card, if you choose to.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 		<!-- Reversed iOS OAuth client id, from firebase_options.dart's `ios`

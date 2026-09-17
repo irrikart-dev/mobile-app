@@ -56,6 +56,9 @@ dependencies:
   url_launcher: ^6.3.1
   form_field_validator: ^1.1.0 # retired once core/utils/validators.dart lands
 
+  # --- payments ---
+  razorpay_flutter: ^1.4.6
+
   # --- utils ---
   intl: ^0.20.2
   logger: ^2.5.0
