@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../components/app_kicker.dart';
 import '../../../components/glass/glass_app_bar.dart';
+import '../../../components/product/catalog_grid_skeleton.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
 import '../../../models/catalog_category.dart';
@@ -11,6 +12,7 @@ import '../../../models/catalog_product.dart';
 import '../../../route/route_constants.dart';
 import 'components/category_scroller.dart';
 import 'components/home_banner.dart';
+import 'components/home_search_bar.dart';
 import 'components/product_section.dart';
 
 /// There is no `featured` flag any more (removed from the catalogue contract
@@ -64,10 +66,6 @@ class HomeScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            onPressed: () => Navigator.pushNamed(context, searchScreenRoute),
-            icon: const Icon(Icons.search),
-          ),
-          IconButton(
             onPressed: () =>
                 Navigator.pushNamed(context, notificationsScreenRoute),
             icon: const Icon(Icons.notifications_none),
@@ -75,7 +73,7 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       body: catalog.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const HomeSkeleton(),
         error: (err, st) =>
             Center(child: Text('Could not load catalogue: $err')),
         data: (data) => RefreshIndicator(
@@ -91,6 +89,11 @@ class HomeScreen extends ConsumerWidget {
               // The catalogue fell back to the bundled fixtures, so anything
               // added in the admin dashboard is missing until a refresh works.
               if (data.isOffline) const _OfflineCatalogueNotice(),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: HomeSearchBar(),
+              ),
+              const SizedBox(height: AppSpacing.md),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: HomeBanner(),

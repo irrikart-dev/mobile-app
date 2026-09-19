@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../components/catalog_image.dart';
 import '../../../components/glass/glass_sheet.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
@@ -17,9 +16,13 @@ import '../../../models/catalog_data.dart';
 import '../../../models/catalog_product.dart';
 import '../../../models/wishlist_state.dart';
 import '../../../route/route_constants.dart';
+import '../../reviews/view/product_reviews_screen.dart';
+import 'components/bulk_order_button.dart';
 import 'components/info_sheet.dart';
+import 'components/product_gallery.dart';
 import 'components/product_list_tile.dart';
 import 'components/shipping_info_sheet.dart';
+import 'components/variant_selector.dart';
 import 'product_returns_screen.dart';
 
 /// Product detail screen. Matches the reference theme's
@@ -37,6 +40,7 @@ class ProductDetailsScreen extends ConsumerStatefulWidget {
 
 class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   int _qty = 1;
+  String? _selectedVariantId;
 
   @override
   Widget build(BuildContext context) {
@@ -54,10 +58,27 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
             body: Center(child: Text('Product not found')),
           );
         }
+        final variant = product.variants.firstWhere(
+          (v) => v.id == _selectedVariantId,
+          orElse: () => product.variants.isNotEmpty
+              ? product.variants.first
+              : CatalogVariant(
+                  id: product.variantId,
+                  sku: product.sku,
+                  size: null,
+                  color: null,
+                  unit: product.unit,
+                  price: product.price,
+                  stockQty: product.stockQty,
+                  available: product.stockQty,
+                ),
+        );
         return _ProductDetailsBody(
           product: product,
+          variant: variant,
           qty: _qty,
           onQtyChanged: (q) => setState(() => _qty = q),
+          onVariantChanged: (id) => setState(() => _selectedVariantId = id),
         );
       },
     );
@@ -67,13 +88,17 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
 class _ProductDetailsBody extends ConsumerWidget {
   const _ProductDetailsBody({
     required this.product,
+    required this.variant,
     required this.qty,
     required this.onQtyChanged,
+    required this.onVariantChanged,
   });
 
   final CatalogProduct product;
+  final CatalogVariant variant;
   final int qty;
   final ValueChanged<int> onQtyChanged;
+  final ValueChanged<String> onVariantChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -84,7 +109,11 @@ class _ProductDetailsBody extends ConsumerWidget {
     );
 
     return Scaffold(
-      bottomNavigationBar: _AddToCartBar(product: product, qty: qty),
+      bottomNavigationBar: _AddToCartBar(
+        product: product,
+        variant: variant,
+        qty: qty,
+      ),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -108,15 +137,12 @@ class _ProductDetailsBody extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.md,
                 ),
-                child: ClipRRect(
-                  borderRadius: AppRadius.lgAll,
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: CatalogImage(
-                      source: product.displayImage,
-                      isRemote: product.hasRemoteImage,
-                    ),
-                  ),
+                child: ProductGallery(
+                  images: product.images.isNotEmpty
+                      ? product.images
+                      : [if (product.displayImage != null) product.displayImage!],
+                  isRemote: product.hasRemoteImage,
+                  videoUrl: product.videoUrl,
                 ),
               ),
             ),
@@ -135,23 +161,35 @@ class _ProductDetailsBody extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: [
-                        Icon(Icons.star_rounded, size: 18, color: ext.warning),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${product.rating}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                    InkWell(
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        productReviewsScreenRoute,
+                        arguments: ProductReviewsArgs(
+                          productId: product.id,
+                          productName: product.name,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.star_rounded, size: 18, color: ext.warning),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${product.rating}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        Text(
-                          ' (${product.reviewCount} reviews)',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                        const Spacer(),
-                        _StockPill(inStock: product.buyable),
-                      ],
+                          Text(
+                            ' (${product.reviewCount} reviews)',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                          const Spacer(),
+                          _StockPill(inStock: variant.buyable),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     Row(
@@ -159,7 +197,7 @@ class _ProductDetailsBody extends ConsumerWidget {
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          formatInr(product.price),
+                          formatInr(variant.price),
                           style: AppTypography.price(
                             theme.colorScheme.primary,
                             fontSize: 28,
@@ -167,17 +205,27 @@ class _ProductDetailsBody extends ConsumerWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          formatUnit(product.unit),
+                          formatUnit(variant.unit),
                           style: theme.textTheme.bodyMedium,
                         ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
+                    VariantSelector(
+                      variants: product.variants,
+                      selectedId: variant.id,
+                      onSelected: onVariantChanged,
+                    ),
                     _QuantityStepper(qty: qty, onChanged: onQtyChanged),
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       product.description,
                       style: theme.textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    BulkOrderButton(
+                      productName: product.name,
+                      sku: variant.sku.isNotEmpty ? variant.sku : product.sku,
                     ),
                   ],
                 ),
@@ -291,9 +339,14 @@ class _QuantityStepper extends StatelessWidget {
 }
 
 class _AddToCartBar extends ConsumerStatefulWidget {
-  const _AddToCartBar({required this.product, required this.qty});
+  const _AddToCartBar({
+    required this.product,
+    required this.variant,
+    required this.qty,
+  });
 
   final CatalogProduct product;
+  final CatalogVariant variant;
   final int qty;
 
   @override
@@ -314,11 +367,24 @@ class _AddToCartBarState extends ConsumerState<_AddToCartBar> {
         ref.read(dioProvider),
         widget.product.id,
       );
-      if (!fresh.buyable) {
+      final freshVariant = fresh.variants.firstWhere(
+        (v) => v.id == widget.variant.id,
+        orElse: () => CatalogVariant(
+          id: fresh.variantId,
+          sku: fresh.sku,
+          size: null,
+          color: null,
+          unit: fresh.unit,
+          price: fresh.price,
+          stockQty: fresh.stockQty,
+          available: fresh.stockQty,
+        ),
+      );
+      if (!freshVariant.buyable) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('This product just went out of stock.'),
+              content: Text('This option just went out of stock.'),
             ),
           );
         }
@@ -327,7 +393,7 @@ class _AddToCartBarState extends ConsumerState<_AddToCartBar> {
 
       await ref
           .read(cartControllerProvider.notifier)
-          .add(fresh.variantId, quantity: widget.qty);
+          .add(freshVariant.id, quantity: widget.qty);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -355,7 +421,10 @@ class _AddToCartBarState extends ConsumerState<_AddToCartBar> {
 
   @override
   Widget build(BuildContext context) {
-    final product = widget.product;
+    final variant = widget.variant;
+    final theme = Theme.of(context);
+    final enabled = variant.buyable && !_busy;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -364,19 +433,59 @@ class _AddToCartBarState extends ConsumerState<_AddToCartBar> {
           AppSpacing.md,
           AppSpacing.sm,
         ),
-        child: ElevatedButton.icon(
-          onPressed: product.buyable && !_busy ? _addToCart : null,
-          icon: _busy
-              ? const SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.shopping_bag_outlined),
-          label: Text(
-            !product.buyable
-                ? 'Out of stock'
-                : 'Add to cart · ${formatInr(product.price * widget.qty)}',
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.smAll,
+            gradient: enabled
+                ? LinearGradient(
+                    colors: [
+                      theme.colorScheme.primary.withValues(alpha: 0.75),
+                      theme.colorScheme.primary,
+                    ],
+                  )
+                : null,
+            color: enabled ? null : theme.disabledColor.withValues(alpha: 0.2),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: AppRadius.smAll,
+              onTap: enabled ? _addToCart : null,
+              child: SizedBox(
+                height: 52,
+                child: Center(
+                  child: _busy
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.shopping_bag_outlined,
+                              color: enabled ? Colors.white : theme.disabledColor,
+                              size: 18,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(
+                              !variant.buyable
+                                  ? 'Out of stock'
+                                  : 'Add to cart · ${formatInr(variant.price * widget.qty)}',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: enabled ? Colors.white : theme.disabledColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

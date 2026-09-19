@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../components/catalog_image.dart';
+import '../../../components/product/catalog_grid_skeleton.dart';
 import '../../../core/theme/app_colors_extension.dart';
 import '../../../core/theme/component_themes/button_styles.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../entry_point_tab.dart';
 import '../../../models/cart_state.dart';
 import '../../../route/route_constants.dart';
 
@@ -39,7 +41,7 @@ class CartScreen extends ConsumerWidget {
         children: [
           Expanded(
             child: cartAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const CartLinesSkeleton(),
               error: (err, st) => _CartError(error: err),
               data: (cart) => cart.isEmpty
                   ? const _EmptyCart()
@@ -181,11 +183,11 @@ class _SignInRequiredNotice extends StatelessWidget {
   }
 }
 
-class _EmptyCart extends StatelessWidget {
+class _EmptyCart extends ConsumerWidget {
   const _EmptyCart();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Center(
       child: Padding(
@@ -208,7 +210,8 @@ class _EmptyCart extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () =>
+                  ref.read(entryTabIndexProvider.notifier).state = 0,
               child: const Text('Start Shopping'),
             ),
           ],
@@ -415,11 +418,12 @@ class _CartSummaryBar extends ConsumerWidget {
                 ),
               ),
               ElevatedButton(
-                // In a Row — see AppButtonStyles.inline for why this is not
-                // optional.
-                style: AppButtonStyles.inline,
-                onPressed: () =>
-                    Navigator.pushNamed(context, checkoutScreenRoute),
+                style: AppButtonStyles.inline.copyWith(
+                  padding: WidgetStateProperty.all(
+                    const EdgeInsets.symmetric(horizontal: 40),
+                  ),
+                ),
+                onPressed: () => Navigator.pushNamed(context, checkoutScreenRoute),
                 child: const Text('Checkout'),
               ),
             ],

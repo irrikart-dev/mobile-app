@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:irrikart/components/whatsapp_support_fab.dart';
 import 'package:irrikart/core/auth/auth_service.dart';
 import 'package:irrikart/core/firebase/firebase_bootstrap.dart';
 import 'package:irrikart/core/theme/app_theme.dart';
@@ -16,15 +17,8 @@ Future<void> main() async {
   // only the sign-in screens degrade. See `bootstrapFirebase`.
   final firebaseStatus = await bootstrapFirebase();
 
-  // Firebase persists the signed-in user across app launches on its own —
-  // by the time `Firebase.initializeApp()` above has resolved, the native
-  // SDK has already loaded any saved credential, so `currentUser` here is
-  // reliable. Previously this was ignored and every cold start hardcoded
-  // the onboarding route, which forced a real returning user back through
-  // onboarding -> login every single time — indistinguishable from actually
-  // being logged out. Route straight past both when a session already exists.
-  final hasSession = firebaseStatus == FirebaseStatus.ready &&
-      FirebaseAuth.instance.currentUser != null;
+  final hasSession =
+      firebaseStatus == FirebaseStatus.ready && await _hasRestoredSession();
 
   runApp(
     ProviderScope(
@@ -34,6 +28,29 @@ Future<void> main() async {
       ),
     ),
   );
+}
+
+/// Whether a signed-in session survives this cold start.
+///
+/// `currentUser` is a cached getter — on some devices/SDK timings it can
+/// still read null immediately after `initializeApp()` resolves, before the
+/// native side has finished restoring the persisted user (the previous fix
+/// here assumed `authStateChanges()` always beats that race — it apparently
+/// doesn't reliably on every device, since this still logged people out).
+/// So: check the fast synchronous path first, and only fall back to
+/// awaiting the stream (bounded by a timeout, so a stream that never fires
+/// can't hang the splash forever) if that path says null.
+Future<bool> _hasRestoredSession() async {
+  if (FirebaseAuth.instance.currentUser != null) return true;
+  try {
+    final user = await FirebaseAuth.instance
+        .authStateChanges()
+        .first
+        .timeout(const Duration(seconds: 5));
+    return user != null;
+  } catch (_) {
+    return FirebaseAuth.instance.currentUser != null;
+  }
 }
 
 class IrriKartApp extends ConsumerStatefulWidget {
@@ -96,6 +113,12 @@ class _IrriKartAppState extends ConsumerState<IrriKartApp>
       themeMode: ThemeMode.system,
       onGenerateRoute: router.generateRoute,
       initialRoute: widget.initialRoute,
+      builder: (context, child) => Stack(
+        children: [
+          if (child != null) child,
+          const WhatsAppSupportFab(),
+        ],
+      ),
     );
   }
 }

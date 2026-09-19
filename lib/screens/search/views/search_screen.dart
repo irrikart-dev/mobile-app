@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../components/app_kicker.dart';
+import '../../../components/product/catalog_grid_skeleton.dart';
 import '../../../components/product/catalog_product_card.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
 import '../../../models/catalog_data.dart';
@@ -25,6 +26,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _searchFor(String query) {
+    setState(() {
+      _controller.text = query;
+      _controller.selection = TextSelection.collapsed(offset: query.length);
+      _query = query;
+    });
   }
 
   @override
@@ -54,7 +63,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         ],
       ),
       body: catalog.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const CatalogGridSkeleton(),
         error: (err, st) => Center(child: Text('Could not search: $err')),
         data: (data) {
           if (_query.trim().isEmpty) {
@@ -62,7 +71,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             // stand in for "Popular right now".
             final popular = data.products.where((p) => p.buyable).toList()
               ..sort((a, b) => b.rating.compareTo(a.rating));
-            return _RecentAndPopular(products: popular.take(8).toList());
+            return _RecentAndPopular(
+              products: popular.take(8).toList(),
+              onSuggestionTap: _searchFor,
+            );
           }
           final results = data.search(_query);
           if (results.isEmpty) {
@@ -80,7 +92,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               crossAxisCount: 2,
               mainAxisSpacing: AppSpacing.sm,
               crossAxisSpacing: AppSpacing.sm,
-              childAspectRatio: 0.64,
+              childAspectRatio: 0.60,
             ),
             itemBuilder: (context, i) => CatalogProductCard(
               product: results[i],
@@ -98,9 +110,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 }
 
 class _RecentAndPopular extends StatelessWidget {
-  const _RecentAndPopular({required this.products});
+  const _RecentAndPopular({
+    required this.products,
+    required this.onSuggestionTap,
+  });
 
   final List<CatalogProduct> products;
+  final ValueChanged<String> onSuggestionTap;
 
   @override
   Widget build(BuildContext context) {
@@ -114,15 +130,18 @@ class _RecentAndPopular extends StatelessWidget {
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: AppSpacing.sm),
-          const Wrap(
+          Wrap(
             spacing: AppSpacing.xs,
             runSpacing: AppSpacing.xs,
             children: [
-              _SuggestionChip('Sprinklers'),
-              _SuggestionChip('Drip kit'),
-              _SuggestionChip('Filters'),
-              _SuggestionChip('Ball valve'),
-              _SuggestionChip('Fogger'),
+              for (final label in const [
+                'Sprinklers',
+                'Drip kit',
+                'Filters',
+                'Ball valve',
+                'Fogger',
+              ])
+                _SuggestionChip(label, onTap: onSuggestionTap),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -140,7 +159,7 @@ class _RecentAndPopular extends StatelessWidget {
               crossAxisCount: 2,
               mainAxisSpacing: AppSpacing.sm,
               crossAxisSpacing: AppSpacing.sm,
-              childAspectRatio: 0.64,
+              childAspectRatio: 0.60,
             ),
             itemBuilder: (context, i) => CatalogProductCard(
               product: products[i],
@@ -158,12 +177,13 @@ class _RecentAndPopular extends StatelessWidget {
 }
 
 class _SuggestionChip extends StatelessWidget {
-  const _SuggestionChip(this.label);
+  const _SuggestionChip(this.label, {required this.onTap});
 
   final String label;
+  final ValueChanged<String> onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ActionChip(label: Text(label), onPressed: () {});
+    return ActionChip(label: Text(label), onPressed: () => onTap(label));
   }
 }

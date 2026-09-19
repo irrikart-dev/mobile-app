@@ -13,6 +13,55 @@ class CatalogSpec {
   }
 }
 
+/// One purchasable size/pack option of a product (`ProductVariant` on the
+/// backend). Every product has at least one — [CatalogProduct.variantId]
+/// always points at `variants.first`, so screens that don't care about
+/// options keep working unmodified.
+class CatalogVariant {
+  const CatalogVariant({
+    required this.id,
+    required this.sku,
+    required this.size,
+    required this.color,
+    required this.unit,
+    required this.price,
+    required this.stockQty,
+    required this.available,
+  });
+
+  final String id;
+  final String sku;
+  final String? size;
+  final String? color;
+  final String unit;
+  final num price;
+  final int stockQty;
+
+  /// `stockQty` minus what other orders already have reserved — this, not
+  /// [stockQty], is what actually caps how many can be added to cart.
+  final int available;
+
+  bool get buyable => available > 0;
+
+  /// Chip label shown in the variant selector — falls back to the unit when
+  /// there's no size/color set, so every variant still reads as something.
+  String get label => size ?? color ?? unit;
+
+  factory CatalogVariant.fromJson(Map<String, dynamic> json) {
+    final stockQty = (json['stockQty'] as num?)?.toInt() ?? 0;
+    return CatalogVariant(
+      id: json['id'] as String,
+      sku: json['sku'] as String? ?? '',
+      size: json['size'] as String?,
+      color: json['color'] as String?,
+      unit: json['unit'] as String? ?? 'piece',
+      price: (json['price'] as num?) ?? 0,
+      stockQty: stockQty,
+      available: (json['available'] as num?)?.toInt() ?? stockQty,
+    );
+  }
+}
+
 /// A product.
 ///
 /// Loaded either from the live API (`GET /api/v1/catalog/products*`) or, when
@@ -36,6 +85,9 @@ class CatalogProduct {
     required this.categoryName,
     required this.image,
     required this.imageUrl,
+    this.images = const [],
+    this.videoUrl,
+    this.variants = const [],
     required this.tagline,
     required this.description,
     required this.features,
@@ -85,6 +137,20 @@ class CatalogProduct {
   /// image — render a placeholder.
   final String? imageUrl;
 
+  /// Full gallery, absolute URLs, position-ordered — empty on the bundled
+  /// offline fixtures. [displayImage] (`images.first`, effectively) stays the
+  /// single image every other screen renders; the PDP is the only place that
+  /// reads the rest.
+  final List<String> images;
+
+  /// YouTube URL for the PDP's demo-video slot, if the admin set one.
+  final String? videoUrl;
+
+  /// Every purchasable size/pack option. Always has at least one entry once
+  /// loaded from the live API — [variantId]/[price]/[stockQty] mirror
+  /// `variants.first` for screens that don't need the rest.
+  final List<CatalogVariant> variants;
+
   final String tagline;
   final String description;
   final List<String> features;
@@ -132,6 +198,11 @@ class CatalogProduct {
       categoryName: json['categoryName'] as String? ?? '',
       image: (image != null && image.isNotEmpty) ? image : null,
       imageUrl: json['imageUrl'] as String?,
+      images: ((json['images'] as List?) ?? const []).cast<String>(),
+      videoUrl: json['videoUrl'] as String?,
+      variants: ((json['variants'] as List?) ?? const [])
+          .map((e) => CatalogVariant.fromJson(e as Map<String, dynamic>))
+          .toList(),
       tagline: json['tagline'] as String? ?? '',
       description: json['description'] as String? ?? '',
       features: ((json['features'] as List?) ?? const []).cast<String>(),

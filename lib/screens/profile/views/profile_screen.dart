@@ -8,6 +8,7 @@ import 'package:flutter_svg/svg.dart';
 
 import '../../../core/auth/auth_service.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
+import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../models/wishlist_state.dart';
 import '../../../route/screen_export.dart';
 import 'components/profile_card.dart';
@@ -79,7 +80,10 @@ class ProfileScreen extends ConsumerWidget {
           ProfileMenuListTile(
             text: 'Get Help',
             svgSrc: 'assets/icons/Help.svg',
-            press: () {},
+            press: () => openWhatsAppSupport(
+              context,
+              message: 'Hi Irrikart Team , I need some help',
+            ),
             isShowDivider: signedIn && kDebugMode,
           ),
           if (signedIn && kDebugMode) const _CopyIdTokenTile(),

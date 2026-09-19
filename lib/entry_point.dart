@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'components/glass/glass_bottom_nav.dart';
+import 'entry_point_tab.dart';
 import 'models/cart_state.dart';
 import 'route/screen_export.dart';
 
@@ -17,7 +18,6 @@ class EntryPoint extends ConsumerStatefulWidget {
 }
 
 class _EntryPointState extends ConsumerState<EntryPoint> {
-  int _currentIndex = 0;
 
   static const _pages = [
     HomeScreen(),
@@ -58,10 +58,11 @@ class _EntryPointState extends ConsumerState<EntryPoint> {
   @override
   Widget build(BuildContext context) {
     final cartCount = ref.watch(cartTotalItemsProvider);
+    final currentIndex = ref.watch(entryTabIndexProvider);
 
     return Scaffold(
       extendBody: true,
-      body: IndexedStack(index: _currentIndex, children: _pages),
+      body: IndexedStack(index: currentIndex, children: _pages),
       bottomNavigationBar: GlassBottomNav(
         items: [
           for (var i = 0; i < _items.length; i++)
@@ -74,8 +75,8 @@ class _EntryPointState extends ConsumerState<EntryPoint> {
             else
               _items[i],
         ],
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        currentIndex: currentIndex,
+        onTap: (index) => ref.read(entryTabIndexProvider.notifier).state = index,
       ),
     );
   }

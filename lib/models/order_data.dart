@@ -99,6 +99,7 @@ String orderStatusLabel(OrderStatus status, String rawStatus) =>
 /// never re-fetch the catalogue price for a placed order.
 class OrderItem {
   const OrderItem({
+    required this.id,
     required this.variantId,
     required this.productId,
     required this.name,
@@ -110,6 +111,9 @@ class OrderItem {
     required this.totalPrice,
   });
 
+  /// This order item's own id — distinct from [variantId]/[productId]. Use
+  /// this, not either of those, as `orderItemId` when submitting a review.
+  final String id;
   final String variantId;
   final String productId;
   final String name;
@@ -128,6 +132,7 @@ class OrderItem {
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
     return OrderItem(
+      id: json['id'] as String,
       variantId: json['variantId'] as String,
       productId: json['productId'] as String,
       name: json['name'] as String,
@@ -179,6 +184,42 @@ class OrderSummary {
   }
 }
 
+/// The address an order shipped to — a snapshot at order time, distinct
+/// from the (editable, deletable) saved [Address] it was created from.
+class OrderAddress {
+  const OrderAddress({
+    required this.name,
+    required this.phone,
+    required this.line1,
+    required this.line2,
+    required this.city,
+    required this.state,
+    required this.pincode,
+  });
+
+  final String name;
+  final String phone;
+  final String line1;
+  final String? line2;
+  final String city;
+  final String state;
+  final String pincode;
+
+  String get oneLine => '$line1, $city, $state $pincode';
+
+  factory OrderAddress.fromJson(Map<String, dynamic> json) {
+    return OrderAddress(
+      name: json['name'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      line1: json['line1'] as String? ?? '',
+      line2: json['line2'] as String?,
+      city: json['city'] as String? ?? '',
+      state: json['state'] as String? ?? '',
+      pincode: json['pincode'] as String? ?? '',
+    );
+  }
+}
+
 /// Full order detail from `GET /orders/{id}`.
 class Order {
   const Order({
@@ -190,6 +231,7 @@ class Order {
     required this.currency,
     required this.createdAt,
     required this.items,
+    required this.address,
   });
 
   final String id;
@@ -200,6 +242,9 @@ class Order {
   final String currency;
   final DateTime createdAt;
   final List<OrderItem> items;
+
+  /// `null` only for orders placed before addresses existed.
+  final OrderAddress? address;
 
   factory Order.fromJson(Map<String, dynamic> json) {
     final raw = json['status'] as String? ?? '';
@@ -216,6 +261,9 @@ class Order {
       items: ((json['items'] as List?) ?? const [])
           .map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
           .toList(),
+      address: json['address'] == null
+          ? null
+          : OrderAddress.fromJson(json['address'] as Map<String, dynamic>),
     );
   }
 }
@@ -233,10 +281,15 @@ class OrdersRepository {
   /// coupon. This has side effects even before payment (re-validates
   /// stock/price live and **reserves stock**), so only call it on the user's
   /// explicit "place order" tap, never speculatively.
-  Future<CheckoutOrder> checkout({String? couponCode}) => _call(
+  Future<CheckoutOrder> checkout({
+    required String addressId,
+    String? couponCode,
+  }) =>
+      _call(
         () => _dio.post<dynamic>(
           '/orders/checkout',
           data: {
+            'addressId': addressId,
             if (couponCode != null && couponCode.isNotEmpty)
               'couponCode': couponCode,
           },

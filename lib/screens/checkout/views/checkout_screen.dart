@@ -10,9 +10,11 @@ import '../../../core/theme/component_themes/button_styles.dart';
 import '../../../core/theme/tokens/radius_tokens.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../models/address_data.dart';
 import '../../../models/cart_state.dart';
 import '../../../models/order_data.dart';
 import '../../../route/route_constants.dart';
+import '../../address/views/addresses_screen.dart';
 import 'order_processing_screen.dart';
 
 /// Single-page checkout: delivery address, order items, coupon, price
@@ -31,6 +33,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String? _appliedCoupon;
   bool _paying = false;
   String? _error;
+  Address? _selectedAddress;
+  bool _addressInitialized = false;
 
   @override
   void initState() {
@@ -44,6 +48,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
+  void _pickAddress() {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddressesScreen(
+          onPicked: (address) {
+            setState(() => _selectedAddress = address);
+            Navigator.pop(context);
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _couponController.dispose();
@@ -52,6 +70,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Future<void> _pay() async {
     if (_paying) return;
+    final address = _selectedAddress;
+    if (address == null) {
+      setState(() => _error = 'Choose a delivery address to continue.');
+      return;
+    }
     setState(() {
       _paying = true;
       _error = null;
@@ -61,9 +84,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       // Has side effects even before payment — re-validates stock/price live
       // and reserves stock — which is exactly why this only runs on the
       // explicit tap, never speculatively.
-      final checkoutOrder = await ref
-          .read(ordersRepositoryProvider)
-          .checkout(couponCode: _appliedCoupon);
+      final checkoutOrder = await ref.read(ordersRepositoryProvider).checkout(
+            addressId: address.id,
+            couponCode: _appliedCoupon,
+          );
 
       final result = await openRazorpayCheckout(
         keyId: checkoutOrder.keyId,
@@ -111,6 +135,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final theme = Theme.of(context);
     final ext = theme.extension<AppColorsExt>()!;
 
+    // Default to the caller's default address the first time the list
+    // loads — after that, whatever they picked (including "none yet") wins.
+    ref.listen(addressControllerProvider, (previous, next) {
+      if (_addressInitialized) return;
+      final addresses = next.valueOrNull;
+      if (addresses == null) return;
+      _addressInitialized = true;
+      if (addresses.isEmpty) return;
+      final defaults = addresses.where((a) => a.isDefault);
+      final defaultAddress = defaults.isNotEmpty ? defaults.first : addresses.first;
+      setState(() => _selectedAddress = defaultAddress);
+    });
+    ref.watch(addressControllerProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Checkout')),
       body: cartAsync.when(
@@ -135,25 +173,43 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             children: [
               _Section(
                 title: 'Delivery Address',
-                child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: ext.divider),
-                    borderRadius: AppRadius.mdAll,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        color: theme.colorScheme.primary,
+                child: InkWell(
+                  onTap: _pickAddress,
+                  borderRadius: AppRadius.mdAll,
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: _selectedAddress == null
+                            ? ext.warning
+                            : ext.divider,
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      const Expanded(
-                        child: Text(
-                          'Add a delivery address to continue.\nAddress book is coming soon.',
+                      borderRadius: AppRadius.mdAll,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          color: theme.colorScheme.primary,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: _selectedAddress == null
+                              ? const Text('Choose a delivery address')
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _selectedAddress!.name,
+                                      style: theme.textTheme.titleSmall,
+                                    ),
+                                    Text(_selectedAddress!.oneLine),
+                                  ],
+                                ),
+                        ),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -259,22 +315,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
-                          ElevatedButton(
-                            // In a Row — see AppButtonStyles.inline.
-                            style: AppButtonStyles.inline,
-                            onPressed: _paying
-                                ? null
-                                : () {
-                                    final code = _couponController.text.trim();
-                                    if (code.isEmpty) return;
-                                    // Not validated locally — the checkout
-                                    // call is the only place that knows if a
-                                    // code is real; an invalid one surfaces
-                                    // as an error there, with the coupon
-                                    // still editable to fix or remove.
-                                    setState(() => _appliedCoupon = code);
-                                  },
-                            child: const Text('Apply'),
+                          SizedBox(
+                            width: 120,
+                            child: ElevatedButton(
+                              // In a Row — see AppButtonStyles.inline.
+                              style: AppButtonStyles.inline,
+                              onPressed: _paying
+                                  ? null
+                                  : () {
+                                      final code = _couponController.text.trim();
+                                      if (code.isEmpty) return;
+
+                                      setState(() => _appliedCoupon = code);
+                                    },
+                              child: const Text('Apply'),
+                            ),
                           ),
                         ],
                       ),

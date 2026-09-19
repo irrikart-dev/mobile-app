@@ -34,6 +34,16 @@ const _slides = [
     subtitle: 'Special pricing for farms & FPOs',
     icon: Icons.request_quote_outlined,
   ),
+  _Slide(
+    title: 'New arrivals every week',
+    subtitle: 'Fresh stock across sprinklers & pumps',
+    icon: Icons.new_releases_outlined,
+  ),
+  _Slide(
+    title: 'Track every order live',
+    subtitle: 'From dispatch to your doorstep',
+    icon: Icons.local_shipping_outlined,
+  ),
 ];
 
 /// The home screen's rotating promo banner. Matches the reference theme's

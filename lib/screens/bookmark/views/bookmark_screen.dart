@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../components/product/catalog_grid_skeleton.dart';
 import '../../../components/product/catalog_product_card.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
+import '../../../entry_point_tab.dart';
 import '../../../models/catalog_data.dart';
 import '../../../models/wishlist_state.dart';
 import '../../../route/route_constants.dart';
@@ -20,7 +22,7 @@ class BookmarkScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Wishlist')),
       body: catalog.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const CatalogGridSkeleton(),
         error: (err, st) =>
             Center(child: Text('Could not load wishlist: $err')),
         data: (data) {
@@ -52,6 +54,17 @@ class BookmarkScreen extends ConsumerWidget {
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
+                    const SizedBox(height: AppSpacing.lg),
+                    ElevatedButton(
+                      onPressed: () {
+                        ref.read(entryTabIndexProvider.notifier).state = 0;
+                        Navigator.popUntil(
+                          context,
+                          (route) => route.settings.name == entryPointScreenRoute,
+                        );
+                      },
+                      child: const Text('Browse products'),
+                    ),
                   ],
                 ),
               ),
@@ -65,7 +78,7 @@ class BookmarkScreen extends ConsumerWidget {
               crossAxisCount: 2,
               mainAxisSpacing: AppSpacing.sm,
               crossAxisSpacing: AppSpacing.sm,
-              childAspectRatio: 0.64,
+              childAspectRatio: 0.60,
             ),
             itemBuilder: (context, i) => CatalogProductCard(
               product: products[i],

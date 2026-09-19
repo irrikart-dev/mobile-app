@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../components/product/catalog_grid_skeleton.dart';
 import '../../../components/product/catalog_product_card.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
 import '../../../models/catalog_data.dart';
@@ -57,7 +58,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
 
     return catalog.when(
       loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: CatalogGridSkeleton(),
       ),
       error: (err, st) =>
           Scaffold(body: Center(child: Text('Could not load products: $err'))),
@@ -110,7 +111,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                           crossAxisCount: 2,
                           mainAxisSpacing: AppSpacing.sm,
                           crossAxisSpacing: AppSpacing.sm,
-                          childAspectRatio: 0.64,
+                          childAspectRatio: 0.60,
                         ),
                         itemBuilder: (context, i) => CatalogProductCard(
                           product: products[i],

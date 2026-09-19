@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:irrikart/entry_point.dart';
+import 'package:irrikart/models/address_data.dart';
 import 'package:irrikart/models/order_data.dart';
 
 import 'screen_export.dart';
@@ -138,7 +139,10 @@ Route<dynamic> generateRoute(RouteSettings settings) {
       );
     case productReviewsScreenRoute:
       return MaterialPageRoute(
-        builder: (context) => const ProductReviewsScreen(),
+        builder: (context) {
+          final args = settings.arguments as ProductReviewsArgs;
+          return ProductReviewsScreen(args: args);
+        },
       );
     // case addReviewsScreenRoute:
     //   return MaterialPageRoute(
@@ -240,10 +244,13 @@ Route<dynamic> generateRoute(RouteSettings settings) {
       return MaterialPageRoute(
         builder: (context) => const AddressesScreen(),
       );
-    // case addNewAddressesScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const AddNewAddressScreen(),
-    //   );
+    case addNewAddressesScreenRoute:
+      return MaterialPageRoute(
+        builder: (context) {
+          final existing = settings.arguments as Address?;
+          return AddEditAddressScreen(existing: existing);
+        },
+      );
     case ordersScreenRoute:
       return MaterialPageRoute(
         builder: (context) => const OrdersScreen(),

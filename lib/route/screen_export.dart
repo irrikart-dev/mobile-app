@@ -1,4 +1,5 @@
 export '/route/route_constants.dart';
+export '/screens/address/views/add_edit_address_screen.dart';
 export '/screens/address/views/addresses_screen.dart';
 export '/screens/auth/views/auth_screen.dart';
 export '/screens/bookmark/views/bookmark_screen.dart';

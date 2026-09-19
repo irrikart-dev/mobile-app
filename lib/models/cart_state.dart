@@ -192,6 +192,12 @@ final cartRepositoryProvider = Provider<CartRepository>(
 /// changes — there is nothing to migrate, the cart is always whoever is
 /// currently signed in.
 class CartController extends AsyncNotifier<Cart> {
+  // Line ids with a remove/quantity request currently in flight — guards
+  // against a rapid double-tap firing two overlapping requests for the same
+  // line (the optimistic update below makes a second tap feel free, so
+  // without this a fast double-tap could race two PATCH/DELETE calls).
+  final Set<String> _pendingLineIds = {};
+
   @override
   Future<Cart> build() async {
     if (!ref.watch(isSignedInProvider)) return Cart.empty;
@@ -219,21 +225,99 @@ class CartController extends AsyncNotifier<Cart> {
   }
 
   /// `quantity` must be `>= 1` — call [remove] to drop a line to zero.
+  ///
+  /// Updates [state] optimistically — the line's quantity/total (and the
+  /// cart's subtotal/total) change the instant this is called, before the
+  /// network round-trip, so the UI never sits inert waiting on a PATCH. On
+  /// failure the optimistic change is rolled back and the error rethrown,
+  /// same as it would be from a plain awaited call.
   Future<void> setQuantity(String itemId, int quantity) async {
-    final cart =
-        await ref.read(cartRepositoryProvider).updateQuantity(itemId, quantity);
-    state = AsyncData(cart);
+    if (!_pendingLineIds.add(itemId)) return;
+    final previous = state;
+    final current = previous.valueOrNull;
+    if (current != null) {
+      state = AsyncData(_withUpdatedQuantity(current, itemId, quantity));
+    }
+    try {
+      final cart =
+          await ref.read(cartRepositoryProvider).updateQuantity(itemId, quantity);
+      state = AsyncData(cart);
+    } catch (_) {
+      state = previous;
+      rethrow;
+    } finally {
+      _pendingLineIds.remove(itemId);
+    }
   }
 
+  /// Same optimistic-then-reconcile pattern as [setQuantity] — the line
+  /// disappears from [state] immediately, not after the DELETE resolves.
   Future<void> remove(String itemId) async {
-    final cart = await ref.read(cartRepositoryProvider).removeItem(itemId);
-    state = AsyncData(cart);
+    if (!_pendingLineIds.add(itemId)) return;
+    final previous = state;
+    final current = previous.valueOrNull;
+    if (current != null) {
+      state = AsyncData(_withoutLine(current, itemId));
+    }
+    try {
+      final cart = await ref.read(cartRepositoryProvider).removeItem(itemId);
+      state = AsyncData(cart);
+    } catch (_) {
+      state = previous;
+      rethrow;
+    } finally {
+      _pendingLineIds.remove(itemId);
+    }
   }
 
   Future<void> clear() async {
     final cart = await ref.read(cartRepositoryProvider).clear();
     state = AsyncData(cart);
   }
+}
+
+/// Recomputes `itemCount`/`subtotal`/`total` from a line list — the same
+/// arithmetic the server does, used only to make an optimistic update look
+/// right for the moment before the server's authoritative cart lands.
+Cart _withLines(Cart cart, List<CartLine> items) {
+  final subtotal = items.fold<num>(0, (sum, l) => sum + l.lineTotal);
+  return Cart(
+    id: cart.id,
+    status: cart.status,
+    items: items,
+    itemCount: items.fold<int>(0, (sum, l) => sum + l.quantity),
+    subtotal: subtotal,
+    total: subtotal,
+  );
+}
+
+Cart _withUpdatedQuantity(Cart cart, String itemId, int quantity) {
+  final items = [
+    for (final line in cart.items)
+      if (line.id == itemId)
+        CartLine(
+          id: line.id,
+          variantId: line.variantId,
+          productId: line.productId,
+          name: line.name,
+          slug: line.slug,
+          image: line.image,
+          sku: line.sku,
+          unit: line.unit,
+          quantity: quantity,
+          price: line.price,
+          lineTotal: line.price * quantity,
+          available: line.available,
+        )
+      else
+        line,
+  ];
+  return _withLines(cart, items);
+}
+
+Cart _withoutLine(Cart cart, String itemId) {
+  final items = cart.items.where((l) => l.id != itemId).toList();
+  return _withLines(cart, items);
 }
 
 final cartControllerProvider = AsyncNotifierProvider<CartController, Cart>(
