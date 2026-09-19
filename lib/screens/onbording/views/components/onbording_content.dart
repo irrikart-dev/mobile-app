@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 
 import '../../../../constants.dart';
 
@@ -27,9 +28,7 @@ class OnbordingContent extends StatelessWidget {
           ),
         if (isTextOnTop) const Spacer(),
 
-        /// if you are using SVG then replace [Image.asset] with [SvgPicture.asset]
-
-        Image.asset(
+        SvgPicture.asset(
           image,
           height: 250,
         ),

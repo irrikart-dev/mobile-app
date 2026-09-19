@@ -18,37 +18,32 @@ class _OnBordingScreenState extends State<OnBordingScreen> {
   int _pageIndex = 0;
   final List<Onbord> _onbordData = [
     Onbord(
-      image: 'assets/Illustration/Illustration-0.png',
-      imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_0.png',
-      title: 'Find the right tool \nfor the job',
+      image: 'assets/Illustration/Illustration-0.svg',
+      title: 'Find the Right Irrigation \n& Farming Solutions',
       description:
           'Browse by crop, category or brand, with clear specifications so you know exactly what you are buying.',
     ),
     Onbord(
-      image: 'assets/Illustration/Illustration-1.png',
-      imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_1.png',
-      title: 'Everything your \nfarm needs',
+      image: 'assets/Illustration/Illustration-1.svg',
+      title: 'Everything Your \nFarm Needs',
       description:
-          'Sprayers, pumps, hand tools, seeds and fertilizer — from trusted brands, at the right price for every acre.',
+          'Drip kits, sprinklers, pumps, hand tools, seeds and fertilizer — from trusted brands, at the right price for every acre.',
     ),
     Onbord(
-      image: 'assets/Illustration/Illustration-2.png',
-      imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_2.png',
-      title: 'Fast & secure \npayment',
+      image: 'assets/Illustration/Illustration-2.svg',
+      title: 'Fast & Secure \nFarm Payments',
       description:
-          'Pay by UPI, card, netbanking or cash on delivery — whichever suits you best.',
+          'Pay by UPI, card, netbanking or cash on delivery — whichever suits you and your farm budget best.',
     ),
     Onbord(
-      image: 'assets/Illustration/Illustration-3.png',
-      imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_3.png',
-      title: 'Order tracking',
+      image: 'assets/Illustration/Illustration-3.svg',
+      title: 'Track Your Delivery \nto the Field',
       description:
           'Follow every order from dispatch to your doorstep, with delivery dates you can plan the season around.',
     ),
     Onbord(
-      image: 'assets/Illustration/Illustration-4.png',
-      imageDarkTheme: 'assets/Illustration/Illustration_darkTheme_4.png',
-      title: 'Buying in bulk?',
+      image: 'assets/Illustration/Illustration-4.svg',
+      title: 'Buying in Bulk?',
       description:
           'Request a quote on bulk quantities and get pricing worked out for your whole village or FPO.',
     ),
@@ -100,10 +95,7 @@ class _OnBordingScreenState extends State<OnBordingScreen> {
                   itemBuilder: (context, index) => OnbordingContent(
                     title: _onbordData[index].title,
                     description: _onbordData[index].description,
-                    image: (Theme.of(context).brightness == Brightness.dark &&
-                            _onbordData[index].imageDarkTheme != null)
-                        ? _onbordData[index].imageDarkTheme!
-                        : _onbordData[index].image,
+                    image: _onbordData[index].image,
                     isTextOnTop: index.isOdd,
                   ),
                 ),
@@ -157,12 +149,10 @@ class _OnBordingScreenState extends State<OnBordingScreen> {
 
 class Onbord {
   final String image, title, description;
-  final String? imageDarkTheme;
 
   Onbord({
     required this.image,
     required this.title,
     this.description = '',
-    this.imageDarkTheme,
   });
 }
