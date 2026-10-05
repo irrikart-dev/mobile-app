@@ -33,7 +33,7 @@ class _OnBordingScreenState extends State<OnBordingScreen> {
       image: 'assets/Illustration/Illustration-2.svg',
       title: 'Fast & Secure \nFarm Payments',
       description:
-          'Pay by UPI, card, netbanking or cash on delivery — whichever suits you and your farm budget best.',
+          'Pay by UPI, card or netbanking — secure, prepaid checkout every time.',
     ),
     Onbord(
       image: 'assets/Illustration/Illustration-3.svg',

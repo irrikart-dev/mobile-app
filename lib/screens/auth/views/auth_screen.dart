@@ -145,18 +145,30 @@ class _Hero extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  height: 56,
-                  width: 56,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Image.asset(
-                    'assets/logo/irrikart_logo_mark.png',
-                    color: Colors.white,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      height: 56,
+                      width: 56,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Image.asset(
+                        'assets/logo/irrikart_logo_mark.png',
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      'IrriKart',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Text(

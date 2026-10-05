@@ -144,11 +144,11 @@ flutter_native_splash:
   color: "#FFFFFF"
   image: assets/logo/irrikart_logo_full.png
   color_dark: "#0F1311"
-  image_dark: assets/logo/irrikart_logo_full.png
+  image_dark: assets/logo/irrikart_logo_full_dark.png
   android_12:
     image: assets/logo/irrikart_logo_full.png
     icon_background_color: "#FFFFFF"
-    image_dark: assets/logo/irrikart_logo_full.png
+    image_dark: assets/logo/irrikart_logo_full_dark.png
     icon_background_color_dark: "#0F1311"
   android: true
   ios: true

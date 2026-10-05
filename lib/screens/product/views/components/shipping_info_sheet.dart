@@ -22,7 +22,7 @@ class ShippingInfoSheet extends StatelessWidget {
         const SpecRow('Dispatch', 'Within 2 business days'),
         const SpecRow('Delivery', '3-7 business days'),
         const SpecRow('Shipping', 'Free above ₹999'),
-        const SpecRow('Cash on delivery', 'Available on eligible pincodes'),
+        const SpecRow('Payment', 'UPI, card or netbanking — prepaid only'),
         const SizedBox(height: defaultPadding * 1.5),
         Text('Check your pincode', style: theme.textTheme.titleSmall),
         const SizedBox(height: defaultPadding / 2),
