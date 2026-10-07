@@ -29,7 +29,13 @@ List<_Rail> _topCategoryRails(CatalogData data, {int count = 2}) {
       rails.add((category: category, products: products.take(10).toList()));
     }
   }
-  rails.sort((a, b) => b.products.length.compareTo(a.products.length));
+  // Biggest first, but a catch-all ("Other products") makes a weak headline
+  // rail, so it only shows when nothing more specific is available.
+  bool catchAll(_Rail r) => r.category.name.toLowerCase().startsWith('other');
+  rails.sort((a, b) {
+    final byKind = (catchAll(a) ? 1 : 0).compareTo(catchAll(b) ? 1 : 0);
+    return byKind != 0 ? byKind : b.products.length.compareTo(a.products.length);
+  });
   return rails.take(count).toList();
 }
 
@@ -94,10 +100,10 @@ class HomeScreen extends ConsumerWidget {
 
   List<Widget> _content(BuildContext context, WidgetRef ref, CatalogData data) {
     const gap = SliverToBoxAdapter(
-      child: SizedBox(height: AppSpacing.sectionGap),
+      child: SizedBox(height: AppSpacing.xl),
     );
     const headerGap = SliverToBoxAdapter(
-      child: SizedBox(height: AppSpacing.smd),
+      child: SizedBox(height: AppSpacing.md),
     );
 
     if (data.categories.isEmpty && data.products.isEmpty) {
@@ -134,33 +140,19 @@ class HomeScreen extends ConsumerWidget {
                   arguments: rail.category.id,
                 ),
               ),
-              const SizedBox(height: AppSpacing.smd),
+              const SizedBox(height: AppSpacing.md),
               ProductRail(products: rail.products),
             ],
           ),
         );
 
     return [
-      if (data.isOffline)
-        const SliverPadding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.gutter,
-            AppSpacing.xs,
-            AppSpacing.gutter,
-            AppSpacing.smd,
-          ),
-          sliver: SliverToBoxAdapter(
-            child: InlineBanner(
-              tone: Tone.warning,
-              icon: Icons.cloud_off_rounded,
-              title: 'You’re viewing the saved catalogue',
-              message: 'Prices and stock may be out of date. Pull down to '
-                  'refresh once you’re back online.',
-            ),
-          ),
-        ),
-      const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xs)),
-      SliverToBoxAdapter(child: HomeBanner(categories: data.categories)),
+      if (data.isOffline) ...[
+        const SliverToBoxAdapter(child: HomeOfflineNotice()),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+      ] else
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xs)),
+      SliverToBoxAdapter(child: HomeBanner(data: data)),
       if (data.categories.isNotEmpty) ...[
         gap,
         SliverToBoxAdapter(
@@ -179,7 +171,7 @@ class HomeScreen extends ConsumerWidget {
       ],
       if (rails.isNotEmpty) ...[gap, railSection(rails.first)],
       gap,
-      const SliverToBoxAdapter(child: HomeTrustStrip()),
+      const SliverToBoxAdapter(child: HomeBulkOrderCard()),
       if (recent.isNotEmpty) ...[
         gap,
         const SliverToBoxAdapter(
@@ -193,9 +185,11 @@ class HomeScreen extends ConsumerWidget {
       ],
       for (final rail in rails.skip(1)) ...[gap, railSection(rail)],
       gap,
-      const SliverToBoxAdapter(child: HomeBulkOrderCard()),
-      const SliverToBoxAdapter(
-        child: SizedBox(height: AppSpacing.fabClearance),
+      const SliverToBoxAdapter(child: HomeTrustStrip()),
+      SliverToBoxAdapter(
+        child: SizedBox(
+          height: AppSpacing.fabClearance + MediaQuery.paddingOf(context).bottom,
+        ),
       ),
     ];
   }

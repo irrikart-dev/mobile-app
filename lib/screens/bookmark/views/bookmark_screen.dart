@@ -44,6 +44,7 @@ class BookmarkScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppTopBar(
+        large: true,
         title: 'Wishlist',
         subtitle: count == 0
             ? null

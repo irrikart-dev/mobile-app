@@ -182,6 +182,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     return Scaffold(
       backgroundColor: c.background,
       appBar: AppTopBar(
+        large: true,
         title: category?.name ?? 'Products',
         subtitle: data == null
             ? null
@@ -436,7 +437,7 @@ class _PriceBox extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: c.surfaceSunken,
+        color: c.tint,
         borderRadius: AppRadius.mdAll,
       ),
       child: Column(

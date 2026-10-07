@@ -11,6 +11,7 @@ import '../../../models/catalog_data.dart';
 import '../../../models/catalog_product.dart';
 import '../../../models/wishlist_state.dart';
 import '../../../route/route_constants.dart';
+import '../../home/views/components/category_art.dart';
 
 /// Live catalogue search: debounced query over name / tagline / SKU /
 /// category, with recent and popular searches while the field is empty.
@@ -242,20 +243,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       if (data.categories.isNotEmpty) ...[
         const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.mdPlus)),
         const SliverToBoxAdapter(
-          child: SectionHeader(title: 'Popular categories'),
+          child: SectionHeader(title: 'Browse categories'),
         ),
-        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.smd)),
-        SliverToBoxAdapter(child: _CategoryChips(data.categories, _openCategory)),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+        SliverToBoxAdapter(
+          child: _CategoryRail(data.categories, _openCategory),
+        ),
       ],
       if (trending.isNotEmpty) ...[
-        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.sectionGap)),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
         const SliverToBoxAdapter(
           child: SectionHeader(
             title: 'Trending products',
             subtitle: 'Top rated by farmers',
           ),
         ),
-        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.smd)),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
         SliverProductGrid(
           products: trending.take(6).toList(),
           onProductTap: _openProduct,
@@ -281,7 +284,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 compact: true,
               ),
               if (data.categories.isNotEmpty)
-                _CategoryChips(data.categories.take(6).toList(), _openCategory),
+                _CategoryChips(
+                  data.categories.take(6).toList(),
+                  _openCategory,
+                  centered: true,
+                ),
               const SizedBox(height: AppSpacing.xl),
             ],
           ),
@@ -323,10 +330,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 }
 
 class _CategoryChips extends StatelessWidget {
-  const _CategoryChips(this.categories, this.onTap);
+  const _CategoryChips(this.categories, this.onTap, {this.centered = false});
 
   final List<CatalogCategory> categories;
   final ValueChanged<CatalogCategory> onTap;
+  final bool centered;
 
   @override
   Widget build(BuildContext context) {
@@ -335,15 +343,82 @@ class _CategoryChips extends StatelessWidget {
       child: Wrap(
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
-        alignment: WrapAlignment.center,
+        alignment: centered ? WrapAlignment.center : WrapAlignment.start,
         children: [
           for (final category in categories)
             AppChip(
               label: category.name,
-              icon: Icons.trending_up_rounded,
+              icon: categoryIcon(category),
               onTap: () => onTap(category),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Horizontal rail of small sage category tiles with the name underneath.
+class _CategoryRail extends StatelessWidget {
+  const _CategoryRail(this.categories, this.onTap);
+
+  final List<CatalogCategory> categories;
+  final ValueChanged<CatalogCategory> onTap;
+
+  static const double _tile = 72;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = context.text.caption.copyWith(
+      color: context.colors.textPrimary,
+      fontWeight: FontWeight.w600,
+      height: 1.25,
+    );
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.15,
+      child: Builder(
+        builder: (context) {
+          final line =
+              MediaQuery.textScalerOf(context).scale(style.fontSize!) *
+                  style.height!;
+          return SizedBox(
+            height: _tile + AppSpacing.sm + line * 2 + 4,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+              itemCount: categories.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: AppSpacing.smd),
+              itemBuilder: (context, i) {
+                final category = categories[i];
+                return SizedBox(
+                  width: _tile,
+                  child: PressableScale(
+                    onTap: () => onTap(category),
+                    child: Column(
+                      children: [
+                        SizedBox.square(
+                          dimension: _tile,
+                          child: CategoryArt(
+                            category: category,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          category.name,
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          style: style,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
       ),
     );
   }

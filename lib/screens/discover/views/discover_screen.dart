@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../components/catalog_image.dart';
 import '../../../components/ui/ui.dart';
 import '../../../models/catalog_category.dart';
 import '../../../models/catalog_data.dart';
 import '../../../route/route_constants.dart';
+import '../../home/views/components/category_art.dart';
 
-const _gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
-  crossAxisCount: 2,
-  mainAxisSpacing: AppSpacing.smd,
-  crossAxisSpacing: AppSpacing.smd,
-  childAspectRatio: 0.82,
-);
+/// Height of the text under a category tile: name (one line) + count. Text
+/// scaling is clamped inside the tile so this always fits.
+const double _labelHeight = 52;
+const double _gridGap = AppSpacing.md;
 
-/// Categories tab — every catalogue category as a 2-column card grid.
+/// 2-column grid geometry: square sage tile + fixed label block.
+SliverGridDelegate _gridDelegate(double width) {
+  final tile = (width - _gridGap) / 2;
+  return SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: 2,
+    mainAxisSpacing: AppSpacing.mdPlus,
+    crossAxisSpacing: _gridGap,
+    mainAxisExtent: tile + _labelHeight,
+  );
+}
+
+/// Categories tab — every catalogue category as a frameless 2-column grid
+/// of sage tiles, name and product count set on the canvas.
 class DiscoverScreen extends ConsumerWidget {
   const DiscoverScreen({super.key});
 
@@ -62,16 +72,18 @@ class DiscoverScreen extends ConsumerWidget {
         return [
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-            sliver: SliverGrid.builder(
-              gridDelegate: _gridDelegate,
-              itemCount: data.categories.length,
-              itemBuilder: (context, i) {
-                final category = data.categories[i];
-                return _CategoryCard(
-                  category: category,
-                  productCount: data.productsInCategory(category.id).length,
-                );
-              },
+            sliver: SliverLayoutBuilder(
+              builder: (context, constraints) => SliverGrid.builder(
+                gridDelegate: _gridDelegate(constraints.crossAxisExtent),
+                itemCount: data.categories.length,
+                itemBuilder: (context, i) {
+                  final category = data.categories[i];
+                  return _CategoryTile(
+                    category: category,
+                    productCount: data.productsInCategory(category.id).length,
+                  );
+                },
+              ),
             ),
           ),
         ];
@@ -98,7 +110,7 @@ class DiscoverScreen extends ConsumerWidget {
                 AppSpacing.gutter,
                 AppSpacing.xs,
                 AppSpacing.gutter,
-                AppSpacing.md,
+                AppSpacing.lg,
               ),
               sliver: SliverToBoxAdapter(
                 child: AppSearchField(
@@ -108,8 +120,11 @@ class DiscoverScreen extends ConsumerWidget {
               ),
             ),
             ...body,
-            const SliverToBoxAdapter(
-              child: SizedBox(height: AppSpacing.fabClearance),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: AppSpacing.fabClearance +
+                    MediaQuery.paddingOf(context).bottom,
+              ),
             ),
           ],
         ),
@@ -118,90 +133,54 @@ class DiscoverScreen extends ConsumerWidget {
   }
 }
 
-class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({required this.category, required this.productCount});
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({required this.category, required this.productCount});
 
   final CatalogCategory category;
   final int productCount;
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
-    return PressableScale(
-      onTap: () => Navigator.pushNamed(
-        context,
-        productListScreenRoute,
-        arguments: category.id,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: AppRadius.lgAll,
-          border: Border.all(color: c.border),
-          boxShadow: c.shadowCard,
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.1,
+      child: PressableScale(
+        onTap: () => Navigator.pushNamed(
+          context,
+          productListScreenRoute,
+          arguments: category.id,
         ),
-        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.all(AppSpacing.sm),
-                padding: const EdgeInsets.all(AppSpacing.smd),
-                decoration: BoxDecoration(
-                  color: c.primarySoft,
-                  borderRadius: AppRadius.mdAll,
-                ),
-                child: CatalogImage(
-                  source: category.displayImage,
-                  isRemote: category.hasRemoteImage,
-                  fit: BoxFit.contain,
-                ),
+            AspectRatio(
+              aspectRatio: 1,
+              child: CategoryArt(
+                category: category,
+                radius: AppRadius.xlAll,
+                imagePadding: const EdgeInsets.all(AppSpacing.lg),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.smd,
-                AppSpacing.xs,
-                AppSpacing.sm,
-                AppSpacing.smd,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          category.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.text.title,
-                        ),
-                        const SizedBox(height: AppSpacing.xxs),
-                        Text(
-                          productCount == 1
-                              ? '1 product'
-                              : '$productCount products',
-                          style: context.text.captionMuted,
-                        ),
-                      ],
+            SizedBox(
+              height: _labelHeight,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(2, 10, 2, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      category.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.title,
                     ),
-                  ),
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: c.surfaceSunken,
-                      shape: BoxShape.circle,
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      productCount == 1 ? '1 product' : '$productCount products',
+                      maxLines: 1,
+                      style: context.text.captionMuted,
                     ),
-                    child: Icon(
-                      Icons.arrow_forward_rounded,
-                      size: AppIconSize.xs + 2,
-                      color: c.textSecondary,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -216,33 +195,23 @@ class _CategoryGridSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-      sliver: SliverGrid.builder(
-        gridDelegate: _gridDelegate,
-        itemCount: 6,
-        itemBuilder: (context, _) => Container(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: AppRadius.lgAll,
-            border: Border.all(color: c.border),
-          ),
-          child: const Column(
+      sliver: SliverLayoutBuilder(
+        builder: (context, constraints) => SliverGrid.builder(
+          gridDelegate: _gridDelegate(constraints.crossAxisExtent),
+          itemCount: 6,
+          itemBuilder: (context, _) => const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: ShimmerBox(
-                  width: double.infinity,
-                  borderRadius: AppRadius.mdAll,
-                ),
+              AspectRatio(
+                aspectRatio: 1,
+                child: ShimmerBox(borderRadius: AppRadius.xlAll),
               ),
-              SizedBox(height: AppSpacing.smd),
+              SizedBox(height: 12),
               ShimmerBox(height: 14, width: 96),
-              SizedBox(height: AppSpacing.sm - 2),
+              SizedBox(height: AppSpacing.sm),
               ShimmerBox(height: 10, width: 64),
-              SizedBox(height: AppSpacing.xs),
             ],
           ),
         ),

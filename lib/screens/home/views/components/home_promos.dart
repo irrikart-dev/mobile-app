@@ -3,68 +3,53 @@ import 'package:flutter/material.dart';
 import '../../../../components/ui/ui.dart';
 import '../../../../core/utils/whatsapp_launcher.dart';
 
-/// Compact three-up row of store promises, in a card.
-class HomeTrustStrip extends StatelessWidget {
-  const HomeTrustStrip({super.key});
-
-  static const _items = [
-    (Icons.verified_rounded, 'Genuine brands'),
-    (Icons.local_shipping_rounded, 'Fast dispatch'),
-    (Icons.lock_rounded, 'Secure prepaid payments'),
-  ];
+/// One-line "offline" notice: a small warning pill, not a banner block.
+class HomeOfflineNotice extends StatelessWidget {
+  const HomeOfflineNotice({super.key});
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-      child: AppCard(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.md,
-        ),
-        child: IntrinsicHeight(
-          child: Row(
-            children: [
-              for (var i = 0; i < _items.length; i++) ...[
-                if (i > 0) VerticalDivider(width: 1, color: c.divider),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: c.primarySoft,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          _items[i].$1,
-                          size: AppIconSize.sm,
-                          color: c.onPrimarySoft,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xs,
-                        ),
-                        child: Text(
-                          _items[i].$2,
-                          maxLines: 2,
-                          textAlign: TextAlign.center,
-                          style: context.text.caption.copyWith(
-                            color: c.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            height: 1.25,
-                          ),
-                        ),
-                      ),
-                    ],
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Tooltip(
+          message: 'Prices and stock may be out of date. Pull down to '
+              'refresh once you’re back online.',
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.smd,
+              AppSpacing.xs + 2,
+              AppSpacing.md,
+              AppSpacing.xs + 2,
+            ),
+            decoration: BoxDecoration(
+              color: c.warningSoft,
+              borderRadius: AppRadius.pillAll,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.cloud_off_rounded,
+                  size: AppIconSize.xs,
+                  color: c.warning,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Flexible(
+                  child: Text(
+                    'Offline · showing saved prices',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.caption.copyWith(
+                      color: c.warning,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -72,70 +57,137 @@ class HomeTrustStrip extends StatelessWidget {
   }
 }
 
-/// "Buying for a farm?" card — opens a WhatsApp chat for a bulk quote.
-class HomeBulkOrderCard extends StatelessWidget {
-  const HomeBulkOrderCard({super.key});
+/// Three store promises set inline on the canvas — icon + two-line label,
+/// no container.
+class HomeTrustStrip extends StatelessWidget {
+  const HomeTrustStrip({super.key});
+
+  static const _items = [
+    (Icons.verified_rounded, 'Genuine\nbrands'),
+    (Icons.local_shipping_rounded, 'Fast\ndispatch'),
+    (Icons.lock_rounded, 'Secure\npayments'),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.mdPlus),
-        decoration: BoxDecoration(
-          color: c.secondarySoft,
-          borderRadius: AppRadius.lgAll,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Row(
+        children: [
+          for (var i = 0; i < _items.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    'BULK ORDERS',
-                    style: context.text.overline.copyWith(color: c.secondary),
+                  Icon(
+                    _items[i].$1,
+                    size: AppIconSize.md,
+                    color: c.accent,
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text('Buying for a farm or FPO?', style: context.text.h3),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Get special pricing on drip kits, pipes and fittings — '
-                    'our team replies on WhatsApp.',
-                    style: context.text.bodySecondary,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppButton(
-                    label: 'Get a bulk quote',
-                    icon: Icons.chat_rounded,
-                    size: AppButtonSize.sm,
-                    expand: false,
-                    onPressed: () => openWhatsAppSupport(
-                      context,
-                      message:
-                          'Hi IrriKart, I would like a quote for a bulk order.',
+                  const SizedBox(width: AppSpacing.sm),
+                  Flexible(
+                    child: Text(
+                      _items[i].$2,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.caption.copyWith(
+                        color: c.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        height: 1.25,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: AppSpacing.smd),
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: c.surface,
-                borderRadius: AppRadius.mdAll,
-              ),
-              child: Icon(
-                Icons.inventory_2_rounded,
-                size: AppIconSize.lg,
-                color: c.secondary,
-              ),
-            ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Bulk-order promo: a sage block with copy and a pill CTA on the left and
+/// a geometric brand mosaic bleeding off the right edge. Opens a WhatsApp
+/// chat for a quote.
+class HomeBulkOrderCard extends StatelessWidget {
+  const HomeBulkOrderCard({super.key});
+
+  static const double _artWidth = 104;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+      child: ClipRRect(
+        borderRadius: AppRadius.xlAll,
+        child: ColoredBox(
+          color: c.tint,
+          child: Stack(
+            children: [
+              const Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                width: _artWidth,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(AppRadius.xl),
+                    bottomLeft: Radius.circular(AppRadius.xl),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: _artWidth,
+                      child: GeoMosaic(variant: 4),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.mdPlus,
+                  AppSpacing.lg,
+                  _artWidth + AppSpacing.mdPlus,
+                  AppSpacing.lg,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'BULK ORDERS',
+                      style: context.text.overline.copyWith(
+                        color: c.onPrimarySoft,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text('Buying in bulk?', style: context.text.h2),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Special pricing for farms and FPOs on kits, pipes '
+                      'and fittings.',
+                      style: context.text.bodySecondary,
+                    ),
+                    const SizedBox(height: AppSpacing.mdPlus),
+                    AppButton(
+                      label: 'Get a quote',
+                      icon: Icons.chat_rounded,
+                      size: AppButtonSize.sm,
+                      expand: false,
+                      onPressed: () => openWhatsAppSupport(
+                        context,
+                        message: 'Hi IrriKart, I would like a quote for a '
+                            'bulk order.',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

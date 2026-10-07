@@ -27,8 +27,8 @@ class HomeHeader extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.gutter,
-        AppSpacing.smd,
-        AppSpacing.smd,
+        AppSpacing.md,
+        AppSpacing.gutter,
         AppSpacing.xs,
       ),
       child: Row(
@@ -42,22 +42,21 @@ class HomeHeader extends ConsumerWidget {
                   firstName.isEmpty ? 'Hello there' : 'Hello, $firstName',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.text.h2,
+                  style: context.text.h1,
                 ),
-                const SizedBox(height: AppSpacing.xxs),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   'What does your farm need today?',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.text.bodySecondary.copyWith(
-                    color: c.textMuted,
-                  ),
+                  style: context.text.bodySecondary,
                 ),
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
+          const SizedBox(width: AppSpacing.smd),
           AppIconButton(
+            size: 48,
             icon: wishlistCount > 0
                 ? Icons.favorite_rounded
                 : Icons.favorite_border_rounded,

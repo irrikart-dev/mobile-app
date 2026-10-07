@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,9 +8,9 @@ import '../../../../components/ui/ui.dart';
 import '../../../../core/utils/whatsapp_launcher.dart';
 import '../../../../entry_point_tab.dart';
 import '../../../../models/catalog_category.dart';
+import '../../../../models/catalog_data.dart';
+import '../../../../models/catalog_product.dart';
 import '../../../../route/route_constants.dart';
-
-enum _SlideTone { primary, water, deep }
 
 /// What tapping a slide does. [categoryHint] is matched against the live
 /// category list (id, slug or name) so the slide keeps working when the
@@ -34,65 +35,68 @@ class _Slide {
     required this.subtitle,
     required this.cta,
     required this.icon,
-    required this.tone,
     required this.action,
+    this.deep = false,
   });
 
   final String eyebrow;
   final String title;
   final String subtitle;
   final String cta;
+
+  /// Shown in the art disc when the catalogue has no photo to offer.
   final IconData icon;
-  final _SlideTone tone;
   final _SlideAction action;
+
+  /// A darker forest, for variety between neighbouring slides.
+  final bool deep;
 }
 
 const _slides = [
   _Slide(
     eyebrow: 'READY TO INSTALL',
-    title: 'Complete drip kits\nfor every farm',
-    subtitle: 'Everything in one box, from ₹2,209',
+    title: 'Drip kits for\nevery farm',
+    subtitle: 'Everything in one box',
     cta: 'Shop kits',
-    icon: Icons.grass_rounded,
-    tone: _SlideTone.primary,
+    icon: Icons.inventory_2_rounded,
     action: _OpenCategory('kit'),
   ),
   _Slide(
-    eyebrow: 'EVEN COVERAGE',
-    title: 'Sprinklers that\nsave water',
-    subtitle: 'Impact, rotary & pop-up sprinklers',
+    eyebrow: 'SAVE WATER',
+    title: 'Sprinklers for\neven coverage',
+    subtitle: 'Micro, pop-up & impact',
     cta: 'Explore',
-    icon: Icons.water_drop_rounded,
-    tone: _SlideTone.water,
+    icon: Icons.shower_rounded,
     action: _OpenCategory('sprinkler'),
+    deep: true,
   ),
   _Slide(
     eyebrow: 'FOR FARMS & FPOs',
-    title: 'Buying in bulk?\nGet a quote',
-    subtitle: 'Special pricing on large orders',
-    cta: 'Chat with us',
+    title: 'Bulk pricing\nfor big orders',
+    subtitle: 'Quotes on WhatsApp',
+    cta: 'Get a quote',
     icon: Icons.request_quote_rounded,
-    tone: _SlideTone.deep,
     action: _BulkQuote(),
   ),
   _Slide(
     eyebrow: 'KEEP LINES CLEAN',
     title: 'Filters for\nclog-free drip',
-    subtitle: 'Screen, disc & sand media filters',
+    subtitle: 'Screen & disc filters',
     cta: 'Shop filters',
     icon: Icons.filter_alt_rounded,
-    tone: _SlideTone.primary,
     action: _OpenCategory('filter'),
+    deep: true,
   ),
 ];
 
 /// Home hero carousel: auto-advancing promo slides with a pill page
-/// indicator. Every slide's CTA does something real — opens a category's
-/// product list or starts a WhatsApp bulk-quote chat.
+/// indicator. Each slide shows a real product photo from its category when
+/// the catalogue has one. Every CTA does something real — opens a
+/// category's product list or starts a WhatsApp bulk-quote chat.
 class HomeBanner extends ConsumerStatefulWidget {
-  const HomeBanner({super.key, required this.categories});
+  const HomeBanner({super.key, required this.data});
 
-  final List<CatalogCategory> categories;
+  final CatalogData data;
 
   @override
   ConsumerState<HomeBanner> createState() => _HomeBannerState();
@@ -132,12 +136,28 @@ class _HomeBannerState extends ConsumerState<HomeBanner> {
 
   CatalogCategory? _resolve(String hint) {
     final h = hint.toLowerCase();
-    for (final c in widget.categories) {
+    for (final c in widget.data.categories) {
       if (c.id.toLowerCase().contains(h) ||
           c.slug.toLowerCase().contains(h) ||
           c.name.toLowerCase().contains(h)) {
         return c;
       }
+    }
+    return null;
+  }
+
+  /// A real product photo for the slide's category, preferring something in
+  /// stock. Null for the bulk slide, or when nothing there has an image.
+  CatalogProduct? _heroProduct(_Slide slide) {
+    if (slide.action case _OpenCategory(:final categoryHint)) {
+      final category = _resolve(categoryHint);
+      if (category == null) return null;
+      final withImage = widget.data
+          .productsInCategory(category.id)
+          .where((p) => p.displayImage?.isNotEmpty ?? false)
+          .toList();
+      return withImage.where((p) => p.buyable).firstOrNull ??
+          withImage.firstOrNull;
     }
     return null;
   }
@@ -171,7 +191,7 @@ class _HomeBannerState extends ConsumerState<HomeBanner> {
     return Column(
       children: [
         SizedBox(
-          height: 172,
+          height: 184,
           child: NotificationListener<ScrollStartNotification>(
             // A manual swipe resets the auto-advance clock.
             onNotification: (n) {
@@ -188,6 +208,7 @@ class _HomeBannerState extends ConsumerState<HomeBanner> {
                 ),
                 child: _SlideCard(
                   slide: _slides[i],
+                  product: _heroProduct(_slides[i]),
                   onTap: () => _onTap(_slides[i]),
                 ),
               ),
@@ -203,10 +224,10 @@ class _HomeBannerState extends ConsumerState<HomeBanner> {
                 duration: AppDurations.normal,
                 curve: AppCurves.standard,
                 margin: const EdgeInsets.symmetric(horizontal: 3),
-                width: i == _page ? 22 : 6,
+                width: i == _page ? 20 : 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: i == _page ? c.primary : c.borderStrong,
+                  color: i == _page ? c.primary : c.border,
                   borderRadius: AppRadius.pillAll,
                 ),
               ),
@@ -218,26 +239,33 @@ class _HomeBannerState extends ConsumerState<HomeBanner> {
 }
 
 class _SlideCard extends StatelessWidget {
-  const _SlideCard({required this.slide, required this.onTap});
+  const _SlideCard({
+    required this.slide,
+    required this.product,
+    required this.onTap,
+  });
 
   final _Slide slide;
+  final CatalogProduct? product;
   final VoidCallback onTap;
+
+  static const double _art = 128;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final (base, fg) = switch (slide.tone) {
-      _SlideTone.primary => (c.primary, c.textOnPrimary),
-      _SlideTone.water => (c.secondary, c.textOnPrimary),
-      _SlideTone.deep => (_darken(c.primary, 0.16), c.textOnPrimary),
-    };
-    final deeper = _darken(base, 0.12);
+    // Forest in light mode. In dark mode the bright brand green is too loud
+    // for a full-bleed block, so it is pulled down to a deep green.
+    final forest = context.isDark ? _darken(c.primary, 0.26) : c.primary;
+    final base = slide.deep ? _darken(forest, 0.05) : forest;
+    final deeper = _darken(base, 0.09);
+    final fg = context.isDark ? c.textPrimary : c.textOnPrimary;
 
     return PressableScale(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: AppRadius.lgAll,
+          borderRadius: AppRadius.xlAll,
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -247,55 +275,57 @@ class _SlideCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: Stack(
           children: [
-            // Soft decorative rings behind the icon.
+            // One soft halo behind the art — depth without clutter.
             Positioned(
               right: -36,
-              top: -28,
-              child: _Ring(size: 180, color: fg.withValues(alpha: 0.08)),
-            ),
-            Positioned(
-              right: 24,
-              bottom: -48,
-              child: _Ring(size: 120, color: fg.withValues(alpha: 0.06)),
+              top: -36,
+              child: Container(
+                width: 220,
+                height: 220,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: fg.withValues(alpha: 0.06),
+                ),
+              ),
             ),
             Positioned(
               right: AppSpacing.mdPlus,
               top: 0,
               bottom: 0,
               child: Center(
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: fg.withValues(alpha: 0.16),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(slide.icon, size: 36, color: fg),
+                child: _SlideArt(
+                  size: _art,
+                  product: product,
+                  icon: slide.icon,
+                  disc: fg,
+                  shade: deeper,
                 ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.mdPlus,
-                AppSpacing.md,
-                112,
-                AppSpacing.md,
+                AppSpacing.mdPlus,
+                _art + AppSpacing.mdPlus + AppSpacing.smd,
+                AppSpacing.mdPlus,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     slide.eyebrow,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: context.text.overline.copyWith(
-                      color: fg.withValues(alpha: 0.8),
+                      color: fg.withValues(alpha: 0.7),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xs),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     slide.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: context.text.h3.copyWith(color: fg),
+                    style: context.text.h2.copyWith(color: fg),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
@@ -303,14 +333,14 @@ class _SlideCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: context.text.caption.copyWith(
-                      color: fg.withValues(alpha: 0.88),
+                      color: fg.withValues(alpha: 0.78),
                     ),
                   ),
                   const Spacer(),
                   Container(
+                    height: 36,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.smd,
-                      vertical: 7,
+                      horizontal: AppSpacing.md,
                     ),
                     decoration: BoxDecoration(
                       color: fg,
@@ -326,7 +356,7 @@ class _SlideCard extends StatelessWidget {
                         const SizedBox(width: AppSpacing.xs),
                         Icon(
                           Icons.arrow_forward_rounded,
-                          size: AppIconSize.xs,
+                          size: AppIconSize.xs + 2,
                           color: deeper,
                         ),
                       ],
@@ -342,26 +372,82 @@ class _SlideCard extends StatelessWidget {
   }
 }
 
+/// A light disc holding the product photo — its white studio background
+/// multiplied away into the disc — or the slide's glyph when there's no
+/// photo to show.
+class _SlideArt extends StatelessWidget {
+  const _SlideArt({
+    required this.size,
+    required this.product,
+    required this.icon,
+    required this.disc,
+    required this.shade,
+  });
+
+  final double size;
+  final CatalogProduct? product;
+  final IconData icon;
+  final Color disc;
+  final Color shade;
+
+  @override
+  Widget build(BuildContext context) {
+    final glyph = Center(
+      child: Icon(icon, size: size * 0.36, color: shade),
+    );
+    final p = product;
+    final src = p?.displayImage;
+
+    Widget content = glyph;
+    if (p != null && src != null) {
+      final image = p.hasRemoteImage
+          ? CachedNetworkImage(
+              imageUrl: src,
+              fit: BoxFit.contain,
+              color: disc,
+              colorBlendMode: BlendMode.multiply,
+              placeholder: (_, __) => glyph,
+              errorWidget: (_, __, ___) => glyph,
+            )
+          : Image.asset(
+              src,
+              fit: BoxFit.contain,
+              color: disc,
+              colorBlendMode: BlendMode.multiply,
+              frameBuilder: (context, child, frame, sync) =>
+                  frame == null && !sync ? glyph : child,
+              errorBuilder: (_, __, ___) => glyph,
+            );
+      content = Padding(
+        padding: EdgeInsets.all(size * 0.13),
+        child: image,
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: disc,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: shade.withValues(alpha: 0.4),
+            offset: const Offset(0, 10),
+            blurRadius: 24,
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: content,
+    );
+  }
+}
+
 /// Same hue, lower lightness — keeps the gradient brand-true in both themes.
 Color _darken(Color color, double amount) {
   final hsl = HSLColor.fromColor(color);
   return hsl
       .withLightness((hsl.lightness - amount).clamp(0.0, 1.0))
       .toColor();
-}
-
-class _Ring extends StatelessWidget {
-  const _Ring({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-    );
-  }
 }
