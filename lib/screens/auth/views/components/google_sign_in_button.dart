@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// "Continue with Google" — the app's only sign-in method. New and returning
-/// accounts go through the same call ([AuthService.signInWithGoogle]).
+import '../../../../components/ui/ui.dart';
+
+/// "Continue with Google" — the app's only sign-in method. Follows Google's
+/// branding guidance: neutral surface, the multi-colour G, dark label.
 class GoogleSignInButton extends StatelessWidget {
   const GoogleSignInButton({
     super.key,
@@ -15,48 +17,37 @@ class GoogleSignInButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.colors;
     final disabled = busy || onPressed == null;
 
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(18),
-      elevation: disabled ? 0 : 3,
-      shadowColor: Colors.black.withValues(alpha: 0.15),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: disabled ? null : onPressed,
+    return PressableScale(
+      onTap: disabled ? null : onPressed,
+      child: AnimatedOpacity(
+        opacity: onPressed == null ? 0.5 : 1,
+        duration: AppDurations.fast,
         child: Container(
-          height: 58,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          height: 56,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-            ),
+            color: c.surface,
+            borderRadius: AppRadius.mdAll,
+            border: Border.all(color: c.borderStrong),
+            boxShadow: disabled ? null : c.shadowCard,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (busy)
-                SizedBox(
-                  height: 20,
-                  width: 20,
+                SizedBox.square(
+                  dimension: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.2,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: c.textMuted,
                   ),
                 )
               else ...[
                 SvgPicture.string(_googleLogoSvg, height: 20, width: 20),
-                const SizedBox(width: 14),
-                Text(
-                  'Continue with Google',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
+                const SizedBox(width: AppSpacing.smd),
+                Text('Continue with Google', style: context.text.button),
               ],
             ],
           ),
@@ -66,10 +57,8 @@ class GoogleSignInButton extends StatelessWidget {
   }
 }
 
-/// Google's official multi-colour "G" mark, from Google's own Identity
-/// branding assets. Embedded inline rather than as a bundled asset file —
-/// one small, unchanging vector with no reason to round-trip the asset
-/// bundle for it.
+/// Google's official multi-colour "G" mark, from Google's Identity branding
+/// assets.
 const _googleLogoSvg = '''
 <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg">
   <g fill="none" fill-rule="evenodd">

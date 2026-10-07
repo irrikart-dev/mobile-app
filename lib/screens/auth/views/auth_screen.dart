@@ -1,12 +1,16 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../components/ui/ui.dart';
 import '../../../core/auth/auth_service.dart';
+import '../../../core/config/support_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/local_store.dart';
-import '../../../core/theme/tokens/spacing_tokens.dart';
+import '../../../core/theme/tokens/color_tokens.dart';
 import '../../../route/route_constants.dart';
 import 'components/auth_unavailable_notice.dart';
 import 'components/google_sign_in_button.dart';
@@ -15,10 +19,8 @@ import 'components/google_sign_in_button.dart';
 ///
 /// Serves both `logInScreenRoute` and `signUpScreenRoute`: Firebase creates
 /// the account on a Google account's first sign-in and just authenticates it
-/// every time after, so there is nothing left to distinguish "log in" from
-/// "sign up" at the UI layer. An Apple button is the next thing to land here
-/// — [GoogleSignInButton] and this layout are built to take a second one
-/// underneath without reshuffling anything.
+/// every time after. Built to take an Apple button under Google's without
+/// reshuffling anything.
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
 
@@ -68,27 +70,120 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final authAvailable = ref.watch(authServiceProvider).isAvailable;
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final c = context.colors;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Expanded(
-              flex: 11,
-              child: _Hero(isDark: isDark),
-            ),
-            Expanded(
-              flex: 9,
-              child: _SignInSheet(
-                authAvailable: authAvailable,
-                busy: _busy,
-                error: _error,
-                onContinueWithGoogle: _continueWithGoogle,
+      backgroundColor: c.background,
+      body: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const _Hero(),
+                  Expanded(
+                    child: _SignInPanel(
+                      authAvailable: authAvailable,
+                      busy: _busy,
+                      error: _error,
+                      onContinueWithGoogle: _continueWithGoogle,
+                    ),
+                  ),
+                ],
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Brand-gradient header: wordmark, headline, soft decorative circles.
+/// White-on-gradient is the one place the brand colours carry the screen;
+/// it reads the same in light and dark mode on purpose.
+class _Hero extends StatelessWidget {
+  const _Hero();
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    const onHero = AppColors.white;
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(
+        bottom: Radius.circular(AppRadius.xl),
+      ),
+      child: Container(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          top + AppSpacing.xl,
+          AppSpacing.lg,
+          AppSpacing.xlPlus,
+        ),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.primaryDark, AppColors.secondaryDark],
+          ),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: -90,
+              right: -70,
+              child: _Circle(size: 220, color: onHero.withValues(alpha: 0.10)),
+            ),
+            Positioned(
+              bottom: -110,
+              left: -80,
+              child: _Circle(size: 200, color: onHero.withValues(alpha: 0.08)),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      height: 48,
+                      width: 48,
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: onHero.withValues(alpha: 0.16),
+                        borderRadius: AppRadius.mdAll,
+                      ),
+                      child: Image.asset(
+                        'assets/logo/irrikart_logo_mark.png',
+                        color: onHero,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.smd),
+                    Text(
+                      'IrriKart',
+                      style: context.text.h2.copyWith(
+                        color: onHero,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  'Everything your farm needs, one tap away.',
+                  style: context.text.display.copyWith(color: onHero),
+                ),
+                const SizedBox(height: AppSpacing.smd),
+                Text(
+                  'Pumps, drip irrigation and farm tools from brands you trust.',
+                  style: context.text.body.copyWith(
+                    color: onHero.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -97,131 +192,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 }
 
-/// Brand-gradient hero panel: logo, headline, a few soft decorative shapes.
-/// No stock photography — nothing in the asset pack is on-brand for an
-/// irrigation retailer, so the gradient and the client's own droplet mark
-/// carry the visual weight instead.
-class _Hero extends StatelessWidget {
-  const _Hero({required this.isDark});
-
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return ClipRect(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: isDark
-                    ? [
-                        scheme.primary.withValues(alpha: 0.85),
-                        scheme.secondary.withValues(alpha: 0.85),
-                      ]
-                    : [scheme.primary, scheme.secondary],
-              ),
-            ),
-          ),
-          const Positioned(
-            top: -60,
-            right: -50,
-            child: _Blob(size: 200, opacity: 0.14),
-          ),
-          const Positioned(
-            bottom: -70,
-            left: -60,
-            child: _Blob(size: 220, opacity: 0.12),
-          ),
-          const Positioned(
-            top: 60,
-            left: -30,
-            child: _Blob(size: 90, opacity: 0.10),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      height: 56,
-                      width: 56,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Image.asset(
-                        'assets/logo/irrikart_logo_mark.png',
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      'IrriKart',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'Everything your\nfarm needs,\none tap away.',
-                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        color: Colors.white,
-                        height: 1.15,
-                      ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Tools, pumps and irrigation kits from trusted brands.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Blob extends StatelessWidget {
-  const _Blob({required this.size, required this.opacity});
+class _Circle extends StatelessWidget {
+  const _Circle({required this.size, required this.color});
 
   final double size;
-  final double opacity;
+  final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: size,
-      width: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withValues(alpha: opacity),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        height: size,
+        width: size,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+      );
 }
 
-/// Rounded sheet sitting over the hero's bottom edge, carrying the sign-in
-/// controls. Elevation + a lightly overlapping negative margin is what makes
-/// it read as a card rather than a second flat section.
-class _SignInSheet extends StatelessWidget {
-  const _SignInSheet({
+class _SignInPanel extends StatelessWidget {
+  const _SignInPanel({
     required this.authAvailable,
     required this.busy,
     required this.error,
@@ -233,39 +219,45 @@ class _SignInSheet extends StatelessWidget {
   final String? error;
   final VoidCallback onContinueWithGoogle;
 
+  Future<void> _open(String url) =>
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final c = context.colors;
+    final linkStyle = context.text.caption.copyWith(
+      color: c.textPrimary,
+      fontWeight: FontWeight.w600,
+      decoration: TextDecoration.underline,
+      decorationColor: c.textMuted,
+    );
 
-    return Transform.translate(
-      offset: const Offset(0, -28),
-      child: Container(
-        width: double.infinity,
+    return SafeArea(
+      top: false,
+      child: Padding(
         padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          AppSpacing.xl,
-          AppSpacing.xl,
           AppSpacing.lg,
-        ),
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(32),
-            topRight: Radius.circular(32),
-          ),
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.md,
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Welcome', style: theme.textTheme.headlineLarge),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Sign in to start shopping — your orders, wishlist and cart '
-              'sync across every device.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+            const _ValueProp(
+              icon: Icons.verified_outlined,
+              title: 'Genuine products',
+              subtitle: 'Sourced directly from trusted brands',
+            ),
+            const _ValueProp(
+              icon: Icons.local_shipping_outlined,
+              title: 'Delivered across India',
+              subtitle: 'Track every order to your doorstep',
+            ),
+            const _ValueProp(
+              icon: Icons.lock_outline_rounded,
+              title: 'Secure prepaid checkout',
+              subtitle: 'UPI, cards and netbanking via Razorpay',
             ),
             const SizedBox(height: AppSpacing.lg),
             if (!authAvailable) ...[
@@ -276,31 +268,39 @@ class _SignInSheet extends StatelessWidget {
               busy: busy,
               onPressed: authAvailable ? onContinueWithGoogle : null,
             ),
-            if (error != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              _ErrorBanner(error!),
-            ],
+            AnimatedSize(
+              duration: AppDurations.fast,
+              child: error == null
+                  ? const SizedBox(width: double.infinity)
+                  : Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.smd),
+                      child: InlineBanner(message: error!, tone: Tone.error),
+                    ),
+            ),
             const Spacer(),
+            const SizedBox(height: AppSpacing.lg),
             Text.rich(
               TextSpan(
                 text: 'By continuing, you agree to IrriKart’s ',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                children: const [
+                style: context.text.caption,
+                children: [
                   TextSpan(
                     text: 'Terms of Service',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: linkStyle,
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => _open(SupportConfig.termsUrl),
                   ),
-                  TextSpan(text: ' and '),
+                  const TextSpan(text: ' and '),
                   TextSpan(
                     text: 'Privacy Policy',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: linkStyle,
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => _open(SupportConfig.privacyUrl),
                   ),
-                  TextSpan(text: '.'),
+                  const TextSpan(text: '.'),
                 ],
               ),
-              textAlign: TextAlign.start,
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -309,32 +309,41 @@ class _SignInSheet extends StatelessWidget {
   }
 }
 
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner(this.message);
+class _ValueProp extends StatelessWidget {
+  const _ValueProp({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
 
-  final String message;
+  final IconData icon;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.smd,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: scheme.errorContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
         children: [
-          Icon(Icons.error_outline, size: 18, color: scheme.onErrorContainer),
-          const SizedBox(width: 8),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: c.primarySoft,
+              borderRadius: AppRadius.smAll,
+            ),
+            child: Icon(icon, size: 20, color: c.onPrimarySoft),
+          ),
+          const SizedBox(width: AppSpacing.smd),
           Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: scheme.onErrorContainer, fontSize: 13),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: context.text.title),
+                Text(subtitle, style: context.text.caption),
+              ],
             ),
           ),
         ],

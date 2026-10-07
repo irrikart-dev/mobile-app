@@ -1,158 +1,245 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:irrikart/components/dot_indicators.dart';
-import 'package:irrikart/constants.dart';
-import 'package:irrikart/route/route_constants.dart';
 
-import 'components/onbording_content.dart';
+import '../../../components/ui/ui.dart';
+import '../../../core/storage/local_store.dart';
+import '../../../route/route_constants.dart';
 
-class OnBordingScreen extends StatefulWidget {
+class _Slide {
+  const _Slide(this.image, this.title, this.description);
+
+  final String image;
+  final String title;
+  final String description;
+}
+
+const _slides = [
+  _Slide(
+    'assets/Illustration/Illustration-0.svg',
+    'The right irrigation gear, made simple',
+    'Browse by crop, category or brand with clear specifications, so you '
+        'know exactly what you’re buying.',
+  ),
+  _Slide(
+    'assets/Illustration/Illustration-1.svg',
+    'Everything your farm needs',
+    'Drip kits, sprinklers, pumps, hand tools and more — from trusted '
+        'brands, priced right for every acre.',
+  ),
+  _Slide(
+    'assets/Illustration/Illustration-2.svg',
+    'Fast, secure payments',
+    'Pay by UPI, card or netbanking. Every order is prepaid and protected '
+        'end to end.',
+  ),
+  _Slide(
+    'assets/Illustration/Illustration-3.svg',
+    'Track every delivery',
+    'Follow each order from dispatch to your doorstep, with dates you can '
+        'plan the season around.',
+  ),
+  _Slide(
+    'assets/Illustration/Illustration-4.svg',
+    'Buying in bulk?',
+    'Get a quote for large quantities — for your farm, your village or '
+        'your FPO.',
+  ),
+];
+
+/// First-run introduction. Shown once: finishing or skipping persists the
+/// flag (see `LocalStore.onboardingCompleted`) and replaces this route, so
+/// neither Back nor a cold start ever brings it back.
+class OnBordingScreen extends ConsumerStatefulWidget {
   const OnBordingScreen({super.key});
 
   @override
-  State<OnBordingScreen> createState() => _OnBordingScreenState();
+  ConsumerState<OnBordingScreen> createState() => _OnBordingScreenState();
 }
 
-class _OnBordingScreenState extends State<OnBordingScreen> {
-  late PageController _pageController;
-  int _pageIndex = 0;
-  final List<Onbord> _onbordData = [
-    Onbord(
-      image: 'assets/Illustration/Illustration-0.svg',
-      title: 'Find the Right Irrigation \n& Farming Solutions',
-      description:
-          'Browse by crop, category or brand, with clear specifications so you know exactly what you are buying.',
-    ),
-    Onbord(
-      image: 'assets/Illustration/Illustration-1.svg',
-      title: 'Everything Your \nFarm Needs',
-      description:
-          'Drip kits, sprinklers, pumps, hand tools, seeds and fertilizer — from trusted brands, at the right price for every acre.',
-    ),
-    Onbord(
-      image: 'assets/Illustration/Illustration-2.svg',
-      title: 'Fast & Secure \nFarm Payments',
-      description:
-          'Pay by UPI, card or netbanking — secure, prepaid checkout every time.',
-    ),
-    Onbord(
-      image: 'assets/Illustration/Illustration-3.svg',
-      title: 'Track Your Delivery \nto the Field',
-      description:
-          'Follow every order from dispatch to your doorstep, with delivery dates you can plan the season around.',
-    ),
-    Onbord(
-      image: 'assets/Illustration/Illustration-4.svg',
-      title: 'Buying in Bulk?',
-      description:
-          'Request a quote on bulk quantities and get pricing worked out for your whole village or FPO.',
-    ),
-  ];
+class _OnBordingScreenState extends ConsumerState<OnBordingScreen> {
+  final _controller = PageController();
+  int _index = 0;
 
-  @override
-  void initState() {
-    _pageController = PageController(initialPage: 0);
-    super.initState();
-  }
+  bool get _isLast => _index == _slides.length - 1;
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _finish() async {
+    await ref.read(localStoreProvider).markOnboardingCompleted();
+    if (!mounted) return;
+    unawaited(Navigator.pushReplacementNamed(context, logInScreenRoute));
+  }
+
+  void _next() {
+    if (_isLast) {
+      unawaited(_finish());
+      return;
+    }
+    unawaited(
+      _controller.nextPage(
+        duration: AppDurations.normal,
+        curve: AppCurves.standard,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
+      backgroundColor: c.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: defaultPadding),
-          child: Column(
-            children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, logInScreenRoute);
-                  },
-                  child: Text(
-                    'Skip',
-                    style: TextStyle(
-                      color: Theme.of(context).textTheme.bodyLarge!.color,
-                    ),
-                  ),
-                ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
+                AppSpacing.sm,
+                AppSpacing.sm,
+                0,
               ),
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: _onbordData.length,
-                  onPageChanged: (value) {
-                    setState(() {
-                      _pageIndex = value;
-                    });
-                  },
-                  itemBuilder: (context, index) => OnbordingContent(
-                    title: _onbordData[index].title,
-                    description: _onbordData[index].description,
-                    image: _onbordData[index].image,
-                    isTextOnTop: index.isOdd,
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  ...List.generate(
-                    _onbordData.length,
-                    (index) => Padding(
-                      padding: const EdgeInsets.only(right: defaultPadding / 4),
-                      child: DotIndicator(isActive: index == _pageIndex),
+              child: SizedBox(
+                height: 44,
+                child: Row(
+                  children: [
+                    Image.asset(
+                      'assets/logo/irrikart_logo_mark.png',
+                      height: 26,
                     ),
-                  ),
-                  const Spacer(),
-                  SizedBox(
-                    height: 60,
-                    width: 60,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (_pageIndex < _onbordData.length - 1) {
-                          _pageController.nextPage(
-                            curve: Curves.ease,
-                            duration: defaultDuration,
-                          );
-                        } else {
-                          Navigator.pushNamed(context, logInScreenRoute);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        shape: const CircleBorder(),
-                      ),
-                      child: SvgPicture.asset(
-                        'assets/icons/Arrow - Right.svg',
-                        colorFilter: const ColorFilter.mode(
-                          Colors.white,
-                          BlendMode.srcIn,
+                    const SizedBox(width: AppSpacing.sm),
+                    Text('IrriKart', style: context.text.h3),
+                    const Spacer(),
+                    AnimatedOpacity(
+                      opacity: _isLast ? 0 : 1,
+                      duration: AppDurations.fast,
+                      child: IgnorePointer(
+                        ignoring: _isLast,
+                        child: AppButton.ghost(
+                          label: 'Skip',
+                          onPressed: _finish,
                         ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: PageView.builder(
+                controller: _controller,
+                itemCount: _slides.length,
+                onPageChanged: (i) => setState(() => _index = i),
+                itemBuilder: (context, i) => _SlideView(slide: _slides[i]),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                children: [
+                  _PageDots(count: _slides.length, index: _index),
+                  const SizedBox(height: AppSpacing.lg),
+                  AppButton(
+                    label: _isLast ? 'Get started' : 'Next',
+                    trailingIcon: Icons.arrow_forward_rounded,
+                    onPressed: _next,
                   ),
                 ],
               ),
-              const SizedBox(height: defaultPadding),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class Onbord {
-  final String image, title, description;
+class _SlideView extends StatelessWidget {
+  const _SlideView({required this.slide});
 
-  Onbord({
-    required this.image,
-    required this.title,
-    this.description = '',
-  });
+  final _Slide slide;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Column(
+        children: [
+          const SizedBox(height: AppSpacing.md),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: c.primarySoft,
+                borderRadius: AppRadius.xlAll,
+              ),
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: SvgPicture.asset(slide.image, fit: BoxFit.contain),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          // Natural height; the illustration above absorbs whatever space
+          // is left, so short screens shrink the art rather than overflow.
+          Text(
+            slide.title,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            style: context.text.h1,
+          ),
+          const SizedBox(height: AppSpacing.smd),
+          SizedBox(
+            height: 64,
+            child: Text(
+              slide.description,
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: context.text.bodySecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PageDots extends StatelessWidget {
+  const _PageDots({required this.count, required this.index});
+
+  final int count;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (var i = 0; i < count; i++)
+          AnimatedContainer(
+            duration: AppDurations.normal,
+            curve: AppCurves.standard,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            width: i == index ? 22 : 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: i == index ? c.primary : c.borderStrong,
+              borderRadius: AppRadius.pillAll,
+            ),
+          ),
+      ],
+    );
+  }
 }
