@@ -80,13 +80,35 @@ abstract final class AppColors {
   // Surfaces
   // ---------------------------------------------------------------------
 
-  static const Color lightBackground = Color(0xFFFFFFFF);
+  // A faintly warm off-white page with pure-white cards on top — the card
+  // edge reads without needing a shadow, which is what keeps lists calm.
+  static const Color lightBackground = Color(0xFFF6F7F5);
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSurfaceVariant = Color(0xFFF7F8F7);
+  static const Color lightSurfaceVariant = Color(0xFFF0F2EF);
 
-  static const Color darkBackground = Color(0xFF0F1311);
+  static const Color darkBackground = Color(0xFF0E1210);
   static const Color darkSurface = Color(0xFF161B18);
-  static const Color darkSurfaceVariant = Color(0xFF1E2521);
+  static const Color darkSurfaceVariant = Color(0xFF1D2420);
+
+  // ---------------------------------------------------------------------
+  // Text & lines — light / dark
+  // ---------------------------------------------------------------------
+
+  static const Color ink = Color(0xFF141A16);
+  static const Color inkSecondary = Color(0xFF4B544E);
+  static const Color inkMuted = Color(0xFF858D88);
+  static const Color inkDisabled = Color(0xFFB7BDB9);
+  static const Color line = Color(0xFFE4E7E3);
+  static const Color lineStrong = Color(0xFFCDD2CC);
+  static const Color lineSoft = Color(0xFFEDEFEC);
+
+  static const Color inkDark = Color(0xFFF2F5F3);
+  static const Color inkSecondaryDark = Color(0xFFB4BDB7);
+  static const Color inkMutedDark = Color(0xFF7E8882);
+  static const Color inkDisabledDark = Color(0xFF4F5853);
+  static const Color lineDark = Color(0xFF2A322D);
+  static const Color lineStrongDark = Color(0xFF3A443E);
+  static const Color lineSoftDark = Color(0xFF222925);
 
   // ---------------------------------------------------------------------
   // Semantic
@@ -97,6 +119,12 @@ abstract final class AppColors {
   static const Color error = Color(0xFFDC2626);
   static const Color info = Color(0xFF2563EB);
 
+  /// Star ratings.
+  static const Color rating = Color(0xFFF5A524);
+
+  /// Wishlist heart, sale badges.
+  static const Color rose = Color(0xFFE5484D);
+
   // ---------------------------------------------------------------------
   // Domain — stock, vendor, ordering. Exposed via AppColorsExt.
   // ---------------------------------------------------------------------
@@ -106,6 +134,5 @@ abstract final class AppColors {
   static const Color outOfStock = Color(0xFF9CA3AF);
   static const Color vendorBadge = Color(0xFF0F766E);
   static const Color rfqBadge = tertiary;
-  static const Color codBadge = Color(0xFF7C3AED);
   static const Color organicBadge = tertiary;
 }

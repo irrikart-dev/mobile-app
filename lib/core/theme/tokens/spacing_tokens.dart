@@ -1,23 +1,35 @@
-/// Spacing scale. Every gap, pad and inset should come from here.
+/// Spacing scale (4-pt grid). Every gap, pad and inset should come from here.
 ///
-/// [md] is 16 — the template's `defaultPadding` — so existing layouts keep
-/// their rhythm as they migrate off `constants.dart`.
+/// 4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 · 64
 abstract final class AppSpacing {
   static const double xxs = 2;
   static const double xs = 4;
   static const double sm = 8;
   static const double smd = 12;
   static const double md = 16;
+  static const double mdPlus = 20;
   static const double lg = 24;
   static const double xl = 32;
+  static const double xlPlus = 40;
   static const double xxl = 48;
   static const double xxxl = 64;
 
-  /// Vertical padding for a full home-screen section. Matched to the
-  /// reference theme's generous `--section-py: 6.5rem` on web; halved for a
-  /// mobile viewport where that much whitespace would push content off-screen.
+  /// Horizontal page margin on every screen.
+  static const double gutter = 16;
+
+  /// Vertical rhythm between home-screen sections.
+  static const double sectionGap = 28;
+
+  /// Legacy: full-section padding used by older home widgets.
   static const double sectionPy = 40;
 
-  /// Card interior padding, matched to the reference theme's `--card-pad`.
-  static const double cardPad = 20;
+  /// Card interior padding.
+  static const double cardPad = 16;
+
+  /// Height of the bottom navigation bar, excluding the system inset.
+  static const double navBarHeight = 64;
+
+  /// Bottom padding for scrollables that the floating WhatsApp button can sit
+  /// over (tab roots, lists) — lets the last item scroll clear of it.
+  static const double fabClearance = 84;
 }

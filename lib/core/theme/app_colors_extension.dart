@@ -2,125 +2,241 @@ import 'package:flutter/material.dart';
 
 import 'tokens/color_tokens.dart';
 
-/// Colours that carry domain meaning and have no slot in [ColorScheme].
-///
-/// Reach these through `Theme.of(context).extension<AppColorsExt>()!` or the
-/// `context.colors` shorthand in `core/utils/extensions/context_ext.dart`.
+/// Every theme-aware colour role the UI uses. Read through `context.colors`
+/// (`core/utils/context_ext.dart`). Screens should never reach for raw
+/// [AppColors] or `Colors.*` — if a role is missing, add it here.
 @immutable
 class AppColorsExt extends ThemeExtension<AppColorsExt> {
   const AppColorsExt({
+    required this.background,
+    required this.surface,
+    required this.surfaceRaised,
+    required this.surfaceSunken,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textMuted,
+    required this.textDisabled,
+    required this.textOnPrimary,
+    required this.border,
+    required this.borderStrong,
+    required this.divider,
+    required this.primary,
+    required this.primarySoft,
+    required this.onPrimarySoft,
+    required this.secondary,
+    required this.secondarySoft,
     required this.success,
+    required this.successSoft,
     required this.warning,
+    required this.warningSoft,
+    required this.error,
+    required this.errorSoft,
     required this.info,
+    required this.infoSoft,
+    required this.discount,
+    required this.rating,
+    required this.wishlist,
+    required this.scrim,
     required this.inStock,
     required this.lowStock,
     required this.outOfStock,
     required this.vendorBadge,
     required this.rfqBadge,
-    required this.codBadge,
-    required this.discount,
-    required this.muted,
-    required this.divider,
+    required this.shadowCard,
+    required this.shadowRaised,
+    required this.shadowFloating,
   });
 
-  final Color success;
-  final Color warning;
-  final Color info;
+  // Surfaces
+  final Color background;
+  final Color surface;
+  final Color surfaceRaised;
+  final Color surfaceSunken;
 
-  /// Stock states shown on product cards and the variant selector.
+  // Text
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textMuted;
+  final Color textDisabled;
+  final Color textOnPrimary;
+
+  // Lines
+  final Color border;
+  final Color borderStrong;
+  final Color divider;
+
+  // Brand
+  final Color primary;
+  final Color primarySoft;
+  final Color onPrimarySoft;
+  final Color secondary;
+  final Color secondarySoft;
+
+  // Status (solid + tinted background)
+  final Color success;
+  final Color successSoft;
+  final Color warning;
+  final Color warningSoft;
+  final Color error;
+  final Color errorSoft;
+  final Color info;
+  final Color infoSoft;
+
+  // Commerce
+  final Color discount;
+  final Color rating;
+  final Color wishlist;
+  final Color scrim;
   final Color inStock;
   final Color lowStock;
   final Color outOfStock;
-
-  /// Badges: seller attribution, bulk-quote availability, cash on delivery.
   final Color vendorBadge;
   final Color rfqBadge;
-  final Color codBadge;
 
-  /// Discount and savings emphasis.
-  final Color discount;
+  // Elevation — dark mode leans on borders instead of shadows.
+  final List<BoxShadow> shadowCard;
+  final List<BoxShadow> shadowRaised;
+  final List<BoxShadow> shadowFloating;
 
-  /// Secondary text and hairline rules.
-  final Color muted;
-  final Color divider;
+  /// Legacy names, kept so not-yet-migrated widgets still compile.
+  Color get muted => textMuted;
 
   static const AppColorsExt light = AppColorsExt(
+    background: AppColors.lightBackground,
+    surface: AppColors.lightSurface,
+    surfaceRaised: AppColors.lightSurface,
+    surfaceSunken: AppColors.lightSurfaceVariant,
+    textPrimary: AppColors.ink,
+    textSecondary: AppColors.inkSecondary,
+    textMuted: AppColors.inkMuted,
+    textDisabled: AppColors.inkDisabled,
+    textOnPrimary: AppColors.white,
+    border: AppColors.line,
+    borderStrong: AppColors.lineStrong,
+    divider: AppColors.lineSoft,
+    primary: AppColors.primary,
+    primarySoft: Color(0xFFEAF6E5),
+    onPrimarySoft: AppColors.primaryDark,
+    secondary: AppColors.secondaryDark,
+    secondarySoft: Color(0xFFE3F5FC),
     success: AppColors.success,
-    warning: AppColors.warning,
+    successSoft: Color(0xFFE7F6EC),
+    warning: Color(0xFFB45309),
+    warningSoft: Color(0xFFFEF3E2),
+    error: AppColors.error,
+    errorSoft: Color(0xFFFDECEC),
     info: AppColors.info,
+    infoSoft: Color(0xFFE8EFFD),
+    discount: AppColors.success,
+    rating: AppColors.rating,
+    wishlist: AppColors.rose,
+    scrim: Color(0x8A0E1210),
     inStock: AppColors.inStock,
-    lowStock: AppColors.lowStock,
+    lowStock: Color(0xFFB45309),
     outOfStock: AppColors.outOfStock,
     vendorBadge: AppColors.vendorBadge,
     rfqBadge: AppColors.rfqBadge,
-    codBadge: AppColors.codBadge,
-    discount: AppColors.error,
-    muted: AppColors.black60,
-    divider: AppColors.black10,
+    shadowCard: [
+      BoxShadow(color: Color(0x0A141A16), offset: Offset(0, 1), blurRadius: 2),
+      BoxShadow(color: Color(0x0D141A16), offset: Offset(0, 6), blurRadius: 16),
+    ],
+    shadowRaised: [
+      BoxShadow(color: Color(0x14141A16), offset: Offset(0, 8), blurRadius: 24),
+    ],
+    shadowFloating: [
+      BoxShadow(color: Color(0x1F141A16), offset: Offset(0, 12), blurRadius: 32),
+    ],
   );
 
   static const AppColorsExt dark = AppColorsExt(
+    background: AppColors.darkBackground,
+    surface: AppColors.darkSurface,
+    surfaceRaised: AppColors.darkSurfaceVariant,
+    surfaceSunken: Color(0xFF121714),
+    textPrimary: AppColors.inkDark,
+    textSecondary: AppColors.inkSecondaryDark,
+    textMuted: AppColors.inkMutedDark,
+    textDisabled: AppColors.inkDisabledDark,
+    textOnPrimary: AppColors.white,
+    border: AppColors.lineDark,
+    borderStrong: AppColors.lineStrongDark,
+    divider: AppColors.lineSoftDark,
+    primary: AppColors.primaryLight,
+    primarySoft: Color(0xFF1C2D18),
+    onPrimarySoft: AppColors.primaryLight,
+    secondary: AppColors.secondaryLight,
+    secondarySoft: Color(0xFF10262F),
     success: Color(0xFF4ADE80),
+    successSoft: Color(0xFF13291B),
     warning: Color(0xFFFBBF24),
+    warningSoft: Color(0xFF2E2410),
+    error: Color(0xFFF87171),
+    errorSoft: Color(0xFF331A1A),
     info: Color(0xFF60A5FA),
+    infoSoft: Color(0xFF15223A),
+    discount: Color(0xFF4ADE80),
+    rating: Color(0xFFFBBF24),
+    wishlist: Color(0xFFFF6B70),
+    scrim: Color(0xB3000000),
     inStock: Color(0xFF4ADE80),
     lowStock: Color(0xFFFBBF24),
     outOfStock: Color(0xFF6B7280),
     vendorBadge: Color(0xFF2DD4BF),
     rfqBadge: Color(0xFFF3B85C),
-    codBadge: Color(0xFFA78BFA),
-    discount: Color(0xFFF87171),
-    muted: AppColors.white60,
-    divider: AppColors.white20,
+    shadowCard: [],
+    shadowRaised: [
+      BoxShadow(color: Color(0x66000000), offset: Offset(0, 8), blurRadius: 24),
+    ],
+    shadowFloating: [
+      BoxShadow(color: Color(0x80000000), offset: Offset(0, 12), blurRadius: 32),
+    ],
   );
 
   @override
-  AppColorsExt copyWith({
-    Color? success,
-    Color? warning,
-    Color? info,
-    Color? inStock,
-    Color? lowStock,
-    Color? outOfStock,
-    Color? vendorBadge,
-    Color? rfqBadge,
-    Color? codBadge,
-    Color? discount,
-    Color? muted,
-    Color? divider,
-  }) {
-    return AppColorsExt(
-      success: success ?? this.success,
-      warning: warning ?? this.warning,
-      info: info ?? this.info,
-      inStock: inStock ?? this.inStock,
-      lowStock: lowStock ?? this.lowStock,
-      outOfStock: outOfStock ?? this.outOfStock,
-      vendorBadge: vendorBadge ?? this.vendorBadge,
-      rfqBadge: rfqBadge ?? this.rfqBadge,
-      codBadge: codBadge ?? this.codBadge,
-      discount: discount ?? this.discount,
-      muted: muted ?? this.muted,
-      divider: divider ?? this.divider,
-    );
-  }
+  AppColorsExt copyWith() => this;
 
   @override
   AppColorsExt lerp(ThemeExtension<AppColorsExt>? other, double t) {
     if (other is! AppColorsExt) return this;
+    Color l(Color a, Color b) => Color.lerp(a, b, t)!;
     return AppColorsExt(
-      success: Color.lerp(success, other.success, t)!,
-      warning: Color.lerp(warning, other.warning, t)!,
-      info: Color.lerp(info, other.info, t)!,
-      inStock: Color.lerp(inStock, other.inStock, t)!,
-      lowStock: Color.lerp(lowStock, other.lowStock, t)!,
-      outOfStock: Color.lerp(outOfStock, other.outOfStock, t)!,
-      vendorBadge: Color.lerp(vendorBadge, other.vendorBadge, t)!,
-      rfqBadge: Color.lerp(rfqBadge, other.rfqBadge, t)!,
-      codBadge: Color.lerp(codBadge, other.codBadge, t)!,
-      discount: Color.lerp(discount, other.discount, t)!,
-      muted: Color.lerp(muted, other.muted, t)!,
-      divider: Color.lerp(divider, other.divider, t)!,
+      background: l(background, other.background),
+      surface: l(surface, other.surface),
+      surfaceRaised: l(surfaceRaised, other.surfaceRaised),
+      surfaceSunken: l(surfaceSunken, other.surfaceSunken),
+      textPrimary: l(textPrimary, other.textPrimary),
+      textSecondary: l(textSecondary, other.textSecondary),
+      textMuted: l(textMuted, other.textMuted),
+      textDisabled: l(textDisabled, other.textDisabled),
+      textOnPrimary: l(textOnPrimary, other.textOnPrimary),
+      border: l(border, other.border),
+      borderStrong: l(borderStrong, other.borderStrong),
+      divider: l(divider, other.divider),
+      primary: l(primary, other.primary),
+      primarySoft: l(primarySoft, other.primarySoft),
+      onPrimarySoft: l(onPrimarySoft, other.onPrimarySoft),
+      secondary: l(secondary, other.secondary),
+      secondarySoft: l(secondarySoft, other.secondarySoft),
+      success: l(success, other.success),
+      successSoft: l(successSoft, other.successSoft),
+      warning: l(warning, other.warning),
+      warningSoft: l(warningSoft, other.warningSoft),
+      error: l(error, other.error),
+      errorSoft: l(errorSoft, other.errorSoft),
+      info: l(info, other.info),
+      infoSoft: l(infoSoft, other.infoSoft),
+      discount: l(discount, other.discount),
+      rating: l(rating, other.rating),
+      wishlist: l(wishlist, other.wishlist),
+      scrim: l(scrim, other.scrim),
+      inStock: l(inStock, other.inStock),
+      lowStock: l(lowStock, other.lowStock),
+      outOfStock: l(outOfStock, other.outOfStock),
+      vendorBadge: l(vendorBadge, other.vendorBadge),
+      rfqBadge: l(rfqBadge, other.rfqBadge),
+      shadowCard: t < 0.5 ? shadowCard : other.shadowCard,
+      shadowRaised: t < 0.5 ? shadowRaised : other.shadowRaised,
+      shadowFloating: t < 0.5 ? shadowFloating : other.shadowFloating,
     );
   }
 }

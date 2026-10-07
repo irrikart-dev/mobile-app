@@ -7,4 +7,7 @@ abstract final class SupportConfig {
 
   static const whatsAppDefaultMessage =
       'Hi IrriKart, I have a question about your products.';
+
+  static const termsUrl = 'https://irrikart.com/terms';
+  static const privacyUrl = 'https://irrikart.com/privacy';
 }

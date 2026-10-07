@@ -1,97 +1,46 @@
 import 'package:flutter/material.dart';
 
-/// Font families and the text scale.
+/// Font families and the Material text scale.
 ///
-/// Matched to the "Botanical Classic" reference theme's pairing: a bold
-/// geometric heading face, a plain-set body face, and a script "kicker" used
-/// as a small eyebrow label above section headings (see [scriptFont] and
-/// `AppKicker` in `shared/widgets`).
+/// Poppins carries headings and prices, Open Sans carries body and UI copy.
+/// Every style sets an explicit [TextStyle.height]: both faces' built-in
+/// leading runs tall, and fixed-height cards overflow without it.
 ///
-/// Every style below sets an explicit [TextStyle.height] rather than
-/// trusting Poppins/Open Sans's built-in leading — the built-in metrics run
-/// noticeably taller than the raw font size suggests, which is what made
-/// fixed-height product cards overflow. Explicit, tight line-heights are
-/// what make a layout's own spacing budget trustworthy.
+/// Screens should use the role-based styles in `AppText` (`context.text`),
+/// which sit on top of this scale.
 abstract final class AppTypography {
-  /// Headings, prices, section titles.
   static const String headingFont = 'Poppins';
-
-  /// Body and UI copy.
   static const String bodyFont = 'Open Sans';
 
-  /// Small eyebrow label above a heading (e.g. "Fresh from the field").
-  /// Reference theme uses a licensed script face ("Shabrina"); Caveat is the
-  /// closest unencumbered equivalent.
+  /// Kept only so legacy widgets compile; no new code should use a script face.
   static const String scriptFont = 'Caveat';
 
-  static TextTheme textTheme(Color onSurface) {
-    final muted = onSurface.withValues(alpha: 0.62);
+  static TextTheme textTheme(Color onSurface, Color secondary) {
+    TextStyle heading(
+      double size,
+      FontWeight weight,
+      double tracking,
+      double height,
+    ) =>
+        TextStyle(
+          fontFamily: headingFont,
+          fontSize: size,
+          fontWeight: weight,
+          letterSpacing: tracking,
+          height: height,
+          color: onSurface,
+        );
 
     return TextTheme(
-      displayLarge: TextStyle(
-        fontFamily: headingFont,
-        fontSize: 34,
-        fontWeight: FontWeight.w800,
-        letterSpacing: -0.6,
-        height: 1.18,
-        color: onSurface,
-      ),
-      displayMedium: TextStyle(
-        fontFamily: headingFont,
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.4,
-        height: 1.2,
-        color: onSurface,
-      ),
-      headlineLarge: TextStyle(
-        fontFamily: headingFont,
-        fontSize: 24,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.3,
-        height: 1.22,
-        color: onSurface,
-      ),
-      headlineMedium: TextStyle(
-        fontFamily: headingFont,
-        fontSize: 21,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.3,
-        height: 1.24,
-        color: onSurface,
-      ),
-      headlineSmall: TextStyle(
-        fontFamily: headingFont,
-        fontSize: 19,
-        fontWeight: FontWeight.w600,
-        letterSpacing: -0.2,
-        height: 1.26,
-        color: onSurface,
-      ),
-      titleLarge: TextStyle(
-        fontFamily: headingFont,
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.2,
-        height: 1.28,
-        color: onSurface,
-      ),
-      titleMedium: TextStyle(
-        fontFamily: headingFont,
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-        letterSpacing: -0.1,
-        height: 1.3,
-        color: onSurface,
-      ),
-      titleSmall: TextStyle(
-        fontFamily: headingFont,
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        letterSpacing: -0.05,
-        height: 1.3,
-        color: onSurface,
-      ),
+      displayLarge: heading(32, FontWeight.w800, -0.8, 1.15),
+      displayMedium: heading(28, FontWeight.w700, -0.6, 1.18),
+      displaySmall: heading(26, FontWeight.w700, -0.5, 1.2),
+      headlineLarge: heading(24, FontWeight.w700, -0.4, 1.22),
+      headlineMedium: heading(20, FontWeight.w700, -0.3, 1.25),
+      headlineSmall: heading(17, FontWeight.w600, -0.2, 1.3),
+      titleLarge: heading(17, FontWeight.w600, -0.2, 1.3),
+      titleMedium: heading(15, FontWeight.w600, -0.1, 1.32),
+      titleSmall: heading(13, FontWeight.w600, 0, 1.3),
       bodyLarge: TextStyle(
         fontFamily: bodyFont,
         fontSize: 15,
@@ -100,21 +49,21 @@ abstract final class AppTypography {
       ),
       bodyMedium: TextStyle(
         fontFamily: bodyFont,
-        fontSize: 13.5,
-        height: 1.42,
+        fontSize: 14,
+        height: 1.45,
         color: onSurface,
       ),
       bodySmall: TextStyle(
         fontFamily: bodyFont,
         fontSize: 12,
-        height: 1.35,
-        color: muted,
+        height: 1.4,
+        color: secondary,
       ),
       labelLarge: TextStyle(
-        fontFamily: bodyFont,
-        fontSize: 13.5,
+        fontFamily: headingFont,
+        fontSize: 15,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0.1,
+        letterSpacing: 0,
         height: 1.2,
         color: onSurface,
       ),
@@ -122,33 +71,31 @@ abstract final class AppTypography {
         fontFamily: bodyFont,
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0.15,
-        height: 1.2,
+        letterSpacing: 0.1,
+        height: 1.25,
         color: onSurface,
       ),
       labelSmall: TextStyle(
         fontFamily: bodyFont,
-        fontSize: 10.5,
+        fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.2,
         height: 1.2,
-        color: muted,
+        color: secondary,
       ),
     );
   }
 
-  /// The recurring "kicker" style: a script eyebrow line above a heading.
+  /// Legacy script eyebrow — rendered in the body face now.
   static TextStyle kicker(Color color) => TextStyle(
-        fontFamily: scriptFont,
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
+        fontFamily: bodyFont,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.8,
         color: color,
-        height: 1.1,
+        height: 1.2,
       );
 
-  /// A price, set in the heading face with tight, non-negative tracking so
-  /// digits sit close together the way price tags read in print. Use for
-  /// any rupee amount that needs emphasis (product cards, totals).
   static TextStyle price(Color color, {double fontSize = 16}) => TextStyle(
         fontFamily: headingFont,
         fontSize: fontSize,
@@ -158,8 +105,6 @@ abstract final class AppTypography {
         color: color,
       );
 
-  /// A struck-through MRP shown next to [price] — same metrics, muted and
-  /// unbolded so it recedes rather than competing.
   static TextStyle strikePrice(Color color, {double fontSize = 12}) =>
       TextStyle(
         fontFamily: bodyFont,
@@ -170,7 +115,6 @@ abstract final class AppTypography {
         decorationColor: color,
       );
 
-  /// Small uppercase badge/pill text (discount tags, stock pills).
   static TextStyle overline(Color color, {double fontSize = 10}) => TextStyle(
         fontFamily: bodyFont,
         fontSize: fontSize,

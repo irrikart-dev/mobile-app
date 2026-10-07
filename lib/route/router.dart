@@ -5,325 +5,73 @@ import 'package:irrikart/models/order_data.dart';
 
 import 'screen_export.dart';
 
-// Yuo will get 50+ screens and more once you have the full template
-
-// NotificationPermissionScreen()
-// PreferredLanguageScreen()
-// SelectLanguageScreen()
-// SignUpVerificationScreen()
-// ProfileSetupScreen()
-// VerificationMethodScreen()
-// OtpScreen()
-// SetNewPasswordScreen()
-// DoneResetPasswordScreen()
-// TermsOfServicesScreen()
-// SetupFingerprintScreen()
-// SetupFingerprintScreen()
-// SetupFingerprintScreen()
-// SetupFingerprintScreen()
-// SetupFaceIdScreen()
-// OnSaleScreen()
-// BannerLStyle2()
-// BannerLStyle3()
-// BannerLStyle4()
-// SearchScreen()
-// SearchHistoryScreen()
-// NotificationsScreen()
-// EnableNotificationScreen()
-// NoNotificationScreen()
-// NotificationOptionsScreen()
-// ProductInfoScreen()
-// ShippingMethodsScreen()
-// ProductReviewsScreen()
-// SizeGuideScreen()
-// BrandScreen()
-// CartScreen()
-// EmptyCartScreen()
-// PaymentMethodScreen()
-// ThanksForOrderScreen()
-// CurrentPasswordScreen()
-// EditUserInfoScreen()
-// OrdersScreen()
-// OrderProcessingScreen()
-// OrderDetailsScreen()
-// CancleOrderScreen()
-// DelivereOrdersdScreen()
-// AddressesScreen()
-// NoAddressScreen()
-// AddNewAddressScreen()
-// ServerErrorScreen()
-// NoInternetScreen()
-// ChatScreen()
-// DiscoverWithImageScreen()
-// SubDiscoverScreen()
-// AddNewCardScreen()
-// EmptyPaymentScreen()
-// GetHelpScreen()
-
-// ℹ️ All the comments screen are included in the full template
-
+/// Every named route in the app. Tab roots (Home, Categories, Orders,
+/// Account) live inside [EntryPoint]; Cart and Orders also have their own
+/// routes so they can be pushed from elsewhere with a back button.
 Route<dynamic> generateRoute(RouteSettings settings) {
+  Route<T> page<T>(WidgetBuilder builder) =>
+      MaterialPageRoute<T>(builder: builder, settings: settings);
+
   switch (settings.name) {
     case onbordingScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const OnBordingScreen(),
-      );
-    // case preferredLanuageScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const PreferredLanguageScreen(),
-    //   );
+      return page((_) => const OnBordingScreen());
     case logInScreenRoute:
     case signUpScreenRoute:
       // One screen, Google-only — Firebase treats a new and a returning
       // account identically, so there is nothing left to tell apart.
-      return MaterialPageRoute(
-        builder: (context) => const AuthScreen(),
-      );
-    // case profileSetupScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const ProfileSetupScreen(),
-    //   );
-    // case verificationMethodScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const VerificationMethodScreen(),
-    //   );
-    // case otpScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const OtpScreen(),
-    //   );
-    // case newPasswordScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const SetNewPasswordScreen(),
-    //   );
-    // case doneResetPasswordScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const DoneResetPasswordScreen(),
-    //   );
-    // case termsOfServicesScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const TermsOfServicesScreen(),
-    //   );
-    // case noInternetScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const NoInternetScreen(),
-    //   );
-    // case serverErrorScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const ServerErrorScreen(),
-    //   );
-    // case signUpVerificationScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const SignUpVerificationScreen(),
-    //   );
-    // case setupFingerprintScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const SetupFingerprintScreen(),
-    //   );
-    // case setupFaceIdScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const SetupFaceIdScreen(),
-    //   );
+      return page((_) => const AuthScreen());
+    case entryPointScreenRoute:
+      return page((_) => const EntryPoint());
     case productDetailsScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) {
-          final slug = settings.arguments as String;
-          return ProductDetailsScreen(slug: slug);
-        },
-      );
+      return page((_) => ProductDetailsScreen(slug: settings.arguments as String));
     case productListScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) {
-          final categoryId = settings.arguments as String;
-          return ProductListScreen(categoryId: categoryId);
-        },
+      return page(
+        (_) => ProductListScreen(categoryId: settings.arguments as String),
       );
     case productReviewsScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) {
-          final args = settings.arguments as ProductReviewsArgs;
-          return ProductReviewsScreen(args: args);
-        },
+      return page(
+        (_) => ProductReviewsScreen(
+          args: settings.arguments as ProductReviewsArgs,
+        ),
       );
-    // case addReviewsScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const AddReviewScreen(),
-    //   );
-    case homeScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const HomeScreen(),
-      );
-    // case brandScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const BrandScreen(),
-    //   );
-    // case discoverWithImageScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const DiscoverWithImageScreen(),
-    //   );
-    // case subDiscoverScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const SubDiscoverScreen(),
-    //   );
-    case discoverScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const DiscoverScreen(),
-      );
-    case onSaleScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const OnSaleScreen(),
-      );
-    case kidsScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const KidsScreen(),
-      );
+    case productReturnsScreenRoute:
+      return page((_) => const ProductReturnsScreen());
     case searchScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const SearchScreen(),
-      );
-    // case searchHistoryScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const SearchHistoryScreen(),
-    //   );
+      return page((_) => const SearchScreen());
     case bookmarkScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const BookmarkScreen(),
-      );
-    case entryPointScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const EntryPoint(),
-      );
-    case profileScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const ProfileScreen(),
-      );
-    // case getHelpScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const GetHelpScreen(),
-    //   );
-    // case chatScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const ChatScreen(),
-    //   );
+      return page((_) => const BookmarkScreen());
     case userInfoScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const UserInfoScreen(),
-      );
-    // case currentPasswordScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const CurrentPasswordScreen(),
-    //   );
-    // case editUserInfoScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const EditUserInfoScreen(),
-    //   );
-    case notificationsScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const NotificationsScreen(),
-      );
-    case noNotificationScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const NoNotificationScreen(),
-      );
-    case enableNotificationScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const EnableNotificationScreen(),
-      );
-    case notificationOptionsScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const NotificationOptionsScreen(),
-      );
-    // case selectLanguageScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const SelectLanguageScreen(),
-    //   );
-    // case noAddressScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const NoAddressScreen(),
-    //   );
-    case addressesScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const AddressesScreen(),
-      );
-    case addNewAddressesScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) {
-          final existing = settings.arguments as Address?;
-          return AddEditAddressScreen(existing: existing);
-        },
-      );
-    case ordersScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const OrdersScreen(),
-      );
-    case orderProcessingScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) {
-          final args = settings.arguments as OrderProcessingArgs;
-          return OrderProcessingScreen(args: args);
-        },
-      );
-    case orderDetailsScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) {
-          final orderId = settings.arguments as String;
-          return OrderDetailScreen(orderId: orderId);
-        },
-      );
-    // case cancleOrderScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const CancleOrderScreen(),
-    //   );
-    // case deliveredOrdersScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const DelivereOrdersdScreen(),
-    //   );
-    // case cancledOrdersScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const CancledOrdersScreen(),
-    //   );
+      return page((_) => const UserInfoScreen());
     case preferencesScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const PreferencesScreen(),
-      );
-    // case emptyPaymentScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const EmptyPaymentScreen(),
-    //   );
-    case emptyWalletScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const EmptyWalletScreen(),
-      );
-    case walletScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const WalletScreen(),
+      return page((_) => const PreferencesScreen());
+    case addressesScreenRoute:
+      return page((_) => const AddressesScreen());
+    case addNewAddressesScreenRoute:
+      return page(
+        (_) => AddEditAddressScreen(existing: settings.arguments as Address?),
       );
     case cartScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const CartScreen(),
-      );
+      return page((_) => const CartScreen());
     case checkoutScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) => const CheckoutScreen(),
+      return page((_) => const CheckoutScreen());
+    case orderProcessingScreenRoute:
+      return page(
+        (_) => OrderProcessingScreen(
+          args: settings.arguments as OrderProcessingArgs,
+        ),
       );
-    // case paymentMethodScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const PaymentMethodScreen(),
-    //   );
-    // case addNewCardScreenRoute:
-    //   return MaterialPageRoute(
-    //     builder: (context) => const AddNewCardScreen(),
-    //   );
     case thanksForOrderScreenRoute:
-      return MaterialPageRoute(
-        builder: (context) {
-          final order = settings.arguments as Order;
-          return ThanksForOrderScreen(order: order);
-        },
+      return page(
+        (_) => ThanksForOrderScreen(order: settings.arguments as Order),
+      );
+    case ordersScreenRoute:
+      return page((_) => const OrdersScreen());
+    case orderDetailsScreenRoute:
+      return page(
+        (_) => OrderDetailScreen(orderId: settings.arguments as String),
       );
     default:
-      return MaterialPageRoute(
-        // Make a screen for undefine
-        builder: (context) => const OnBordingScreen(),
-      );
+      // Unknown route name — land somewhere safe rather than crash.
+      return page((_) => const EntryPoint());
   }
 }

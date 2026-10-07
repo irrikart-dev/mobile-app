@@ -1,6 +1,6 @@
+import 'package:flutter/animation.dart';
+
 /// Animation durations.
-///
-/// [normal] is 300ms — the template's `defaultDuration`.
 abstract final class AppDurations {
   static const Duration instant = Duration(milliseconds: 100);
   static const Duration fast = Duration(milliseconds: 200);
@@ -9,4 +9,12 @@ abstract final class AppDurations {
 
   /// Debounce window for the search field.
   static const Duration searchDebounce = Duration(milliseconds: 350);
+}
+
+/// Motion curves. [standard] for most UI changes, [emphasized] for things
+/// entering the screen, [press] for tap feedback.
+abstract final class AppCurves {
+  static const Curve standard = Curves.easeOutCubic;
+  static const Curve emphasized = Curves.easeOutQuart;
+  static const Curve press = Curves.easeOut;
 }

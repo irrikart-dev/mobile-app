@@ -2,131 +2,53 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens/radius_tokens.dart';
 import '../../core/theme/tokens/spacing_tokens.dart';
+import '../../core/utils/context_ext.dart';
+import '../ui/skeleton.dart';
+import 'catalog_product_card.dart';
 
-/// A shimmering placeholder block — a looping gradient sweep over a flat
-/// tinted box. Self-contained (no `shimmer` package) since this is the only
-/// place in the app that needs the effect.
-class ShimmerBox extends StatefulWidget {
-  const ShimmerBox({
-    super.key,
-    this.height,
-    this.width,
-    this.borderRadius,
-  });
+export '../ui/skeleton.dart' show ShimmerBox;
 
-  final double? height;
-  final double? width;
-  final BorderRadius? borderRadius;
-
-  @override
-  State<ShimmerBox> createState() => _ShimmerBoxState();
-}
-
-class _ShimmerBoxState extends State<ShimmerBox>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1400),
-  )..repeat();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+/// Skeleton matching [CatalogProductCard]'s exact proportions, so the swap
+/// to real content doesn't jump.
+class ProductCardSkeleton extends StatelessWidget {
+  const ProductCardSkeleton({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final base = Theme.of(context).colorScheme.surfaceContainerHighest;
-    final highlight = Theme.of(context)
-        .colorScheme
-        .onSurface
-        .withValues(alpha: 0.10);
-
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return ShaderMask(
-          blendMode: BlendMode.srcATop,
-          shaderCallback: (bounds) {
-            final t = _controller.value;
-            return LinearGradient(
-              begin: Alignment(-1 - 2 * t, 0),
-              end: Alignment(1 - 2 * t + 1, 0),
-              colors: [base, highlight, base],
-              stops: const [0.35, 0.5, 0.65],
-            ).createShader(bounds);
-          },
-          child: child,
-        );
-      },
-      child: Container(
-        height: widget.height,
-        width: widget.width,
-        decoration: BoxDecoration(
-          color: base,
-          borderRadius: widget.borderRadius ?? AppRadius.smAll,
-        ),
+    final c = context.colors;
+    return Container(
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: c.border),
       ),
-    );
-  }
-}
-
-/// Loading placeholder for a catalogue grid — matches `CatalogProductCard`'s
-/// proportions so the skeleton-to-real-content swap doesn't visibly jump.
-class CatalogGridSkeleton extends StatelessWidget {
-  const CatalogGridSkeleton({super.key, this.itemCount = 6});
-
-  final int itemCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      itemCount: itemCount,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: AppSpacing.sm,
-        crossAxisSpacing: AppSpacing.sm,
-        childAspectRatio: 0.60,
-      ),
-      itemBuilder: (context, i) => const _CardSkeleton(),
-    );
-  }
-}
-
-class _CardSkeleton extends StatelessWidget {
-  const _CardSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: AppRadius.mdAll,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.antiAlias,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AspectRatio(aspectRatio: 1, child: ShimmerBox()),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.sm,
-              AppSpacing.sm,
-              AppSpacing.sm,
-              0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                ShimmerBox(height: 14, width: 110),
-                SizedBox(height: 6),
-                ShimmerBox(height: 11, width: 70),
-                SizedBox(height: 6),
-                ShimmerBox(height: 14, width: 60),
-              ],
-            ),
+          AspectRatio(
+            aspectRatio: 1,
+            child: ShimmerBox(borderRadius: BorderRadius.zero),
           ),
-          const Padding(
-            padding: EdgeInsets.all(AppSpacing.sm),
-            child: ShimmerBox(height: 34),
+          SizedBox(
+            height: kProductCardContentHeight,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(12, 12, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerBox(height: 12, width: 120),
+                  SizedBox(height: 6),
+                  ShimmerBox(height: 12, width: 80),
+                  SizedBox(height: 10),
+                  ShimmerBox(height: 10, width: 60),
+                  Spacer(),
+                  ShimmerBox(height: 16, width: 70),
+                  SizedBox(height: 10),
+                  ShimmerBox(height: 32, borderRadius: AppRadius.pillAll),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -134,68 +56,115 @@ class _CardSkeleton extends StatelessWidget {
   }
 }
 
-/// Loading placeholder for the Home screen — mirrors its actual layout
-/// (search bar, banner, category row, two horizontal product rails) instead
-/// of a generic grid, so the skeleton sits exactly where each real component
-/// lands rather than reading as one undifferentiated wash across the screen.
+/// Sliver grid of [ProductCardSkeleton]s with the real grid's geometry.
+class SliverProductGridSkeleton extends StatelessWidget {
+  const SliverProductGridSkeleton({super.key, this.itemCount = 6});
+
+  final int itemCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+      sliver: SliverLayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.crossAxisExtent;
+          final columns = width >= 600 ? 3 : 2;
+          const spacing = SliverProductGrid.spacing;
+          final tile = (width - spacing * (columns - 1)) / columns;
+          return SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: spacing,
+              crossAxisSpacing: spacing,
+              mainAxisExtent: tile + kProductCardContentHeight + 2,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (_, __) => const ProductCardSkeleton(),
+              childCount: itemCount,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Box version of the grid skeleton for screens that aren't sliver-based.
+class CatalogGridSkeleton extends StatelessWidget {
+  const CatalogGridSkeleton({super.key, this.itemCount = 6});
+
+  final int itemCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      slivers: [
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+        SliverProductGridSkeleton(itemCount: itemCount),
+      ],
+    );
+  }
+}
+
+/// Loading placeholder for Home — mirrors its real layout.
 class HomeSkeleton extends StatelessWidget {
   const HomeSkeleton({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ListView(
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
       children: [
         const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: ShimmerBox(height: 48),
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+          child: ShimmerBox(height: 168, borderRadius: AppRadius.lgAll),
         ),
-        const SizedBox(height: AppSpacing.md),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: ShimmerBox(height: 152, borderRadius: AppRadius.lgAll),
-        ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.sectionGap),
         const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
           child: ShimmerBox(height: 18, width: 140),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.smd),
         SizedBox(
-          height: 92,
+          height: 96,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
             itemCount: 6,
             separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.smd),
             itemBuilder: (context, i) => const Column(
               children: [
-                ShimmerBox(height: 64, width: 64, borderRadius: AppRadius.pillAll),
+                ShimmerBox(height: 64, width: 64, borderRadius: AppRadius.lgAll),
                 SizedBox(height: 8),
                 ShimmerBox(height: 10, width: 52),
               ],
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.sectionGap),
         for (var rail = 0; rail < 2; rail++) ...[
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
             child: ShimmerBox(height: 18, width: 160),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.smd),
           SizedBox(
-            height: 300,
+            height: 164 + kProductCardContentHeight + 2,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              itemCount: 4,
-              separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+              itemCount: 3,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: AppSpacing.smd),
               itemBuilder: (context, i) =>
-                  const SizedBox(width: 168, child: _CardSkeleton()),
+                  const SizedBox(width: 164, child: ProductCardSkeleton()),
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.sectionGap),
         ],
       ],
     );
@@ -209,31 +178,5 @@ class CartLinesSkeleton extends StatelessWidget {
   final int itemCount;
 
   @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      itemCount: itemCount,
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, i) => Row(
-        children: [
-          ShimmerBox(
-            height: 72,
-            width: 72,
-            borderRadius: AppRadius.mdAll,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                ShimmerBox(height: 14, width: 160),
-                SizedBox(height: 8),
-                ShimmerBox(height: 12, width: 90),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ListSkeleton(itemCount: itemCount);
 }

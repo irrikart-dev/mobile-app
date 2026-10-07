@@ -1,368 +1,403 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/app_colors_extension.dart';
 import '../../core/theme/tokens/radius_tokens.dart';
-import '../../core/theme/tokens/shadow_tokens.dart';
 import '../../core/theme/tokens/spacing_tokens.dart';
-import '../../core/utils/formatters.dart';
+import '../../core/utils/context_ext.dart';
 import '../../models/cart_state.dart';
 import '../../models/catalog_product.dart';
 import '../../models/wishlist_state.dart';
+import '../../route/route_constants.dart';
 import '../catalog_image.dart';
+import '../ui/badges.dart';
+import '../ui/dialogs.dart';
+import '../ui/pressable.dart';
+import '../ui/price.dart';
+import '../ui/quantity_stepper.dart';
+import '../ui/rating.dart';
 
-/// A product card for grids: full-bleed photo, wishlist heart, name,
-/// rating, price, and an inline add-to-cart control that becomes a quantity
-/// stepper once the item is in the cart — so bumping quantity from a grid
-/// never requires a trip to the cart screen.
-///
-/// The one card every catalogue-facing screen (home, categories, product
-/// list, search, wishlist) uses, so the product grid reads consistently
-/// everywhere. Content below the image is deliberately kept to a single
-/// text line each (name / rating / price) so the card's height is
-/// predictable and never depends on how long a product's name happens to
-/// be — the failure mode that caused real overflow on-device.
+/// Height of everything below the square image. Fixed — every line in the
+/// content area has a fixed height and text scaling is clamped inside the
+/// card — so grids can use an exact `mainAxisExtent` and never overflow.
+const double kProductCardContentHeight = 146;
+
+/// Product card for grids and rails: square photo with wishlist heart and
+/// stock badge, 2-line name, rating, price, and an inline Add button that
+/// turns into a quantity stepper once the item is in the cart.
 class CatalogProductCard extends ConsumerWidget {
-  const CatalogProductCard({
-    super.key,
-    required this.product,
-    required this.onTap,
-  });
-
-  final CatalogProduct product;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final ext = theme.extension<AppColorsExt>()!;
-    final isWishlisted = ref.watch(
-      wishlistControllerProvider.select((s) => s.contains(product.slug)),
-    );
-    final cartLine = ref.watch(
-      cartControllerProvider.select(
-        (s) => s.valueOrNull?.items
-            .cast<CartLine?>()
-            .firstWhere((l) => l?.variantId == product.variantId, orElse: () => null),
-      ),
-    );
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: AppRadius.mdAll,
-          boxShadow: AppShadows.sm,
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CatalogImage(
-                    source: product.displayImage,
-                    isRemote: product.hasRemoteImage,
-                    fit: BoxFit.cover,
-                  ),
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: _WishlistButton(
-                      isActive: isWishlisted,
-                      onTap: () => ref
-                          .read(wishlistControllerProvider.notifier)
-                          .toggle(product.slug),
-                    ),
-                  ),
-                  if (!product.buyable)
-                    Positioned.fill(
-                      child: ColoredBox(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        child: Center(
-                          child: _Badge(
-                            text: 'OUT OF STOCK',
-                            color: Colors.black.withValues(alpha: 0.75),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.sm,
-                AppSpacing.sm,
-                AppSpacing.sm,
-                0,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Icon(Icons.star_rounded, size: 13, color: ext.warning),
-                      const SizedBox(width: 2),
-                      Text(
-                        '${product.rating}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: ext.muted,
-                        ),
-                      ),
-                      Text(
-                        ' (${product.reviewCount})',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    formatInr(product.price),
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              child: Divider(height: AppSpacing.sm),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.sm,
-                0,
-                AppSpacing.sm,
-                AppSpacing.sm,
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                child: cartLine == null
-                    ? _AddButton(product: product)
-                    : _QtyStepper(product: product, line: cartLine),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AddButton extends ConsumerStatefulWidget {
-  const _AddButton({required this.product});
+  const CatalogProductCard({super.key, required this.product, this.onTap});
 
   final CatalogProduct product;
 
-  @override
-  ConsumerState<_AddButton> createState() => _AddButtonState();
-}
-
-class _AddButtonState extends ConsumerState<_AddButton> {
-  bool _busy = false;
-
-  Future<void> _add() async {
-    if (_busy) return;
-    setState(() => _busy = true);
-    try {
-      await ref
-          .read(cartControllerProvider.notifier)
-          .add(widget.product.variantId, quantity: 1);
-    } on AuthRequiredException {
-      // Silently no-op here — the grid isn't the place to bounce to sign-in;
-      // the product/cart screens already handle that case explicitly.
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(cartErrorMessage(e))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return OutlinedButton.icon(
-      onPressed: widget.product.buyable && !_busy ? _add : null,
-      icon: _busy
-          ? const SizedBox(
-              height: 14,
-              width: 14,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.shopping_bag_outlined, size: 15),
-      label: Text(widget.product.buyable ? 'Add to cart' : 'Unavailable'),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 34),
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-        side: BorderSide(color: theme.colorScheme.outlineVariant),
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
-      ),
-    );
-  }
-}
-
-class _QtyStepper extends ConsumerStatefulWidget {
-  const _QtyStepper({required this.product, required this.line});
-
-  final CatalogProduct product;
-  final CartLine line;
-
-  @override
-  ConsumerState<_QtyStepper> createState() => _QtyStepperState();
-}
-
-class _QtyStepperState extends ConsumerState<_QtyStepper> {
-  bool _busy = false;
-
-  Future<void> _change(int delta) async {
-    if (_busy) return;
-    setState(() => _busy = true);
-    final notifier = ref.read(cartControllerProvider.notifier);
-    try {
-      final next = widget.line.quantity + delta;
-      if (next <= 0) {
-        await notifier.remove(widget.line.id);
-      } else {
-        await notifier.setQuantity(widget.line.id, next);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(cartErrorMessage(e))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      height: 34,
-      decoration: BoxDecoration(
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-        borderRadius: AppRadius.smAll,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _StepperButton(
-            icon: Icons.remove,
-            onTap: _busy ? null : () => _change(-1),
-          ),
-          Text(
-            '${widget.line.quantity}',
-            style: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          _StepperButton(
-            icon: Icons.add,
-            onTap: _busy || widget.line.quantity >= widget.line.available
-                ? null
-                : () => _change(1),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StepperButton extends StatelessWidget {
-  const _StepperButton({required this.icon, required this.onTap});
-
-  final IconData icon;
+  /// Defaults to opening the product page.
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      child: SizedBox(
-        width: 34,
-        height: 34,
-        child: Icon(
-          icon,
-          size: 16,
-          color: onTap == null
-              ? theme.disabledColor
-              : theme.colorScheme.primary,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final isWishlisted = ref.watch(
+      wishlistControllerProvider.select((s) => s.contains(product.slug)),
+    );
+
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1,
+      child: PressableScale(
+        onTap: onTap ??
+            () => Navigator.pushNamed(
+                  context,
+                  productDetailsScreenRoute,
+                  arguments: product.slug,
+                ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: AppRadius.mdAll,
+            border: Border.all(color: c.border),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AspectRatio(
+                aspectRatio: 1,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ColoredBox(
+                      color: c.surfaceSunken,
+                      child: Opacity(
+                        opacity: product.buyable ? 1 : 0.55,
+                        child: CatalogImage(
+                          source: product.displayImage,
+                          isRemote: product.hasRemoteImage,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: WishlistHeart(
+                        active: isWishlisted,
+                        onTap: () => ref
+                            .read(wishlistControllerProvider.notifier)
+                            .toggle(product.slug),
+                      ),
+                    ),
+                    if (!product.buyable)
+                      const Positioned(
+                        left: 8,
+                        top: 8,
+                        child: AppBadge(label: 'OUT OF STOCK'),
+                      ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: kProductCardContentHeight,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.smd,
+                    10,
+                    AppSpacing.smd,
+                    AppSpacing.smd,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        height: 34,
+                        child: Text(
+                          product.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.text.titleSm,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      SizedBox(
+                        height: 16,
+                        child: RatingLabel(
+                          rating: product.rating,
+                          count: product.reviewCount,
+                        ),
+                      ),
+                      const Spacer(),
+                      SizedBox(
+                        height: 22,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Flexible(child: PriceText(product.price)),
+                            const SizedBox(width: 4),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: Text(
+                                '/ ${product.unit}',
+                                style: context.text.captionMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 32,
+                        child: _CartAction(product: product),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _Badge extends StatelessWidget {
-  const _Badge({required this.text, required this.color});
+/// Round heart button over product media.
+class WishlistHeart extends StatelessWidget {
+  const WishlistHeart({
+    super.key,
+    required this.active,
+    required this.onTap,
+    this.size = 32,
+  });
 
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: BoxDecoration(color: color, borderRadius: AppRadius.smAll),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 9.5,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.4,
-        ),
-      ),
-    );
-  }
-}
-
-class _WishlistButton extends StatelessWidget {
-  const _WishlistButton({required this.isActive, required this.onTap});
-
-  final bool isActive;
+  final bool active;
   final VoidCallback onTap;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.92),
-          shape: BoxShape.circle,
-          boxShadow: AppShadows.sm,
+    final c = context.colors;
+    return Semantics(
+      button: true,
+      label: active ? 'Remove from wishlist' : 'Add to wishlist',
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: c.surface.withValues(alpha: 0.94),
+            shape: BoxShape.circle,
+            boxShadow: c.shadowCard,
+          ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            transitionBuilder: (child, a) => ScaleTransition(
+              scale: Tween(begin: 0.6, end: 1.0).animate(
+                CurvedAnimation(parent: a, curve: Curves.elasticOut),
+              ),
+              child: child,
+            ),
+            child: Icon(
+              active ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              key: ValueKey(active),
+              size: size * 0.53,
+              color: active ? c.wishlist : c.textSecondary,
+            ),
+          ),
         ),
-        child: Icon(
-          isActive ? Icons.favorite : Icons.favorite_border,
-          size: 15,
-          color: isActive ? Colors.redAccent : Colors.black54,
+      ),
+    );
+  }
+}
+
+/// "Add" button / quantity stepper, depending on whether this product's
+/// variant is already a cart line.
+class _CartAction extends ConsumerStatefulWidget {
+  const _CartAction({required this.product});
+
+  final CatalogProduct product;
+
+  @override
+  ConsumerState<_CartAction> createState() => _CartActionState();
+}
+
+class _CartActionState extends ConsumerState<_CartAction> {
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } on AuthRequiredException {
+      if (mounted) {
+        AppSnack.show(
+          context,
+          'Sign in to add items to your cart.',
+          actionLabel: 'Sign in',
+          onAction: () => Navigator.pushNamed(context, logInScreenRoute),
+        );
+      }
+    } catch (e) {
+      if (mounted) AppSnack.error(context, cartErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final product = widget.product;
+    final line = ref.watch(
+      cartControllerProvider.select(
+        (s) => s.valueOrNull?.items
+            .where((l) => l.variantId == product.variantId)
+            .firstOrNull,
+      ),
+    );
+    final notifier = ref.read(cartControllerProvider.notifier);
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: line == null
+          ? SizedBox(
+              key: const ValueKey('add'),
+              width: double.infinity,
+              child: Material(
+                color: product.buyable ? c.primarySoft : c.surfaceSunken,
+                borderRadius: AppRadius.pillAll,
+                child: InkWell(
+                  borderRadius: AppRadius.pillAll,
+                  onTap: product.buyable && !_busy
+                      ? () {
+                          HapticFeedback.lightImpact();
+                          _run(() => notifier.add(product.variantId));
+                        }
+                      : null,
+                  child: Center(
+                    child: _busy
+                        ? SizedBox.square(
+                            dimension: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: c.onPrimarySoft,
+                            ),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (product.buyable)
+                                Icon(
+                                  Icons.add_rounded,
+                                  size: 16,
+                                  color: c.onPrimarySoft,
+                                ),
+                              const SizedBox(width: 2),
+                              Text(
+                                product.buyable ? 'Add' : 'Unavailable',
+                                style: context.text.label.copyWith(
+                                  color: product.buyable
+                                      ? c.onPrimarySoft
+                                      : c.textDisabled,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            )
+          : SizedBox(
+              key: const ValueKey('stepper'),
+              width: double.infinity,
+              child: QuantityStepper(
+                value: line.quantity,
+                max: line.available,
+                allowRemove: true,
+                filled: true,
+                busy: _busy,
+                size: StepperSize.sm,
+                onChanged: (next) => _run(
+                  () => next <= 0
+                      ? notifier.remove(line.id)
+                      : notifier.setQuantity(line.id, next),
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+/// Two-column (three on tablets) product grid as a sliver, with the exact
+/// row height cards need.
+class SliverProductGrid extends StatelessWidget {
+  const SliverProductGrid({
+    super.key,
+    required this.products,
+    this.padding = const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+    this.onProductTap,
+  });
+
+  final List<CatalogProduct> products;
+  final EdgeInsets padding;
+
+  /// Overrides the default "open product page" tap.
+  final void Function(CatalogProduct product)? onProductTap;
+
+  static const double spacing = AppSpacing.smd;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverPadding(
+      padding: padding,
+      sliver: SliverLayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.crossAxisExtent;
+          final columns = width >= 600 ? 3 : 2;
+          final tile = (width - spacing * (columns - 1)) / columns;
+          return SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: spacing,
+              crossAxisSpacing: spacing,
+              mainAxisExtent: tile + kProductCardContentHeight + 2,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, i) => CatalogProductCard(
+                product: products[i],
+                onTap: onProductTap == null
+                    ? null
+                    : () => onProductTap!(products[i]),
+              ),
+              childCount: products.length,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Horizontal product rail (home sections, "You may also like").
+class ProductRail extends StatelessWidget {
+  const ProductRail({super.key, required this.products, this.cardWidth = 164});
+
+  final List<CatalogProduct> products;
+  final double cardWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: cardWidth + kProductCardContentHeight + 2,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+        itemCount: products.length,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.smd),
+        itemBuilder: (context, i) => SizedBox(
+          width: cardWidth,
+          child: CatalogProductCard(product: products[i]),
         ),
       ),
     );
