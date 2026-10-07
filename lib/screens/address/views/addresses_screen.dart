@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_colors_extension.dart';
-import '../../../core/theme/tokens/radius_tokens.dart';
-import '../../../core/theme/tokens/spacing_tokens.dart';
+import '../../../components/ui/ui.dart';
 import '../../../models/address_data.dart';
 import '../../../route/route_constants.dart';
 
@@ -17,177 +15,304 @@ class AddressesScreen extends ConsumerWidget {
 
   bool get _isPicker => onPicked != null;
 
+  void _add(BuildContext context) =>
+      Navigator.pushNamed(context, addNewAddressesScreenRoute);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final addressesAsync = ref.watch(addressControllerProvider);
+    final count = addressesAsync.valueOrNull?.length ?? 0;
+    final hasList = addressesAsync.hasValue && count > 0;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isPicker ? 'Choose delivery address' : 'Saved addresses'),
+      backgroundColor: context.colors.background,
+      appBar: AppTopBar(
+        title: _isPicker ? 'Choose delivery address' : 'Saved addresses',
+        subtitle: hasList
+            ? (count == 1 ? '1 address' : '$count addresses')
+            : null,
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, addNewAddressesScreenRoute),
-        icon: const Icon(Icons.add),
-        label: const Text('Add address'),
-      ),
-      body: addressesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, st) =>
-            Center(child: Text('Could not load addresses: $err')),
-        data: (addresses) {
-          if (addresses.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.location_on_outlined,
-                      size: 72,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.4),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'No saved addresses yet',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Add a delivery address to check out.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pushNamed(
-                        context,
-                        addNewAddressesScreenRoute,
-                      ),
-                      child: const Text('Add address'),
-                    ),
-                  ],
+      bottomNavigationBar: hasList
+          ? _BottomBar(
+              child: AppButton(
+                label: 'Add new address',
+                icon: Icons.add_rounded,
+                onPressed: () => _add(context),
+              ),
+            )
+          : null,
+      body: switch (addressesAsync) {
+        AsyncValue(:final value?, hasError: false) => value.isEmpty
+            ? EmptyState(
+                icon: Icons.location_on_rounded,
+                title: 'No saved addresses yet',
+                message: 'Add a delivery address so your pumps, pipes and '
+                    'kits reach the right farm.',
+                actionLabel: 'Add address',
+                onAction: () => _add(context),
+              )
+            : RefreshIndicator(
+                onRefresh: () =>
+                    ref.read(addressControllerProvider.notifier).refresh(),
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.gutter,
+                    AppSpacing.sm,
+                    AppSpacing.gutter,
+                    AppSpacing.lg,
+                  ),
+                  itemCount: value.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppSpacing.smd),
+                  itemBuilder: (context, i) => _AddressCard(
+                    address: value[i],
+                    onPick: _isPicker ? () => onPicked!(value[i]) : null,
+                  ),
                 ),
               ),
-            );
-          }
+        AsyncValue(:final error?) => ErrorState(
+            error: error,
+            onRetry: () =>
+                ref.read(addressControllerProvider.notifier).refresh(),
+          ),
+        _ => const ListSkeleton(itemCount: 3, thumb: 40),
+      },
+    );
+  }
+}
 
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.xxxl,
-            ),
-            itemCount: addresses.length,
-            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-            itemBuilder: (context, i) => _AddressTile(
-              address: addresses[i],
-              onTap: _isPicker ? () => onPicked!(addresses[i]) : null,
-            ),
-          );
-        },
+class _BottomBar extends StatelessWidget {
+  const _BottomBar({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      decoration: BoxDecoration(
+        color: c.surface,
+        border: Border(top: BorderSide(color: c.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.gutter,
+            AppSpacing.smd,
+            AppSpacing.gutter,
+            AppSpacing.smd,
+          ),
+          child: child,
+        ),
       ),
     );
   }
 }
 
-class _AddressTile extends ConsumerWidget {
-  const _AddressTile({required this.address, required this.onTap});
+class _AddressCard extends ConsumerStatefulWidget {
+  const _AddressCard({required this.address, required this.onPick});
 
   final Address address;
-  final VoidCallback? onTap;
+
+  /// Set in picker mode: tapping the card chooses it.
+  final VoidCallback? onPick;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final ext = theme.extension<AppColorsExt>()!;
+  ConsumerState<_AddressCard> createState() => _AddressCardState();
+}
 
-    return InkWell(
-      onTap: onTap ??
-          () => Navigator.pushNamed(
-                context,
-                addNewAddressesScreenRoute,
-                arguments: address,
-              ),
-      borderRadius: AppRadius.mdAll,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.smd),
-        decoration: BoxDecoration(
-          border: Border.all(color: ext.divider),
-          borderRadius: AppRadius.mdAll,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+class _AddressCardState extends ConsumerState<_AddressCard> {
+  bool _busy = false;
+
+  Address get _a => widget.address;
+
+  void _edit() => Navigator.pushNamed(
+        context,
+        addNewAddressesScreenRoute,
+        arguments: _a,
+      );
+
+  Future<void> _delete() async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Delete this address?',
+      message: '${_a.name}, ${_a.oneLine} will be removed from your saved '
+          'addresses.',
+      confirmLabel: 'Delete',
+      destructive: true,
+      icon: Icons.delete_outline_rounded,
+    );
+    if (!ok || !mounted) return;
+    await _run(
+      () => ref.read(addressControllerProvider.notifier).remove(_a.id),
+      success: 'Address deleted',
+    );
+  }
+
+  Future<void> _setDefault() => _run(
+        () => ref.read(addressControllerProvider.notifier).setDefault(_a.id),
+        success: 'Default address updated',
+      );
+
+  Future<void> _run(Future<void> Function() action, {required String success}) async {
+    setState(() => _busy = true);
+    // Grab the messenger context before the card may be removed (delete).
+    final messengerContext = Navigator.of(context).context;
+    try {
+      await action();
+      if (messengerContext.mounted) AppSnack.success(messengerContext, success);
+    } catch (e) {
+      if (messengerContext.mounted) {
+        AppSnack.error(messengerContext, friendlyError(e));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final a = _a;
+    final line2 = a.line2?.trim();
+    final fullAddress = [
+      a.line1,
+      if (line2 != null && line2.isNotEmpty) line2,
+      '${a.city}, ${a.state} – ${a.pincode}',
+    ].join('\n');
+
+    return AppCard(
+      onTap: widget.onPick,
+      padding: EdgeInsets.zero,
+      borderColor: a.isDefault ? c.primary : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.smd,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: a.isDefault ? c.primarySoft : c.surfaceSunken,
+                    borderRadius: AppRadius.smAll,
+                  ),
+                  child: Icon(
+                    a.isDefault
+                        ? Icons.home_rounded
+                        : Icons.location_on_rounded,
+                    size: 20,
+                    color: a.isDefault ? c.onPrimarySoft : c.textSecondary,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.smd),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(address.name, style: theme.textTheme.titleSmall),
-                      if (address.isDefault) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                            borderRadius: AppRadius.smAll,
-                          ),
-                          child: Text(
-                            'Default',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.w700,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              a.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.text.title,
                             ),
                           ),
-                        ),
-                      ],
+                          if (a.isDefault) ...[
+                            const SizedBox(width: AppSpacing.sm),
+                            const StatusPill(
+                              label: 'Default',
+                              tone: Tone.primary,
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.phone_rounded,
+                            size: 14,
+                            color: c.textMuted,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Text(_formatPhone(a.phone), style: context.text.caption),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(fullAddress, style: context.text.bodySecondary),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(address.oneLine, style: theme.textTheme.bodyMedium),
-                  const SizedBox(height: 2),
-                  Text(
-                    address.phone,
-                    style: theme.textTheme.bodySmall?.copyWith(color: ext.muted),
-                  ),
-                ],
-              ),
+                ),
+                if (widget.onPick != null)
+                  Icon(Icons.chevron_right_rounded, color: c.textMuted),
+              ],
             ),
-            if (onTap == null)
-              PopupMenuButton<String>(
-                onSelected: (value) async {
-                  switch (value) {
-                    case 'default':
-                      await ref
-                          .read(addressControllerProvider.notifier)
-                          .setDefault(address.id);
-                    case 'delete':
-                      await ref
-                          .read(addressControllerProvider.notifier)
-                          .remove(address.id);
-                  }
-                },
-                itemBuilder: (context) => [
-                  if (!address.isDefault)
-                    const PopupMenuItem(
-                      value: 'default',
-                      child: Text('Set as default'),
+          ),
+          Divider(height: 1, color: c.divider),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
+            ),
+            child: _busy
+                ? const Padding(
+                    padding: EdgeInsets.all(AppSpacing.smd),
+                    child: Center(
+                      child: SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     ),
-                  const PopupMenuItem(value: 'delete', child: Text('Delete')),
-                ],
-              ),
-          ],
-        ),
+                  )
+                : Row(
+                    children: [
+                      AppButton.ghost(
+                        label: 'Edit',
+                        icon: Icons.edit_rounded,
+                        size: AppButtonSize.sm,
+                        onPressed: _edit,
+                      ),
+                      AppButton.ghost(
+                        label: 'Delete',
+                        icon: Icons.delete_outline_rounded,
+                        size: AppButtonSize.sm,
+                        onPressed: _delete,
+                      ),
+                      const Spacer(),
+                      if (!a.isDefault)
+                        AppButton.ghost(
+                          label: 'Set as default',
+                          size: AppButtonSize.sm,
+                          onPressed: _setDefault,
+                        ),
+                    ],
+                  ),
+          ),
+        ],
       ),
     );
   }
+}
+
+/// "9876543210" → "+91 98765 43210"; anything else is shown as stored.
+String _formatPhone(String raw) {
+  final digits = raw.replaceAll(RegExp(r'\D'), '');
+  final local = digits.length == 12 && digits.startsWith('91')
+      ? digits.substring(2)
+      : digits;
+  if (local.length != 10) return raw;
+  return '+91 ${local.substring(0, 5)} ${local.substring(5)}';
 }
