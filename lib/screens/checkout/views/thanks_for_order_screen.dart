@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../components/catalog_image.dart';
 import '../../../components/ui/ui.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../entry_point_tab.dart';
@@ -79,9 +78,9 @@ class _ThanksForOrderScreenState extends ConsumerState<ThanksForOrderScreen>
     final c = context.colors;
     final order = _order;
     final address = order.address;
-    final tone = _confirmed ? Tone.success : Tone.warning;
-    final (fg, bg) = tone.resolve(context);
     final itemCount = order.items.fold<int>(0, (sum, i) => sum + i.quantity);
+    final statusLabel =
+        orderStatusLabel(order.status, order.rawStatus).toLowerCase();
 
     return PopScope(
       canPop: false,
@@ -95,7 +94,7 @@ class _ThanksForOrderScreenState extends ConsumerState<ThanksForOrderScreen>
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.gutter,
-              AppSpacing.xl,
+              AppSpacing.xxl,
               AppSpacing.gutter,
               AppSpacing.lg,
             ),
@@ -103,63 +102,51 @@ class _ThanksForOrderScreenState extends ConsumerState<ThanksForOrderScreen>
               Center(
                 child: ScaleTransition(
                   scale: _scale,
-                  child: Container(
-                    width: 104,
-                    height: 104,
-                    decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-                    alignment: Alignment.center,
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      decoration:
-                          BoxDecoration(color: fg, shape: BoxShape.circle),
-                      child: Icon(
-                        _confirmed
-                            ? Icons.check_rounded
-                            : Icons.hourglass_top_rounded,
-                        size: 40,
-                        color: c.textOnPrimary,
-                      ),
-                    ),
-                  ),
+                  child: _SuccessMark(confirmed: _confirmed),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.xl),
               FadeTransition(
                 opacity: _fade,
                 child: Column(
                   children: [
                     Text(
-                      _confirmed
-                          ? 'Order placed!'
-                          : 'Order ${orderStatusLabel(order.status, order.rawStatus).toLowerCase()}',
+                      _confirmed ? 'Order placed!' : 'Order $statusLabel',
                       style: context.text.display,
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      _confirmed
-                          ? 'Thank you! Your payment is confirmed and we’ll notify you as your order is packed and shipped.'
-                          : 'Your order is now ${orderStatusLabel(order.status, order.rawStatus).toLowerCase()}. Check your orders for the latest status.',
-                      style: context.text.bodySecondary,
-                      textAlign: TextAlign.center,
+                    const SizedBox(height: AppSpacing.smd),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
+                      child: Text(
+                        _confirmed
+                            ? 'Thank you! Your payment is confirmed. We’ll let you know as soon as it’s packed and on its way.'
+                            : 'Your order is now $statusLabel. Check your orders for the latest status.',
+                        style: context.text.bodySecondary,
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.mdPlus),
                     Material(
-                      color: c.surface,
-                      shape: StadiumBorder(side: BorderSide(color: c.border)),
+                      color: c.tint,
+                      shape: const StadiumBorder(),
+                      clipBehavior: Clip.antiAlias,
                       child: InkWell(
-                        customBorder: const StadiumBorder(),
                         onTap: _copyNumber,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.md,
-                            vertical: AppSpacing.sm,
+                            vertical: AppSpacing.sm + 2,
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('Order ', style: context.text.caption),
+                              Text(
+                                'Order ',
+                                style: context.text.captionMuted,
+                              ),
                               Text(
                                 orderDisplayNumber(order.orderNumber),
                                 style: context.text.label,
@@ -167,7 +154,7 @@ class _ThanksForOrderScreenState extends ConsumerState<ThanksForOrderScreen>
                               const SizedBox(width: AppSpacing.sm),
                               Icon(
                                 Icons.copy_rounded,
-                                size: 16,
+                                size: AppIconSize.xs,
                                 color: c.textMuted,
                               ),
                             ],
@@ -178,86 +165,72 @@ class _ThanksForOrderScreenState extends ConsumerState<ThanksForOrderScreen>
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.xxl),
               FadeTransition(
                 opacity: _fade,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SectionCard(
-                      title: 'Items',
-                      icon: Icons.shopping_bag_rounded,
+                    OverlineHeader(
+                      'Items',
                       trailing: Text(
-                        '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
-                        style: context.text.caption,
+                        itemCountLabel(itemCount),
+                        style: context.text.captionMuted,
                       ),
-                      child: Column(
-                        children: [
-                          for (final item in order.items)
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: AppSpacing.smd,
-                              ),
-                              child: Row(
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    for (final item in order.items)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.smd),
+                        child: Row(
+                          children: [
+                            ProductTile(image: item.image, size: 48),
+                            const SizedBox(width: AppSpacing.smd),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  OrderThumb(
-                                    size: 44,
-                                    child: CatalogImage(
-                                      source: item.image,
-                                      isRemote: item.hasRemoteImage,
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.smd),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.name,
-                                          style: context.text.titleSm,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          'Qty ${item.quantity}',
-                                          style: context.text.caption,
-                                        ),
-                                      ],
-                                    ),
+                                  Text(
+                                    item.name,
+                                    style: context.text.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    formatInr(item.totalPrice),
-                                    style: context.text.bodyStrong,
+                                    'Qty ${item.quantity}',
+                                    style: context.text.captionMuted,
                                   ),
                                 ],
                               ),
                             ),
-                        ],
-                      ),
-                    ),
-                    if (address != null) ...[
-                      const SizedBox(height: AppSpacing.smd),
-                      SectionCard(
-                        title: 'Delivering to',
-                        icon: Icons.location_on_rounded,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(address.name, style: context.text.title),
-                            const SizedBox(height: AppSpacing.xxs),
+                            const SizedBox(width: AppSpacing.sm),
                             Text(
-                              address.oneLine,
-                              style: context.text.bodySecondary,
+                              formatInr(item.totalPrice),
+                              style: context.text.bodyStrong,
                             ),
-                            if (address.phone.isNotEmpty)
-                              Text(address.phone, style: context.text.caption),
                           ],
                         ),
                       ),
+                    if (address != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      const Hairline(),
+                      const SizedBox(height: AppSpacing.md),
+                      const OverlineHeader('Delivering to'),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(address.name, style: context.text.title),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(address.oneLine, style: context.text.bodySecondary),
+                      if (address.phone.isNotEmpty)
+                        Text(address.phone, style: context.text.captionMuted),
                     ],
-                    const SizedBox(height: AppSpacing.smd),
+                    const SizedBox(height: AppSpacing.lg),
                     AppCard(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.mdPlus,
+                        AppSpacing.md,
+                        AppSpacing.mdPlus,
+                        AppSpacing.md,
+                      ),
                       child: Row(
                         children: [
                           Expanded(
@@ -266,19 +239,32 @@ class _ThanksForOrderScreenState extends ConsumerState<ThanksForOrderScreen>
                               children: [
                                 Text(
                                   _confirmed ? 'Total paid' : 'Order total',
-                                  style: context.text.caption,
+                                  style: context.text.captionMuted,
                                 ),
                                 const SizedBox(height: AppSpacing.xxs),
-                                PriceText(order.amount, large: true),
+                                Text(
+                                  formatInr(order.amount),
+                                  style: context.text.h2,
+                                ),
                               ],
                             ),
                           ),
-                          StatusPill(
-                            label: _confirmed
-                                ? 'Paid via Razorpay'
-                                : 'Razorpay · prepaid',
-                            tone: _confirmed ? Tone.success : Tone.neutral,
-                            icon: Icons.lock_rounded,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.verified_user_rounded,
+                                size: AppIconSize.xs,
+                                color: _confirmed ? c.success : c.textMuted,
+                              ),
+                              const SizedBox(width: AppSpacing.xs + 2),
+                              Text(
+                                _confirmed
+                                    ? 'Paid via Razorpay'
+                                    : 'Prepaid · Razorpay',
+                                style: context.text.caption,
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -289,36 +275,64 @@ class _ThanksForOrderScreenState extends ConsumerState<ThanksForOrderScreen>
             ],
           ),
         ),
-        bottomNavigationBar: DecoratedBox(
-          decoration: BoxDecoration(
-            color: c.surface,
-            border: Border(top: BorderSide(color: c.border)),
+        bottomNavigationBar: StickyFooter(
+          bottom: context.bottomInset,
+          child: Row(
+            children: [
+              Expanded(
+                child: AppButton.secondary(
+                  label: 'Keep shopping',
+                  onPressed: _continueShopping,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.smd),
+              Expanded(
+                child: AppButton(
+                  label: 'View order',
+                  trailingIcon: Icons.arrow_forward_rounded,
+                  onPressed: _viewOrder,
+                ),
+              ),
+            ],
           ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.gutter,
-                AppSpacing.smd,
-                AppSpacing.gutter,
-                AppSpacing.smd,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppButton(
-                    label: 'View order',
-                    trailingIcon: Icons.arrow_forward_rounded,
-                    onPressed: _viewOrder,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  AppButton.outline(
-                    label: 'Continue shopping',
-                    onPressed: _continueShopping,
-                  ),
-                ],
-              ),
-            ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Big forest disc with a check, sitting in two soft sage halos.
+class _SuccessMark extends StatelessWidget {
+  const _SuccessMark({required this.confirmed});
+
+  final bool confirmed;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final fg = confirmed ? c.primary : c.warning;
+    final halo = confirmed ? c.tint : c.warningSoft;
+    return Container(
+      width: 148,
+      height: 148,
+      decoration: BoxDecoration(
+        color: halo.withValues(alpha: 0.55),
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Container(
+        width: 116,
+        height: 116,
+        decoration: BoxDecoration(color: halo, shape: BoxShape.circle),
+        alignment: Alignment.center,
+        child: Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
+          child: Icon(
+            confirmed ? Icons.check_rounded : Icons.hourglass_top_rounded,
+            size: AppIconSize.xl,
+            color: c.textOnPrimary,
           ),
         ),
       ),

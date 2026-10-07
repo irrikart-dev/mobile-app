@@ -1,7 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../components/catalog_image.dart';
 import '../../../components/product/catalog_grid_skeleton.dart';
 import '../../../components/ui/ui.dart';
 import '../../../core/auth/auth_service.dart';
@@ -15,20 +16,28 @@ import '../../order/views/order_ui.dart';
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
 
+  /// True when pushed on its own route rather than shown as a shell tab —
+  /// decides whether the checkout bar has to clear the floating nav.
+  static bool _isStandalone(BuildContext context) {
+    final route = ModalRoute.of(context);
+    final name = route?.settings.name;
+    if (name == cartScreenRoute) return true;
+    return (route?.canPop ?? false) && name != entryPointScreenRoute;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final signedIn = ref.watch(isSignedInProvider);
     final cartAsync = ref.watch(cartControllerProvider);
     final count = cartAsync.valueOrNull?.itemCount ?? 0;
+    final standalone = _isStandalone(context);
 
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppTopBar(
         large: true,
         title: 'Cart',
-        subtitle: signedIn && count > 0
-            ? '$count ${count == 1 ? 'item' : 'items'}'
-            : null,
+        subtitle: signedIn && count > 0 ? itemCountLabel(count) : null,
       ),
       // A plain Column, deliberately not Scaffold's bottomNavigationBar slot:
       // CartScreen lives in entry_point.dart's IndexedStack, which keeps
@@ -70,7 +79,7 @@ class CartScreen extends ConsumerWidget {
                           ),
                   ),
                 ),
-                const _CartBottomBar(),
+                _CartBottomBar(standalone: standalone),
               ],
             ),
     );
@@ -105,7 +114,6 @@ class _CartList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
-    final short = cart.items.any((l) => l.quantity > l.available);
 
     return RefreshIndicator(
       onRefresh: onRefresh,
@@ -114,38 +122,33 @@ class _CartList extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.gutter,
-          AppSpacing.sm,
+          AppSpacing.xs,
           AppSpacing.gutter,
           AppSpacing.lg,
         ),
         children: [
-          if (short) ...[
-            const InlineBanner(
-              tone: Tone.warning,
-              title: 'Some items are short on stock',
-              message:
-                  'Reduce the quantity or remove the items marked below to continue to checkout.',
+          for (var i = 0; i < cart.items.length; i++) ...[
+            if (i > 0) const Hairline(),
+            _CartLineRow(
+              key: ValueKey(cart.items[i].id),
+              line: cart.items[i],
+              onQtyChanged: (q) =>
+                  _updateQty(snackContext, ref, cart.items[i], q),
+              onRemove: () => _remove(snackContext, ref, cart.items[i]),
             ),
-            const SizedBox(height: AppSpacing.smd),
           ],
-          for (final line in cart.items) ...[
-            _CartLineCard(
-              key: ValueKey(line.id),
-              line: line,
-              onQtyChanged: (q) => _updateQty(snackContext, ref, line, q),
-              onRemove: () => _remove(snackContext, ref, line),
+          const SizedBox(height: AppSpacing.md),
+          AppCard(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.mdPlus,
+              AppSpacing.md,
+              AppSpacing.mdPlus,
+              AppSpacing.md,
             ),
-            const SizedBox(height: AppSpacing.smd),
-          ],
-          const SizedBox(height: AppSpacing.xs),
-          SectionCard(
-            title: 'Price details',
-            icon: Icons.receipt_long_rounded,
             child: Column(
               children: [
                 SummaryRow(
-                  label:
-                      'Subtotal (${cart.itemCount} ${cart.itemCount == 1 ? 'item' : 'items'})',
+                  label: 'Subtotal · ${itemCountLabel(cart.itemCount)}',
                   value: formatInr(cart.subtotal),
                 ),
                 SummaryRow(
@@ -155,7 +158,7 @@ class _CartList extends ConsumerWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                  child: Divider(height: 1, color: c.divider),
+                  child: Divider(height: 1, color: c.border),
                 ),
                 SummaryRow(
                   label: 'Total',
@@ -165,15 +168,15 @@ class _CartList extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.smd),
+          const SizedBox(height: AppSpacing.md),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.lock_rounded, size: 14, color: c.textMuted),
+              Icon(Icons.lock_rounded, size: AppIconSize.xs, color: c.textMuted),
               const SizedBox(width: AppSpacing.xs),
               Flexible(
                 child: Text(
-                  'Prepaid orders · UPI, cards & netbanking via Razorpay',
+                  'Prepaid · UPI, cards & netbanking via Razorpay',
                   style: context.text.captionMuted,
                   textAlign: TextAlign.center,
                 ),
@@ -230,8 +233,10 @@ class _CartList extends ConsumerWidget {
   }
 }
 
-class _CartLineCard extends StatelessWidget {
-  const _CartLineCard({
+/// One cart line: sage product tile, name, unit price, line total and a
+/// compact stepper — no card frame, rows are split by hairlines.
+class _CartLineRow extends StatelessWidget {
+  const _CartLineRow({
     super.key,
     required this.line,
     required this.onQtyChanged,
@@ -247,36 +252,33 @@ class _CartLineCard extends StatelessWidget {
     final c = context.colors;
     final short = line.quantity > line.available;
 
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpacing.smd),
-      borderColor: short ? c.warning : null,
+    return InkWell(
       onTap: () => Navigator.pushNamed(
         context,
         productDetailsScreenRoute,
         arguments: line.slug,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              OrderThumb(
-                size: 72,
-                child: CatalogImage(
-                  source: line.image,
-                  isRemote: line.hasRemoteImage,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.smd),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProductTile(image: line.image),
+            const SizedBox(width: AppSpacing.smd + 2),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // The remove button floats over the title's top-right
+                  // corner so its tap target never pushes the text rows
+                  // apart (one- and two-line names keep the same rhythm).
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: AppSpacing.xl),
+                        child: SizedBox(
+                          width: double.infinity,
                           child: Text(
                             line.name,
                             style: context.text.title,
@@ -284,50 +286,54 @@ class _CartLineCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.xs),
-                        AppIconButton(
+                      ),
+                      Positioned(
+                        top: -AppSpacing.sm + 1,
+                        right: -AppSpacing.sm,
+                        child: AppIconButton(
                           icon: Icons.close_rounded,
                           tooltip: 'Remove',
                           size: 32,
-                          iconSize: 18,
+                          iconSize: AppIconSize.sm,
                           color: c.textMuted,
                           onPressed: onRemove,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      '${formatInr(line.price)} ${formatUnit(line.unit)}',
-                      style: context.text.caption,
-                    ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    '${formatInr(line.price)} ${formatUnit(line.unit)}',
+                    style: context.text.captionMuted,
+                  ),
+                  if (short) ...[
                     const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: [
-                        Expanded(child: PriceText(line.lineTotal)),
-                        QuantityStepper(
-                          value: line.quantity,
-                          onChanged: onQtyChanged,
-                          allowRemove: true,
-                          max: line.available,
-                          size: StepperSize.sm,
-                        ),
-                      ],
+                    StatusPill(
+                      tone: line.available <= 0 ? Tone.error : Tone.warning,
+                      dot: true,
+                      label: line.available <= 0
+                          ? 'Out of stock'
+                          : 'Only ${line.available} left',
                     ),
                   ],
-                ),
+                  const SizedBox(height: AppSpacing.smd),
+                  Row(
+                    children: [
+                      Expanded(child: PriceText(line.lineTotal)),
+                      QuantityStepper(
+                        value: line.quantity,
+                        onChanged: onQtyChanged,
+                        allowRemove: true,
+                        max: line.available,
+                        size: StepperSize.sm,
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
-          if (short) ...[
-            const SizedBox(height: AppSpacing.smd),
-            InlineBanner(
-              tone: Tone.warning,
-              message: line.available <= 0
-                  ? 'Out of stock — remove it or check back after restock.'
-                  : 'Only ${line.available} left — you have ${line.quantity} in your cart.',
             ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -360,7 +366,11 @@ class _CartError extends ConsumerWidget {
 }
 
 class _CartBottomBar extends ConsumerWidget {
-  const _CartBottomBar();
+  const _CartBottomBar({required this.standalone});
+
+  /// Pushed on its own route — otherwise the bar sits above the shell's
+  /// floating nav.
+  final bool standalone;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -369,77 +379,75 @@ class _CartBottomBar extends ConsumerWidget {
 
     final c = context.colors;
     final short = cart.items.any((l) => l.quantity > l.available);
+    // Inside the shell, Scaffold.extendBody already folds the floating nav
+    // into MediaQuery.padding (and the system inset may be consumed from
+    // viewPadding), so take whichever is larger — the bar clears the nav
+    // either way.
+    final padded = MediaQuery.paddingOf(context).bottom;
+    final bottom = standalone
+        ? padded
+        : math.max(
+            padded,
+            AppSpacing.navBarHeight +
+                AppSpacing.navFloatGap +
+                MediaQuery.viewPaddingOf(context).bottom,
+          );
 
     // RepaintBoundary keeps this bar's paint scoped to its own layer — the
     // tab shell's IndexedStack rebuilds it while offstage (see body note).
     return RepaintBoundary(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: c.surface,
-          border: Border(top: BorderSide(color: c.border)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.gutter,
-              AppSpacing.smd,
-              AppSpacing.gutter,
-              AppSpacing.smd,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (short) ...[
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        size: 16,
-                        color: c.warning,
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Expanded(
-                        child: Text(
-                          'Fix stock issues above to continue',
-                          style: context.text.caption.copyWith(
-                            color: c.warning,
-                          ),
-                        ),
-                      ),
-                    ],
+      child: StickyFooter(
+        bottom: bottom,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (short) ...[
+              Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: AppIconSize.xs + 2,
+                    color: c.warning,
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(width: AppSpacing.xs + 2),
+                  Expanded(
+                    child: Text(
+                      'Update the items marked above to continue',
+                      style: context.text.caption.copyWith(color: c.warning),
+                    ),
+                  ),
                 ],
-                Row(
+              ),
+              const SizedBox(height: AppSpacing.smd),
+            ],
+            Row(
+              children: [
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Total', style: context.text.caption),
-                        PriceText(cart.total),
-                      ],
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: AppButton(
-                        label: 'Checkout',
-                        trailingIcon: Icons.arrow_forward_rounded,
-                        onPressed: short
-                            ? null
-                            : () => Navigator.pushNamed(
-                                  context,
-                                  checkoutScreenRoute,
-                                ),
-                      ),
-                    ),
+                    Text('Total', style: context.text.captionMuted),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(formatInr(cart.total), style: context.text.h2),
                   ],
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: AppButton(
+                    label: 'Checkout',
+                    trailingIcon: Icons.arrow_forward_rounded,
+                    onPressed: short
+                        ? null
+                        : () => Navigator.pushNamed(
+                              context,
+                              checkoutScreenRoute,
+                            ),
+                  ),
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );

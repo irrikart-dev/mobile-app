@@ -273,49 +273,36 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
           child: Text(
             title,
             key: ValueKey(title),
-            style: context.text.h2,
+            style: context.text.h1,
             textAlign: TextAlign.center,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.smd),
         Text(
           'This usually takes a few seconds.',
           style: context.text.bodySecondary,
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.xl),
         _PhaseSteps(phase: _phase),
         const Spacer(flex: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.smd,
-          ),
-          decoration: BoxDecoration(
-            color: c.surfaceSunken,
-            borderRadius: AppRadius.mdAll,
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.phonelink_lock_rounded, size: 20, color: c.textSecondary),
-              const SizedBox(width: AppSpacing.smd),
-              Expanded(
-                child: Text(
-                  'Don’t close the app or press back. Your payment is safe — '
-                  'we’ll take you to your order as soon as it’s confirmed.',
-                  style: context.text.caption,
-                ),
-              ),
-            ],
-          ),
+        Text(
+          'Please keep the app open. Your payment is safe — we’ll take you '
+          'to your order as soon as it’s confirmed.',
+          style: context.text.captionMuted,
+          textAlign: TextAlign.center,
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.smd),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.lock_rounded, size: 13, color: c.textMuted),
-            const SizedBox(width: AppSpacing.xs),
-            Text('Secured by Razorpay', style: context.text.captionMuted),
+            Icon(
+              Icons.verified_user_rounded,
+              size: AppIconSize.xs,
+              color: c.success,
+            ),
+            const SizedBox(width: AppSpacing.xs + 2),
+            Text('Secured by Razorpay', style: context.text.caption),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
@@ -330,18 +317,22 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
       children: [
         const Spacer(flex: 3),
         Container(
-          width: 96,
-          height: 96,
+          width: 112,
+          height: 112,
           decoration: BoxDecoration(color: c.warningSoft, shape: BoxShape.circle),
-          child: Icon(Icons.hourglass_top_rounded, size: 44, color: c.warning),
+          child: Icon(
+            Icons.hourglass_top_rounded,
+            size: AppIconSize.xl,
+            color: c.warning,
+          ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.xl),
         Text(
           'Still confirming your payment',
-          style: context.text.h2,
+          style: context.text.h1,
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.smd),
         Text(
           _error ??
               'This is taking longer than usual. If money was debited, your '
@@ -350,11 +341,11 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
           style: context.text.bodySecondary,
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: AppSpacing.lg),
-        const InlineBanner(
-          tone: Tone.info,
-          message:
-              'Please don’t pay again for the same items until this order resolves.',
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Please don’t pay again for the same items until this order resolves.',
+          style: context.text.caption.copyWith(color: c.warning),
+          textAlign: TextAlign.center,
         ),
         const Spacer(flex: 4),
         AppButton(
@@ -363,7 +354,7 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
           onPressed: _beginPolling,
         ),
         const SizedBox(height: AppSpacing.smd),
-        AppButton.outline(
+        AppButton.secondary(
           label: 'Contact support',
           icon: Icons.support_agent_rounded,
           onPressed: _contactSupport,
@@ -386,7 +377,7 @@ class _ProgressRing extends StatelessWidget {
 
   final Animation<double> animation;
 
-  static const _size = 120.0;
+  static const _size = 136.0;
 
   @override
   Widget build(BuildContext context) {
@@ -405,23 +396,23 @@ class _ProgressRing extends StatelessWidget {
                 size: const Size.square(_size),
                 painter: _RingPainter(
                   progress: t,
-                  track: c.primarySoft,
-                  arc: c.primary,
+                  track: c.tint,
+                  arc: c.accent,
                 ),
               ),
               Transform.scale(
                 scale: pulse,
                 child: Container(
-                  width: 68,
-                  height: 68,
+                  width: 76,
+                  height: 76,
                   decoration: BoxDecoration(
-                    color: c.primarySoft,
+                    color: c.primary,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.lock_rounded,
-                    size: 30,
-                    color: c.onPrimarySoft,
+                    size: AppIconSize.lg,
+                    color: c.textOnPrimary,
                   ),
                 ),
               ),
@@ -515,7 +506,7 @@ class _PhaseRow extends StatelessWidget {
     final c = context.colors;
     final Widget leading = switch (state) {
       _RowState.done =>
-        Icon(Icons.check_circle_rounded, size: 18, color: c.success),
+        Icon(Icons.check_circle_rounded, size: 18, color: c.primary),
       _RowState.active => SizedBox.square(
           dimension: 14,
           child: CircularProgressIndicator(strokeWidth: 2, color: c.primary),

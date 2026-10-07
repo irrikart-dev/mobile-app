@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../components/catalog_image.dart';
 import '../../../components/ui/ui.dart';
 import '../../../core/payments/razorpay_checkout.dart';
 import '../../../core/utils/formatters.dart';
@@ -99,7 +98,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Future<void> _changeAddress() async {
     final picked = await showAppSheet<Object>(
       context,
-      title: 'Delivery address',
+      title: 'Deliver to',
       builder: (_) => _AddressSheet(selectedId: _selectedAddress?.id),
     );
     if (!mounted || picked == null) return;
@@ -261,26 +260,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             );
           }
           return ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.gutter,
-              AppSpacing.xs,
-              AppSpacing.gutter,
-              AppSpacing.lg,
-            ),
+            padding: const EdgeInsets.only(bottom: AppSpacing.xl),
             children: [
-              _StepIndicator(current: _selectedAddress == null ? 0 : 1),
-              const SizedBox(height: AppSpacing.md),
-              if (short) ...[
-                InlineBanner(
-                  tone: Tone.warning,
-                  title: 'Stock changed',
-                  message:
-                      'Some items have less stock than you requested. Update quantities before paying.',
-                  actionLabel: 'Back to cart',
-                  onAction: () => Navigator.maybePop(context),
+              if (short)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.gutter,
+                    AppSpacing.sm,
+                    AppSpacing.gutter,
+                    0,
+                  ),
+                  child: InlineBanner(
+                    tone: Tone.warning,
+                    message:
+                        'Stock changed for some items. Update quantities before paying.',
+                    actionLabel: 'Back to cart',
+                    onAction: () => Navigator.maybePop(context),
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.smd),
-              ],
               _AddressSection(
                 address: _selectedAddress,
                 addressesAsync: addressesAsync,
@@ -290,16 +287,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 onRetry: () =>
                     ref.read(addressControllerProvider.notifier).refresh(),
               ),
-              const SizedBox(height: AppSpacing.smd),
+              const SectionDivider(thin: true),
               _ItemsSection(
                 cart: cart,
                 expanded: _itemsExpanded,
                 onToggle: () =>
                     setState(() => _itemsExpanded = !_itemsExpanded),
               ),
-              const SizedBox(height: AppSpacing.smd),
+              const SectionDivider(thin: true),
               const _PaymentSection(),
-              const SizedBox(height: AppSpacing.smd),
+              const SectionDivider(thin: true),
               _CouponSection(
                 controller: _couponController,
                 applied: _appliedCoupon,
@@ -307,44 +304,52 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 onApply: _applyCoupon,
                 onRemove: _removeCoupon,
               ),
-              const SizedBox(height: AppSpacing.smd),
-              SectionCard(
-                title: 'Price summary',
-                icon: Icons.receipt_long_rounded,
-                child: Column(
-                  children: [
-                    SummaryRow(
-                      label:
-                          'Subtotal (${cart.itemCount} ${cart.itemCount == 1 ? 'item' : 'items'})',
-                      value: formatInr(cart.subtotal),
-                    ),
-                    SummaryRow(
-                      label: 'Delivery',
-                      value: 'Free',
-                      valueColor: c.success,
-                    ),
-                    if (_appliedCoupon != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.gutter,
+                ),
+                child: AppCard(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.mdPlus,
+                    AppSpacing.md,
+                    AppSpacing.mdPlus,
+                    AppSpacing.md,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                       SummaryRow(
-                        label: 'Coupon ($_appliedCoupon)',
-                        value: 'Applied at payment',
+                        label: 'Subtotal · ${itemCountLabel(cart.itemCount)}',
+                        value: formatInr(cart.subtotal),
+                      ),
+                      SummaryRow(
+                        label: 'Delivery',
+                        value: 'Free',
                         valueColor: c.success,
                       ),
-                    Padding(
-                      padding:
-                          const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                      child: Divider(height: 1, color: c.divider),
-                    ),
-                    SummaryRow(
-                      label: 'Total',
-                      value: formatInr(cart.total),
-                      emphasize: true,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Coupon discounts, if any, are applied when you pay. Prices include all taxes.',
-                      style: context.text.captionMuted,
-                    ),
-                  ],
+                      if (_appliedCoupon != null)
+                        SummaryRow(
+                          label: 'Coupon $_appliedCoupon',
+                          value: 'At payment',
+                          valueColor: c.success,
+                        ),
+                      Padding(
+                        padding:
+                            const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                        child: Divider(height: 1, color: c.border),
+                      ),
+                      SummaryRow(
+                        label: 'Total',
+                        value: formatInr(cart.total),
+                        emphasize: true,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Inclusive of all taxes. Coupon discounts are applied when you pay.',
+                        style: context.text.captionMuted,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -358,81 +363,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         paying: _paying,
         onPay: canPay ? _pay : null,
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Step indicator
-// ---------------------------------------------------------------------------
-
-class _StepIndicator extends StatelessWidget {
-  const _StepIndicator({required this.current});
-
-  /// 0 = Address, 1 = Payment, 2 = Done.
-  final int current;
-
-  static const _labels = ['Address', 'Payment', 'Done'];
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final children = <Widget>[];
-    for (var i = 0; i < _labels.length; i++) {
-      final done = i < current;
-      final active = i == current;
-      final color = done || active ? c.primary : c.textDisabled;
-      children.add(
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: AppDurations.normal,
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: done ? c.primary : (active ? c.primarySoft : c.surface),
-                border: Border.all(color: color, width: 1.5),
-              ),
-              alignment: Alignment.center,
-              child: done
-                  ? Icon(Icons.check_rounded, size: 14, color: c.textOnPrimary)
-                  : Text(
-                      '${i + 1}',
-                      style: context.text.badge.copyWith(color: color),
-                    ),
-            ),
-            const SizedBox(width: AppSpacing.xs + 2),
-            Text(
-              _labels[i],
-              style: context.text.label.copyWith(
-                color: active
-                    ? c.textPrimary
-                    : (done ? c.textSecondary : c.textMuted),
-              ),
-            ),
-          ],
-        ),
-      );
-      if (i < _labels.length - 1) {
-        children.add(
-          Expanded(
-            child: Container(
-              height: 1.5,
-              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: i < current ? c.primary : c.border,
-                borderRadius: AppRadius.pillAll,
-              ),
-            ),
-          ),
-        );
-      }
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Row(children: children),
     );
   }
 }
@@ -460,57 +390,11 @@ class _AddressSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
     final selected = address;
 
     Widget body;
     if (selected != null) {
-      body = Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: c.primarySoft,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.location_on_rounded,
-              size: 20,
-              color: c.onPrimarySoft,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.smd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        selected.name,
-                        style: context.text.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (selected.isDefault) ...[
-                      const SizedBox(width: AppSpacing.sm),
-                      const StatusPill(label: 'Default', tone: Tone.primary),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(selected.oneLine, style: context.text.bodySecondary),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(selected.phone, style: context.text.caption),
-              ],
-            ),
-          ),
-        ],
-      );
+      body = _AddressText(address: selected);
     } else if (addressesAsync.isLoading && !addressesAsync.hasValue) {
       body = const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,7 +413,7 @@ class _AddressSection extends StatelessWidget {
       );
     } else {
       body = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Where should we deliver your order?',
@@ -540,23 +424,55 @@ class _AddressSection extends StatelessWidget {
             label: 'Add delivery address',
             icon: Icons.add_location_alt_rounded,
             size: AppButtonSize.md,
+            expand: false,
             onPressed: enabled ? onAdd : null,
           ),
         ],
       );
     }
 
-    return SectionCard(
-      title: 'Delivery address',
-      icon: Icons.local_shipping_rounded,
+    return _CheckoutBlock(
+      title: 'Deliver to',
       trailing: selected == null
           ? null
-          : AppButton.ghost(
-              label: 'Change',
-              size: AppButtonSize.sm,
-              onPressed: enabled ? onChange : null,
-            ),
+          : TextAction(label: 'Change', onTap: enabled ? onChange : null),
       child: body,
+    );
+  }
+}
+
+/// Name, full address and phone as plain text — no box.
+class _AddressText extends StatelessWidget {
+  const _AddressText({required this.address});
+
+  final Address address;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                address.name,
+                style: context.text.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (address.isDefault) ...[
+              const SizedBox(width: AppSpacing.sm),
+              const StatusPill(label: 'Default', tone: Tone.primary),
+            ],
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(address.oneLine, style: context.text.bodySecondary),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(address.phone, style: context.text.captionMuted),
+      ],
     );
   }
 }
@@ -583,9 +499,10 @@ class _AddressSheet extends ConsumerWidget {
           ),
         for (final a in addresses) ...[
           AppCard(
-            padding: const EdgeInsets.all(AppSpacing.smd),
+            padding: const EdgeInsets.all(AppSpacing.md),
+            // Only the chosen address is framed; the rest sit on the sheet.
             borderColor: a.id == selectedId ? c.primary : null,
-            color: a.id == selectedId ? c.primarySoft : null,
+            color: a.id == selectedId ? c.tint : c.surface,
             onTap: () => Navigator.pop(context, a),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -594,53 +511,84 @@ class _AddressSheet extends ConsumerWidget {
                   a.id == selectedId
                       ? Icons.radio_button_checked_rounded
                       : Icons.radio_button_unchecked_rounded,
-                  size: 22,
+                  size: AppIconSize.md,
                   color: a.id == selectedId ? c.primary : c.textMuted,
                 ),
                 const SizedBox(width: AppSpacing.smd),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              a.name,
-                              style: context.text.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (a.isDefault) ...[
-                            const SizedBox(width: AppSpacing.sm),
-                            const StatusPill(
-                              label: 'Default',
-                              tone: Tone.primary,
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.xxs),
-                      Text(a.oneLine, style: context.text.bodySecondary),
-                      const SizedBox(height: AppSpacing.xxs),
-                      Text(a.phone, style: context.text.caption),
-                    ],
-                  ),
-                ),
+                Expanded(child: _AddressText(address: a)),
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.xs),
         ],
-        const SizedBox(height: AppSpacing.xs),
-        AppButton.outline(
+        const SizedBox(height: AppSpacing.smd),
+        AppButton.secondary(
           label: 'Add new address',
           icon: Icons.add_rounded,
           size: AppButtonSize.md,
           onPressed: () => Navigator.pop(context, _addNewAddress),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Section scaffold
+// ---------------------------------------------------------------------------
+
+/// Un-boxed checkout section: bold title (optional trailing action) and its
+/// content, sitting directly on the canvas.
+class _CheckoutBlock extends StatelessWidget {
+  const _CheckoutBlock({
+    required this.title,
+    required this.child,
+    this.trailing,
+    this.subtitle,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        AppSpacing.mdPlus,
+        AppSpacing.gutter,
+        AppSpacing.mdPlus,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: context.text.h3),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(subtitle!, style: context.text.captionMuted),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null)
+                Transform.translate(
+                  offset: const Offset(AppSpacing.sm, 0),
+                  child: trailing,
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.smd + 2),
+          child,
+        ],
+      ),
     );
   }
 }
@@ -660,20 +608,23 @@ class _ItemsSection extends StatelessWidget {
   final bool expanded;
   final VoidCallback onToggle;
 
-  static const _maxThumbs = 5;
+  static const _collapsedCount = 2;
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
     final lines = cart.items;
-    final extra = lines.length - _maxThumbs;
+    final collapsible = lines.length > _collapsedCount + 1;
+    final shown =
+        collapsible && !expanded ? lines.take(_collapsedCount) : lines;
 
-    return SectionCard(
+    return _CheckoutBlock(
       title: 'Items',
-      icon: Icons.shopping_bag_rounded,
-      trailing: Text(
-        '${cart.itemCount} ${cart.itemCount == 1 ? 'item' : 'items'}',
-        style: context.text.caption,
+      trailing: Padding(
+        padding: const EdgeInsets.only(right: AppSpacing.sm),
+        child: Text(
+          itemCountLabel(cart.itemCount),
+          style: context.text.captionMuted,
+        ),
       ),
       child: AnimatedSize(
         duration: AppDurations.normal,
@@ -682,84 +633,55 @@ class _ItemsSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (!expanded)
-              Row(
-                children: [
-                  for (final line in lines.take(_maxThumbs)) ...[
-                    OrderThumb(
-                      size: 48,
-                      child: CatalogImage(
-                        source: line.image,
-                        isRemote: line.hasRemoteImage,
+            for (final line in shown)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.smd),
+                child: Row(
+                  children: [
+                    ProductTile(image: line.image, size: 56),
+                    const SizedBox(width: AppSpacing.smd),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            line.name,
+                            style: context.text.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                            'Qty ${line.quantity} · ${formatInr(line.price)} ${formatUnit(line.unit)}',
+                            style: context.text.captionMuted,
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                  ],
-                  if (extra > 0)
-                    Container(
-                      width: 48,
-                      height: 48,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: c.surfaceSunken,
-                        borderRadius: AppRadius.smAll,
-                      ),
-                      child: Text('+$extra', style: context.text.label),
+                    Text(
+                      formatInr(line.lineTotal),
+                      style: context.text.bodyStrong,
                     ),
-                ],
-              )
-            else
-              for (final line in lines)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.smd),
-                  child: Row(
-                    children: [
-                      OrderThumb(
-                        size: 48,
-                        child: CatalogImage(
-                          source: line.image,
-                          isRemote: line.hasRemoteImage,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.smd),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              line.name,
-                              style: context.text.titleSm,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: AppSpacing.xxs),
-                            Text(
-                              'Qty ${line.quantity} · ${formatInr(line.price)} ${formatUnit(line.unit)}',
-                              style: context.text.caption,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        formatInr(line.lineTotal),
-                        style: context.text.bodyStrong,
-                      ),
-                    ],
+                  ],
+                ),
+              ),
+            if (collapsible)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Transform.translate(
+                  offset: const Offset(-AppSpacing.sm, 0),
+                  child: TextAction(
+                    label: expanded
+                        ? 'Show less'
+                        : 'Show all ${lines.length} items',
+                    icon: expanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    onTap: onToggle,
                   ),
                 ),
-            const SizedBox(height: AppSpacing.xs),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: AppButton.ghost(
-                label: expanded ? 'Hide items' : 'View all items',
-                size: AppButtonSize.sm,
-                trailingIcon: expanded
-                    ? Icons.keyboard_arrow_up_rounded
-                    : Icons.keyboard_arrow_down_rounded,
-                onPressed: onToggle,
               ),
-            ),
           ],
         ),
       ),
@@ -777,56 +699,37 @@ class _PaymentSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return SectionCard(
+    return _CheckoutBlock(
       title: 'Payment',
-      icon: Icons.account_balance_wallet_rounded,
-      trailing: const StatusPill(label: 'Prepaid', tone: Tone.primary),
+      subtitle: 'Prepaid only — pick your method in the next step',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Pay securely online — you’ll pick your method in the next step.',
-            style: context.text.bodySecondary,
+          const _PaymentRow(
+            icon: Icons.qr_code_2_rounded,
+            title: 'UPI',
+            subtitle: 'Google Pay, PhonePe, Paytm & more',
           ),
-          const SizedBox(height: AppSpacing.smd),
-          Container(
-            decoration: BoxDecoration(
-              color: c.surfaceSunken,
-              borderRadius: AppRadius.mdAll,
-            ),
-            child: const Column(
-              children: [
-                _PaymentRow(
-                  icon: Icons.qr_code_2_rounded,
-                  title: 'UPI',
-                  subtitle: 'Google Pay, PhonePe, Paytm & more',
-                ),
-                _PaymentDivider(),
-                _PaymentRow(
-                  icon: Icons.credit_card_rounded,
-                  title: 'Credit & debit cards',
-                  subtitle: 'Visa, Mastercard, RuPay',
-                ),
-                _PaymentDivider(),
-                _PaymentRow(
-                  icon: Icons.account_balance_rounded,
-                  title: 'Netbanking',
-                  subtitle: 'All major Indian banks',
-                ),
-              ],
-            ),
+          const _PaymentRow(
+            icon: Icons.credit_card_rounded,
+            title: 'Credit & debit cards',
+            subtitle: 'Visa, Mastercard, RuPay',
           ),
-          const SizedBox(height: AppSpacing.smd),
+          const _PaymentRow(
+            icon: Icons.account_balance_rounded,
+            title: 'Netbanking',
+            subtitle: 'All major Indian banks',
+          ),
+          const SizedBox(height: AppSpacing.xs),
           Row(
             children: [
-              Icon(Icons.lock_rounded, size: 14, color: c.success),
-              const SizedBox(width: AppSpacing.xs),
-              Expanded(
-                child: Text(
-                  'Secured by Razorpay · Cash on delivery isn’t available',
-                  style: context.text.caption,
-                ),
+              Icon(
+                Icons.verified_user_rounded,
+                size: AppIconSize.xs,
+                color: c.success,
               ),
+              const SizedBox(width: AppSpacing.xs + 2),
+              Text('Secured by Razorpay', style: context.text.caption),
             ],
           ),
         ],
@@ -850,49 +753,29 @@ class _PaymentRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.smd,
-        vertical: AppSpacing.smd - 2,
-      ),
+      padding: const EdgeInsets.only(bottom: AppSpacing.smd + 2),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: c.surface,
-              borderRadius: AppRadius.smAll,
-              border: Border.all(color: c.border),
-            ),
-            child: Icon(icon, size: 20, color: c.primary),
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: c.tint, shape: BoxShape.circle),
+            child: Icon(icon, size: AppIconSize.sm + 2, color: c.primary),
           ),
-          const SizedBox(width: AppSpacing.smd),
+          const SizedBox(width: AppSpacing.smd + 2),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: context.text.titleSm),
-                Text(subtitle, style: context.text.caption),
+                Text(title, style: context.text.title),
+                Text(subtitle, style: context.text.captionMuted),
               ],
             ),
           ),
-          Icon(Icons.check_circle_rounded, size: 18, color: c.success),
         ],
       ),
     );
   }
-}
-
-class _PaymentDivider extends StatelessWidget {
-  const _PaymentDivider();
-
-  @override
-  Widget build(BuildContext context) => Divider(
-        height: 1,
-        indent: AppSpacing.smd,
-        endIndent: AppSpacing.smd,
-        color: context.colors.divider,
-      );
 }
 
 // ---------------------------------------------------------------------------
@@ -918,72 +801,84 @@ class _CouponSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final code = applied;
-    return SectionCard(
+    const pill = OutlineInputBorder(
+      borderRadius: AppRadius.pillAll,
+      borderSide: BorderSide.none,
+    );
+    return _CheckoutBlock(
       title: 'Coupon',
-      icon: Icons.local_offer_rounded,
       child: AnimatedSwitcher(
         duration: AppDurations.fast,
         child: code != null
-            ? Container(
+            ? Row(
                 key: const ValueKey('applied'),
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.smd,
-                  AppSpacing.sm,
-                  AppSpacing.xs,
-                  AppSpacing.sm,
-                ),
-                decoration: BoxDecoration(
-                  color: c.successSoft,
-                  borderRadius: AppRadius.mdAll,
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle_rounded, size: 20, color: c.success),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(code, style: context.text.title),
-                          Text(
-                            'Discount is validated and applied when you pay',
-                            style: context.text.caption,
-                          ),
-                        ],
-                      ),
+                children: [
+                  Icon(
+                    Icons.check_circle_rounded,
+                    size: AppIconSize.md,
+                    color: c.success,
+                  ),
+                  const SizedBox(width: AppSpacing.smd),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(code, style: context.text.title),
+                        Text(
+                          'Validated and applied when you pay',
+                          style: context.text.captionMuted,
+                        ),
+                      ],
                     ),
-                    AppIconButton(
-                      icon: Icons.close_rounded,
-                      tooltip: 'Remove coupon',
-                      size: 36,
-                      iconSize: 18,
-                      color: c.textSecondary,
-                      onPressed: enabled ? onRemove : null,
-                    ),
-                  ],
-                ),
+                  ),
+                  TextAction(
+                    label: 'Remove',
+                    onTap: enabled ? onRemove : null,
+                  ),
+                ],
               )
             : Row(
                 key: const ValueKey('entry'),
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: controller,
-                      enabled: enabled,
-                      textCapitalization: TextCapitalization.characters,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => onApply(),
-                      style: context.text.body,
-                      decoration: const InputDecoration(
-                        hintText: 'Enter coupon code',
-                        isDense: true,
+                    child: SizedBox(
+                      height: AppButtonSize.md.height,
+                      child: TextField(
+                        controller: controller,
+                        enabled: enabled,
+                        textCapitalization: TextCapitalization.characters,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => onApply(),
+                        style: context.text.bodyStrong,
+                        decoration: InputDecoration(
+                          hintText: 'Enter coupon code',
+                          isDense: true,
+                          filled: true,
+                          fillColor: c.tint,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.mdPlus,
+                            vertical: AppSpacing.smd + 1,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.local_offer_rounded,
+                            size: AppIconSize.sm,
+                            color: c.textMuted,
+                          ),
+                          border: pill,
+                          enabledBorder: pill,
+                          disabledBorder: pill,
+                          focusedBorder: pill.copyWith(
+                            borderSide:
+                                BorderSide(color: c.primary, width: 1.4),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   ListenableBuilder(
                     listenable: controller,
-                    builder: (context, _) => AppButton.secondary(
+                    builder: (context, _) => AppButton(
                       label: 'Apply',
                       size: AppButtonSize.md,
                       expand: false,
@@ -1022,67 +917,50 @@ class _PayBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final amount = total;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border(top: BorderSide(color: c.border)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.gutter,
-            AppSpacing.smd,
-            AppSpacing.gutter,
-            AppSpacing.smd,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (error != null) ...[
-                InlineBanner(tone: Tone.error, message: error!),
-                const SizedBox(height: AppSpacing.smd),
-              ] else if (reason != null) ...[
-                Row(
-                  children: [
-                    Icon(Icons.info_outline_rounded, size: 16, color: c.warning),
-                    const SizedBox(width: AppSpacing.xs),
-                    Expanded(
-                      child: Text(
-                        reason!,
-                        style: context.text.caption.copyWith(color: c.warning),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-              AppButton(
-                label: paying
-                    ? 'Opening payment…'
-                    : amount == null
-                        ? 'Pay'
-                        : 'Pay ${formatInr(amount)}',
-                icon: Icons.lock_rounded,
-                loading: paying,
-                onPressed: onPay,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.verified_user_rounded, size: 13, color: c.textMuted),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    '100% secure payments by Razorpay',
-                    style: context.text.captionMuted,
+    final message = error ?? reason;
+    final messageColor = error != null ? c.error : c.warning;
+    return StickyFooter(
+      bottom: context.bottomInset,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (message != null) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Icon(
+                    error != null
+                        ? Icons.error_outline_rounded
+                        : Icons.info_outline_rounded,
+                    size: AppIconSize.xs + 2,
+                    color: messageColor,
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(width: AppSpacing.xs + 2),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: context.text.caption.copyWith(color: messageColor),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.smd),
+          ],
+          AppButton(
+            label: paying
+                ? 'Opening payment…'
+                : amount == null
+                    ? 'Pay securely'
+                    : 'Pay ${formatInr(amount)}',
+            icon: Icons.lock_rounded,
+            loading: paying,
+            onPressed: onPay,
           ),
-        ),
+        ],
       ),
     );
   }
@@ -1097,19 +975,38 @@ class _CheckoutSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Widget block(List<Widget> children) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.mdPlus),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: children,
+          ),
+        );
     return ListView(
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(AppSpacing.gutter),
-      children: const [
-        ShimmerBox(height: 22, borderRadius: AppRadius.pillAll),
-        SizedBox(height: AppSpacing.md),
-        ShimmerBox(height: 120, borderRadius: AppRadius.mdAll),
-        SizedBox(height: AppSpacing.smd),
-        ShimmerBox(height: 110, borderRadius: AppRadius.mdAll),
-        SizedBox(height: AppSpacing.smd),
-        ShimmerBox(height: 200, borderRadius: AppRadius.mdAll),
-        SizedBox(height: AppSpacing.smd),
-        ShimmerBox(height: 140, borderRadius: AppRadius.mdAll),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+      children: [
+        block(const [
+          ShimmerBox(height: 18, width: 110),
+          SizedBox(height: AppSpacing.md),
+          ShimmerBox(height: 14, width: 160),
+          SizedBox(height: AppSpacing.sm),
+          ShimmerBox(height: 12, width: 260),
+        ]),
+        const Hairline(),
+        block(const [
+          ShimmerBox(height: 18, width: 80),
+          SizedBox(height: AppSpacing.md),
+          ListRowSkeleton(thumb: 56),
+          SizedBox(height: AppSpacing.smd),
+          ListRowSkeleton(thumb: 56),
+        ]),
+        const Hairline(),
+        block(const [
+          ShimmerBox(height: 18, width: 100),
+          SizedBox(height: AppSpacing.md),
+          ShimmerBox(height: 140, borderRadius: AppRadius.lgAll),
+        ]),
       ],
     );
   }

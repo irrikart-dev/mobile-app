@@ -130,7 +130,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                     ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.smd),
               Expanded(
                 child: visible.isEmpty
                     ? RefreshableFill(
@@ -147,17 +147,17 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                         color: c.primary,
                         child: ListView.separated(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.gutter,
-                            AppSpacing.sm,
-                            AppSpacing.gutter,
-                            AppSpacing.fabClearance,
+                          padding: EdgeInsets.only(
+                            // viewPadding: the shell's extendBody already
+                            // folds the nav into MediaQuery.padding.
+                            bottom: AppSpacing.fabClearance +
+                                MediaQuery.viewPaddingOf(context).bottom,
                           ),
                           itemCount: visible.length,
                           separatorBuilder: (_, __) =>
-                              const SizedBox(height: AppSpacing.smd),
+                              const Hairline(inset: AppSpacing.gutter),
                           itemBuilder: (context, i) =>
-                              _OrderCard(order: visible[i]),
+                              _OrderRow(order: visible[i]),
                         ),
                       ),
               ),
@@ -169,8 +169,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   }
 }
 
-class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order});
+/// One order as a flat row: sage status tile, number + date, then total and
+/// status pill on the right. Rows are split by hairlines, not boxed.
+class _OrderRow extends StatelessWidget {
+  const _OrderRow({required this.order});
 
   final OrderSummary order;
 
@@ -178,40 +180,58 @@ class _OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final tone = orderStatusTone(order.status);
-    final (fg, bg) = tone.resolve(context);
 
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpacing.smd + 2),
+    return InkWell(
       onTap: () => Navigator.pushNamed(
         context,
         orderDetailsScreenRoute,
         arguments: order.id,
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: bg, borderRadius: AppRadius.smAll),
-            child: Icon(orderStatusIcon(order.status), size: 22, color: fg),
-          ),
-          const SizedBox(width: AppSpacing.smd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.gutter,
+          vertical: AppSpacing.md + 2,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: c.tint,
+                borderRadius: AppRadius.mdAll,
+              ),
+              child: Icon(
+                orderStatusIcon(order.status),
+                size: AppIconSize.md,
+                color: c.primary,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.smd + 2),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    formatOrderDate(order.createdAt),
+                    style: context.text.captionMuted,
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    'Order ${orderDisplayNumber(order.orderNumber)}',
+                    style: context.text.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  'Order ${orderDisplayNumber(order.orderNumber)}',
-                  style: context.text.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  formatOrderDateTime(order.createdAt),
-                  style: context.text.caption,
-                ),
-                const SizedBox(height: AppSpacing.sm),
+                PriceText(order.amount),
+                const SizedBox(height: AppSpacing.xs + 2),
                 StatusPill(
                   label: orderStatusLabel(order.status, order.rawStatus),
                   tone: tone,
@@ -219,17 +239,8 @@ class _OrderCard extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              PriceText(order.amount),
-              const SizedBox(height: AppSpacing.xs),
-              Icon(Icons.chevron_right_rounded, color: c.textMuted),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

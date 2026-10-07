@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../components/catalog_image.dart';
 import '../../../components/ui/ui.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
@@ -43,15 +42,10 @@ class OrderDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final orderAsync = ref.watch(orderDetailProvider(orderId));
     final c = context.colors;
-    final number = orderAsync.valueOrNull?.orderNumber;
 
     return Scaffold(
       backgroundColor: c.background,
-      appBar: AppTopBar(
-        title: number == null
-            ? 'Order details'
-            : 'Order ${orderDisplayNumber(number)}',
-      ),
+      appBar: const AppTopBar(title: 'Order details'),
       body: orderAsync.when(
         skipLoadingOnRefresh: true,
         loading: () => const _DetailSkeleton(),
@@ -81,27 +75,53 @@ class OrderDetailScreen extends ConsumerWidget {
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.gutter,
-              AppSpacing.sm,
-              AppSpacing.gutter,
-              AppSpacing.fabClearance,
+            padding: EdgeInsets.only(
+              bottom: AppSpacing.xl + context.bottomInset,
             ),
             children: [
-              _StatusCard(order: order),
-              const SizedBox(height: AppSpacing.smd),
-              _ItemsCard(order: order),
+              _StatusHeader(order: order),
+              const SectionDivider(thin: true),
+              _ItemsSection(order: order),
               if (order.address != null) ...[
-                const SizedBox(height: AppSpacing.smd),
-                _AddressCard(address: order.address!),
+                const SectionDivider(thin: true),
+                _AddressSection(address: order.address!),
               ],
-              const SizedBox(height: AppSpacing.smd),
-              _PaymentCard(order: order),
-              const SizedBox(height: AppSpacing.smd),
-              _HelpCard(order: order),
+              const SectionDivider(thin: true),
+              _PaymentSection(order: order),
+              const SectionDivider(thin: true),
+              _HelpRow(order: order),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Gutter-padded block with an overline header.
+class _Block extends StatelessWidget {
+  const _Block({required this.label, required this.child, this.trailing});
+
+  final String label;
+  final Widget? trailing;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        AppSpacing.mdPlus,
+        AppSpacing.gutter,
+        AppSpacing.mdPlus,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          OverlineHeader(label, trailing: trailing),
+          const SizedBox(height: AppSpacing.xs),
+          child,
+        ],
       ),
     );
   }
@@ -111,8 +131,8 @@ class OrderDetailScreen extends ConsumerWidget {
 // Status + timeline
 // ---------------------------------------------------------------------------
 
-class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.order});
+class _StatusHeader extends StatelessWidget {
+  const _StatusHeader({required this.order});
 
   final Order order;
 
@@ -129,80 +149,71 @@ class _StatusCard extends StatelessWidget {
         order.status == OrderStatus.returned;
     final isUnknown = order.status == OrderStatus.unknown;
 
-    return AppCard(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        AppSpacing.sm,
+        AppSpacing.gutter,
+        AppSpacing.lg,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('ORDER STATUS', style: context.text.overline),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      switch (order.status) {
-                        OrderStatus.cancelled => 'This order was cancelled',
-                        OrderStatus.returned => 'This order was returned',
-                        _ => _flowCopy[order.status] ??
-                            orderStatusLabel(order.status, order.rawStatus),
-                      },
-                      style: context.text.h3,
-                    ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      'Placed ${formatOrderDateTime(order.createdAt)}',
-                      style: context.text.caption,
-                    ),
-                  ],
+              InkWell(
+                onTap: () => _copy(context),
+                borderRadius: AppRadius.smAll,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Order ${orderDisplayNumber(order.orderNumber)}',
+                        style: context.text.label.copyWith(
+                          color: c.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs + 2),
+                      Icon(
+                        Icons.copy_rounded,
+                        size: AppIconSize.xs,
+                        color: c.textMuted,
+                      ),
+                    ],
+                  ),
                 ),
               ),
+              const Spacer(),
               StatusPill(
                 label: orderStatusLabel(order.status, order.rawStatus),
                 tone: tone,
-                icon: orderStatusIcon(order.status),
+                dot: true,
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.smd),
-          InkWell(
-            borderRadius: AppRadius.smAll,
-            onTap: () => _copy(context),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.smd,
-                vertical: AppSpacing.sm,
-              ),
-              decoration: BoxDecoration(
-                color: c.surfaceSunken,
-                borderRadius: AppRadius.smAll,
-              ),
-              child: Row(
-                children: [
-                  Text('Order no.', style: context.text.caption),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      orderDisplayNumber(order.orderNumber),
-                      style: context.text.label,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Icon(Icons.copy_rounded, size: 16, color: c.textMuted),
-                ],
-              ),
-            ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            switch (order.status) {
+              OrderStatus.cancelled => 'This order was cancelled',
+              OrderStatus.returned => 'This order was returned',
+              _ => _flowCopy[order.status] ??
+                  orderStatusLabel(order.status, order.rawStatus),
+            },
+            style: context.text.h1,
           ),
-          const SizedBox(height: AppSpacing.md),
-          Divider(height: 1, color: c.divider),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Placed ${formatOrderDateTime(order.createdAt)}',
+            style: context.text.captionMuted,
+          ),
+          const SizedBox(height: AppSpacing.lg),
           if (isUnknown)
-            InlineBanner(
-              tone: Tone.info,
-              message:
-                  'Status: ${orderStatusLabel(order.status, order.rawStatus)}. Contact support if you have questions about this order.',
+            Text(
+              'Status: ${orderStatusLabel(order.status, order.rawStatus)}. '
+              'Contact support if you have questions about this order.',
+              style: context.text.bodySecondary,
             )
           else if (isTerminal)
             _TerminalTimeline(status: order.status)
@@ -264,18 +275,11 @@ class _TerminalTimeline extends StatelessWidget {
         _TimelineStep(
           title: cancelled ? 'Cancelled' : 'Returned',
           subtitle: cancelled
-              ? 'This order was cancelled'
-              : 'This order was returned',
+              ? 'If any amount was debited, support will help sort it out.'
+              : 'Questions about your return? Support can help.',
           state: _StepState.failed,
           connectorFilled: false,
           isLast: true,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        InlineBanner(
-          tone: cancelled ? Tone.error : Tone.neutral,
-          message: cancelled
-              ? 'If any amount was debited for this order, reach out to support and we’ll help sort it out.'
-              : 'Questions about your return? Our support team can help.',
         ),
       ],
     );
@@ -297,49 +301,49 @@ class _TimelineStep extends StatelessWidget {
   final bool connectorFilled;
   final bool isLast;
 
+  static const _node = 22.0;
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
 
+    Widget disc(Color color, {Widget? child, double size = _node}) => Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          alignment: Alignment.center,
+          child: child,
+        );
+
     final Widget node = switch (state) {
-      _StepState.done => Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle),
-          child: Icon(Icons.check_rounded, size: 15, color: c.textOnPrimary),
-        ),
-      _StepState.current => Container(
-          width: 24,
-          height: 24,
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: c.primarySoft,
-            shape: BoxShape.circle,
-            border: Border.all(color: c.primary, width: 2),
-          ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(color: c.primary, shape: BoxShape.circle),
+      _StepState.done => disc(
+          c.primary,
+          child: Icon(
+            Icons.check_rounded,
+            size: AppIconSize.xs,
+            color: c.textOnPrimary,
           ),
         ),
-      _StepState.upcoming => Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: c.surface,
-            shape: BoxShape.circle,
-            border: Border.all(color: c.borderStrong, width: 1.5),
-          ),
+      _StepState.current => disc(
+          c.tint,
+          child: disc(c.accent, size: 10),
         ),
-      _StepState.failed => Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(color: c.error, shape: BoxShape.circle),
-          child: Icon(Icons.close_rounded, size: 15, color: c.textOnPrimary),
+      _StepState.upcoming =>
+        disc(c.tint, child: disc(c.borderStrong, size: 8)),
+      _StepState.failed => disc(
+          c.error,
+          child: Icon(
+            Icons.close_rounded,
+            size: AppIconSize.xs,
+            color: c.textOnPrimary,
+          ),
         ),
     };
 
     final titleStyle = switch (state) {
-      _StepState.current => context.text.title.copyWith(color: c.primary),
+      _StepState.current => context.text.title.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
       _StepState.failed => context.text.title.copyWith(color: c.error),
       _StepState.done => context.text.title,
       _StepState.upcoming => context.text.title.copyWith(color: c.textMuted),
@@ -350,7 +354,7 @@ class _TimelineStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
-            width: 24,
+            width: _node,
             child: Column(
               children: [
                 node,
@@ -358,9 +362,9 @@ class _TimelineStep extends StatelessWidget {
                   Expanded(
                     child: Container(
                       width: 2,
-                      margin: const EdgeInsets.symmetric(vertical: 2),
+                      margin: const EdgeInsets.symmetric(vertical: 3),
                       decoration: BoxDecoration(
-                        color: connectorFilled ? c.primary : c.border,
+                        color: connectorFilled ? c.primary : c.divider,
                         borderRadius: AppRadius.pillAll,
                       ),
                     ),
@@ -368,33 +372,33 @@ class _TimelineStep extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.smd),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(
-                top: 2,
+                top: 1,
                 bottom: isLast ? 0 : AppSpacing.mdPlus,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Flexible(child: Text(title, style: titleStyle)),
-                      if (state == _StepState.current) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        const StatusPill(label: 'Now', tone: Tone.primary),
-                      ],
-                    ],
-                  ),
+                  Text(title, style: titleStyle),
                   if (subtitle != null && state != _StepState.upcoming) ...[
                     const SizedBox(height: AppSpacing.xxs),
-                    Text(subtitle!, style: context.text.caption),
+                    Text(subtitle!, style: context.text.captionMuted),
                   ],
                 ],
               ),
             ),
           ),
+          if (state == _StepState.current)
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Text(
+                'NOW',
+                style: context.text.overline.copyWith(color: c.primary),
+              ),
+            ),
         ],
       ),
     );
@@ -405,34 +409,23 @@ class _TimelineStep extends StatelessWidget {
 // Items
 // ---------------------------------------------------------------------------
 
-class _ItemsCard extends StatelessWidget {
-  const _ItemsCard({required this.order});
+class _ItemsSection extends StatelessWidget {
+  const _ItemsSection({required this.order});
 
   final Order order;
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
     final delivered = order.status == OrderStatus.delivered;
     final count = order.items.fold<int>(0, (s, i) => s + i.quantity);
 
-    return SectionCard(
-      title: 'Items',
-      icon: Icons.shopping_bag_rounded,
-      trailing: Text(
-        '$count ${count == 1 ? 'item' : 'items'}',
-        style: context.text.caption,
-      ),
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.cardPad,
-        AppSpacing.cardPad,
-        AppSpacing.cardPad,
-        AppSpacing.xs,
-      ),
+    return _Block(
+      label: 'Items',
+      trailing: Text(itemCountLabel(count), style: context.text.captionMuted),
       child: Column(
         children: [
           for (var i = 0; i < order.items.length; i++) ...[
-            if (i > 0) Divider(height: 1, color: c.divider),
+            if (i > 0) const Hairline(),
             _OrderItemRow(item: order.items[i], canReview: delivered),
           ],
         ],
@@ -475,41 +468,36 @@ class _OrderItemRow extends StatelessWidget {
         arguments: item.slug,
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.smd),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.smd + 2),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            OrderThumb(
-              size: 60,
-              child: CatalogImage(
-                source: item.image,
-                isRemote: item.hasRemoteImage,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.smd),
+            ProductTile(image: item.image, size: 64),
+            const SizedBox(width: AppSpacing.smd + 2),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     item.name,
-                    style: context.text.titleSm,
+                    style: context.text.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
                     'Qty ${item.quantity} · ${formatInr(item.unitPrice)} each',
-                    style: context.text.caption,
+                    style: context.text.captionMuted,
                   ),
                   if (canReview) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    AppButton.secondary(
-                      label: 'Write a review',
-                      icon: Icons.rate_review_rounded,
-                      size: AppButtonSize.sm,
-                      expand: false,
-                      onPressed: () => _writeReview(context),
+                    const SizedBox(height: AppSpacing.xs),
+                    Transform.translate(
+                      offset: const Offset(-AppSpacing.sm, 0),
+                      child: TextAction(
+                        label: 'Write a review',
+                        icon: Icons.chevron_right_rounded,
+                        onTap: () => _writeReview(context),
+                      ),
                     ),
                   ],
                 ],
@@ -528,22 +516,21 @@ class _OrderItemRow extends StatelessWidget {
 // Address, payment, help
 // ---------------------------------------------------------------------------
 
-class _AddressCard extends StatelessWidget {
-  const _AddressCard({required this.address});
+class _AddressSection extends StatelessWidget {
+  const _AddressSection({required this.address});
 
   final OrderAddress address;
 
   @override
   Widget build(BuildContext context) {
     final line2 = address.line2;
-    return SectionCard(
-      title: 'Delivery address',
-      icon: Icons.location_on_rounded,
+    return _Block(
+      label: 'Delivery address',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(address.name, style: context.text.title),
-          const SizedBox(height: AppSpacing.xxs),
+          const SizedBox(height: AppSpacing.xs),
           Text(address.line1, style: context.text.bodySecondary),
           if (line2 != null && line2.isNotEmpty)
             Text(line2, style: context.text.bodySecondary),
@@ -552,18 +539,8 @@ class _AddressCard extends StatelessWidget {
             style: context.text.bodySecondary,
           ),
           if (address.phone.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Row(
-              children: [
-                Icon(
-                  Icons.phone_rounded,
-                  size: 14,
-                  color: context.colors.textMuted,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(address.phone, style: context.text.caption),
-              ],
-            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(address.phone, style: context.text.captionMuted),
           ],
         ],
       ),
@@ -571,8 +548,8 @@ class _AddressCard extends StatelessWidget {
   }
 }
 
-class _PaymentCard extends StatelessWidget {
-  const _PaymentCard({required this.order});
+class _PaymentSection extends StatelessWidget {
+  const _PaymentSection({required this.order});
 
   final Order order;
 
@@ -583,93 +560,117 @@ class _PaymentCard extends StatelessWidget {
         order.items.fold<num>(0, (sum, i) => sum + i.totalPrice);
     final discount = itemsTotal - order.amount;
 
-    final (String label, Tone tone) = switch (order.status) {
-      OrderStatus.placed => ('Awaiting payment confirmation', Tone.warning),
+    final (String label, Color color) = switch (order.status) {
+      OrderStatus.placed => ('Awaiting payment confirmation', c.warning),
       OrderStatus.cancelled ||
       OrderStatus.returned =>
-        ('Prepaid via Razorpay', Tone.neutral),
-      _ => ('Paid via Razorpay', Tone.success),
+        ('Prepaid via Razorpay', c.textMuted),
+      _ => ('Paid via Razorpay', c.success),
     };
 
-    return SectionCard(
-      title: 'Payment summary',
-      icon: Icons.receipt_long_rounded,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SummaryRow(label: 'Item total', value: formatInr(itemsTotal)),
-          if (discount > 0)
-            SummaryRow(
-              label: 'Discount',
-              value: '-${formatInr(discount)}',
-              valueColor: c.success,
-            ),
-          SummaryRow(label: 'Delivery', value: 'Free', valueColor: c.success),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            child: Divider(height: 1, color: c.divider),
+    return _Block(
+      label: 'Payment',
+      child: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.xs),
+        child: AppCard(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.mdPlus,
+            AppSpacing.md,
+            AppSpacing.mdPlus,
+            AppSpacing.md,
           ),
-          SummaryRow(
-            label: order.status == OrderStatus.placed ? 'Total' : 'Total paid',
-            value: formatInr(order.amount),
-            emphasize: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SummaryRow(label: 'Item total', value: formatInr(itemsTotal)),
+              if (discount > 0)
+                SummaryRow(
+                  label: 'Discount',
+                  value: '-${formatInr(discount)}',
+                  valueColor: c.success,
+                ),
+              SummaryRow(label: 'Delivery', value: 'Free', valueColor: c.success),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Divider(height: 1, color: c.border),
+              ),
+              SummaryRow(
+                label:
+                    order.status == OrderStatus.placed ? 'Total' : 'Total paid',
+                value: formatInr(order.amount),
+                emphasize: true,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Icon(
+                    Icons.verified_user_rounded,
+                    size: AppIconSize.xs,
+                    color: color,
+                  ),
+                  const SizedBox(width: AppSpacing.xs + 2),
+                  Text(
+                    label,
+                    style: context.text.caption.copyWith(color: color),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.smd),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: StatusPill(
-              label: label,
-              tone: tone,
-              icon: Icons.lock_rounded,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _HelpCard extends StatelessWidget {
-  const _HelpCard({required this.order});
+class _HelpRow extends StatelessWidget {
+  const _HelpRow({required this.order});
 
   final Order order;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return AppCard(
+    return InkWell(
       onTap: () => openWhatsAppSupport(
         context,
         message:
             'Hi IrriKart, I need help with my order ${orderDisplayNumber(order.orderNumber)}.',
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: c.successSoft,
-              shape: BoxShape.circle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.gutter,
+          vertical: AppSpacing.mdPlus,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: c.tint, shape: BoxShape.circle),
+              child: Icon(
+                Icons.support_agent_rounded,
+                size: AppIconSize.md,
+                color: c.primary,
+              ),
             ),
-            child: Icon(Icons.support_agent_rounded, color: c.success),
-          ),
-          const SizedBox(width: AppSpacing.smd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Need help with this order?', style: context.text.title),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  'Chat with our team on WhatsApp',
-                  style: context.text.caption,
-                ),
-              ],
+            const SizedBox(width: AppSpacing.smd + 2),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Need help with this order?', style: context.text.title),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    'Chat with our team on WhatsApp',
+                    style: context.text.captionMuted,
+                  ),
+                ],
+              ),
             ),
-          ),
-          Icon(Icons.chevron_right_rounded, color: c.textMuted),
-        ],
+            Icon(Icons.chevron_right_rounded, color: c.textMuted),
+          ],
+        ),
       ),
     );
   }
@@ -684,58 +685,38 @@ class _DetailSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
-    Widget card(Widget child) => Container(
-          padding: const EdgeInsets.all(AppSpacing.cardPad),
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: AppRadius.mdAll,
-            border: Border.all(color: c.border),
-          ),
-          child: child,
-        );
-
     return ListView(
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(AppSpacing.gutter),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.gutter,
+        vertical: AppSpacing.sm,
+      ),
       children: [
-        card(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        const ShimmerBox(height: 12, width: 110),
+        const SizedBox(height: AppSpacing.smd),
+        const ShimmerBox(height: 26, width: 220),
+        const SizedBox(height: AppSpacing.sm),
+        const ShimmerBox(height: 12, width: 150),
+        const SizedBox(height: AppSpacing.lg),
+        for (var i = 0; i < 4; i++) ...[
+          const Row(
             children: [
-              const ShimmerBox(height: 12, width: 90),
-              const SizedBox(height: AppSpacing.sm),
-              const ShimmerBox(height: 22, width: 160),
-              const SizedBox(height: AppSpacing.lg),
-              for (var i = 0; i < 4; i++) ...[
-                const Row(
-                  children: [
-                    ShimmerBox(
-                      height: 24,
-                      width: 24,
-                      borderRadius: AppRadius.pillAll,
-                    ),
-                    SizedBox(width: AppSpacing.smd),
-                    ShimmerBox(height: 14, width: 140),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.mdPlus),
-              ],
+              ShimmerBox(
+                height: 22,
+                width: 22,
+                borderRadius: AppRadius.pillAll,
+              ),
+              SizedBox(width: AppSpacing.md),
+              ShimmerBox(height: 14, width: 140),
             ],
           ),
-        ),
-        const SizedBox(height: AppSpacing.smd),
-        card(
-          const Column(
-            children: [
-              ListRowSkeleton(thumb: 60),
-              SizedBox(height: AppSpacing.md),
-              ListRowSkeleton(thumb: 60),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.smd),
-        const ShimmerBox(height: 120, borderRadius: AppRadius.mdAll),
+          const SizedBox(height: AppSpacing.mdPlus),
+        ],
+        const Hairline(),
+        const SizedBox(height: AppSpacing.mdPlus),
+        const ListRowSkeleton(thumb: 64),
+        const SizedBox(height: AppSpacing.md),
+        const ListRowSkeleton(thumb: 64),
       ],
     );
   }
