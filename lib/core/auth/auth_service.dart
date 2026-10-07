@@ -11,9 +11,8 @@ import '../firebase/firebase_options.dart';
 
 /// Firebase's auto-provisioned **Web** OAuth client for this project. Passed
 /// as `serverClientId` on every platform — that's what makes Google hand back
-/// an ID token whose audience Firebase accepts, without a
-/// `google-services.json` / `GoogleService-Info.plist` in the repo. Not a
-/// secret: safe to ship in the client, same as any other OAuth client id.
+/// an ID token whose audience Firebase accepts. Not a secret: safe to ship in
+/// the client, same as any other OAuth client id.
 const _googleWebClientId =
     '505911392963-1iute5rngd8foc7fqcmshkkoglmcab69.apps.googleusercontent.com';
 
@@ -131,7 +130,18 @@ class AuthService {
     return _guard(() => _auth.signInWithCredential(credential));
   }
 
-  Future<void> signOut() => _guard(() => _auth.signOut());
+  /// True from an explicit sign-out until the app has handled it — lets the
+  /// session-ended listener tell "user tapped Log out" apart from "Firebase
+  /// dropped the session" (revoked/expired), which deserves a message.
+  static bool explicitSignOutPending = false;
+
+  Future<void> signOut() async {
+    explicitSignOutPending = true;
+    // Also clears Google's cached account, so the next sign-in shows the
+    // account picker instead of silently reusing the last account.
+    await _googleSignIn.signOut().catchError((_) => null);
+    await _guard(() => _auth.signOut());
+  }
 
   /// Runs [action], translating Firebase's error codes into user-facing copy.
   Future<T> _guard<T>(Future<T> Function() action) async {

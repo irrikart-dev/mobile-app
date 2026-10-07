@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_service.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/storage/local_store.dart';
 import '../../../core/theme/tokens/spacing_tokens.dart';
 import '../../../route/route_constants.dart';
 import 'components/auth_unavailable_notice.dart';
@@ -38,6 +39,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     try {
       final credential = await ref.read(authServiceProvider).signInWithGoogle();
       if (!mounted || credential == null) return; // null = picker was closed
+
+      // Signed-in users never see onboarding again, even after a later log-out.
+      unawaited(ref.read(localStoreProvider).markOnboardingCompleted());
 
       // Mirrors the Firebase account into the backend's own User table —
       // cart/orders 401 with "No account linked" until this has run once.
