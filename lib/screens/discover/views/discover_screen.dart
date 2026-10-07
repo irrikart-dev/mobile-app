@@ -1,54 +1,115 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../components/app_kicker.dart';
 import '../../../components/catalog_image.dart';
-import '../../../core/theme/tokens/radius_tokens.dart';
-import '../../../core/theme/tokens/shadow_tokens.dart';
-import '../../../core/theme/tokens/spacing_tokens.dart';
+import '../../../components/ui/ui.dart';
 import '../../../models/catalog_category.dart';
 import '../../../models/catalog_data.dart';
 import '../../../route/route_constants.dart';
 
-/// Categories tab — a grid of the catalogue's 11 categories, matching the
-/// reference theme's `categories-screen`.
+const _gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+  crossAxisCount: 2,
+  mainAxisSpacing: AppSpacing.smd,
+  crossAxisSpacing: AppSpacing.smd,
+  childAspectRatio: 0.82,
+);
+
+/// Categories tab — every catalogue category as a 2-column card grid.
 class DiscoverScreen extends ConsumerWidget {
   const DiscoverScreen({super.key});
 
+  Future<void> _refresh(WidgetRef ref) async {
+    ref.invalidate(catalogDataProvider);
+    try {
+      await ref.read(catalogDataProvider.future);
+    } catch (_) {
+      // Error state renders itself.
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final catalog = ref.watch(catalogDataProvider);
+    final count = catalog.valueOrNull?.categories.length;
+
+    final List<Widget> body = catalog.when(
+      loading: () => const [_CategoryGridSkeleton()],
+      error: (error, _) => [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: ErrorState(
+            error: error,
+            onRetry: () => ref.invalidate(catalogDataProvider),
+          ),
+        ),
+      ],
+      data: (data) {
+        if (data.categories.isEmpty) {
+          return [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: EmptyState(
+                icon: Icons.category_rounded,
+                title: 'No categories yet',
+                message: 'We’re setting up the store. Check back soon.',
+                actionLabel: 'Refresh',
+                onAction: () => ref.invalidate(catalogDataProvider),
+              ),
+            ),
+          ];
+        }
+        return [
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+            sliver: SliverGrid.builder(
+              gridDelegate: _gridDelegate,
+              itemCount: data.categories.length,
+              itemBuilder: (context, i) {
+                final category = data.categories[i];
+                return _CategoryCard(
+                  category: category,
+                  productCount: data.productsInCategory(category.id).length,
+                );
+              },
+            ),
+          ),
+        ];
+      },
+    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Categories'),
-        automaticallyImplyLeading: false,
+      backgroundColor: c.background,
+      appBar: AppTopBar(
+        large: true,
+        title: 'Categories',
+        subtitle: count == null
+            ? 'Browse the full range'
+            : '$count ${count == 1 ? 'category' : 'categories'}',
       ),
-      body: catalog.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, st) =>
-            Center(child: Text('Could not load categories: $err')),
-        data: (data) => ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          children: [
-            const AppKicker('Everything you need'),
-            Text(
-              'Shop by category',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: data.categories.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: AppSpacing.sm,
-                crossAxisSpacing: AppSpacing.sm,
-                childAspectRatio: 0.74,
+      body: RefreshIndicator(
+        color: c.primary,
+        onRefresh: () => _refresh(ref),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
+                AppSpacing.xs,
+                AppSpacing.gutter,
+                AppSpacing.md,
               ),
-              itemBuilder: (context, i) =>
-                  _CategoryCard(category: data.categories[i]),
+              sliver: SliverToBoxAdapter(
+                child: AppSearchField(
+                  readOnly: true,
+                  onTap: () => Navigator.pushNamed(context, searchScreenRoute),
+                ),
+              ),
+            ),
+            ...body,
+            const SliverToBoxAdapter(
+              child: SizedBox(height: AppSpacing.fabClearance),
             ),
           ],
         ),
@@ -58,15 +119,15 @@ class DiscoverScreen extends ConsumerWidget {
 }
 
 class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({required this.category});
+  const _CategoryCard({required this.category, required this.productCount});
 
   final CatalogCategory category;
+  final int productCount;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return GestureDetector(
+    final c = context.colors;
+    return PressableScale(
       onTap: () => Navigator.pushNamed(
         context,
         productListScreenRoute,
@@ -74,46 +135,116 @@ class _CategoryCard extends StatelessWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: AppRadius.mdAll,
-          boxShadow: AppShadows.sm,
+          color: c.surface,
+          borderRadius: AppRadius.lgAll,
+          border: Border.all(color: c.border),
+          boxShadow: c.shadowCard,
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: ColoredBox(
-                color: theme.colorScheme.surfaceContainerHighest,
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: CatalogImage(
-                    source: category.displayImage,
-                    isRemote: category.hasRemoteImage,
-                    fit: BoxFit.contain,
-                  ),
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.all(AppSpacing.sm),
+                padding: const EdgeInsets.all(AppSpacing.smd),
+                decoration: BoxDecoration(
+                  color: c.primarySoft,
+                  borderRadius: AppRadius.mdAll,
+                ),
+                child: CatalogImage(
+                  source: category.displayImage,
+                  isRemote: category.hasRemoteImage,
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.smd,
+                AppSpacing.xs,
+                AppSpacing.sm,
+                AppSpacing.smd,
+              ),
+              child: Row(
                 children: [
-                  Text(category.name, style: theme.textTheme.titleSmall),
-                  const SizedBox(height: 2),
-                  Text(
-                    category.blurb,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          category.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.text.title,
+                        ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        Text(
+                          productCount == 1
+                              ? '1 product'
+                              : '$productCount products',
+                          style: context.text.captionMuted,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: c.surfaceSunken,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      size: AppIconSize.xs + 2,
+                      color: c.textSecondary,
+                    ),
                   ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryGridSkeleton extends StatelessWidget {
+  const _CategoryGridSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+      sliver: SliverGrid.builder(
+        gridDelegate: _gridDelegate,
+        itemCount: 6,
+        itemBuilder: (context, _) => Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: AppRadius.lgAll,
+            border: Border.all(color: c.border),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ShimmerBox(
+                  width: double.infinity,
+                  borderRadius: AppRadius.mdAll,
+                ),
+              ),
+              SizedBox(height: AppSpacing.smd),
+              ShimmerBox(height: 14, width: 96),
+              SizedBox(height: AppSpacing.sm - 2),
+              ShimmerBox(height: 10, width: 64),
+              SizedBox(height: AppSpacing.xs),
+            ],
+          ),
         ),
       ),
     );
