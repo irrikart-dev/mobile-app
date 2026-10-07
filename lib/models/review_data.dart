@@ -67,7 +67,7 @@ class ReviewsRepository {
               'comment': comment.trim(),
           },
         ),
-        (data) => null,
+        (_) {},
       );
 }
 

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/tokens/radius_tokens.dart';
-import '../../../../core/theme/tokens/spacing_tokens.dart';
+import '../../../../components/ui/ui.dart';
+import '../../../../core/utils/formatters.dart';
 import '../../../../models/catalog_product.dart';
 
 /// Size/pack option chips. Hidden entirely when a product only has one
-/// variant — most of the catalogue — so this never adds noise to the common
-/// case.
+/// variant (most of the catalogue), so the common case stays clean.
+/// Out-of-stock options stay visible but struck through and disabled.
 class VariantSelector extends StatelessWidget {
   const VariantSelector({
     super.key,
@@ -22,46 +22,44 @@ class VariantSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (variants.length <= 1) return const SizedBox.shrink();
-    final theme = Theme.of(context);
+    final selected = variants.where((v) => v.id == selectedId).firstOrNull;
+    final prices = variants.map((v) => v.price).toSet();
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Options', style: theme.textTheme.titleSmall),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(
+          TextSpan(
+            text: 'Option',
             children: [
-              for (final variant in variants)
-                ChoiceChip(
-                  label: Text(variant.label),
-                  selected: variant.id == selectedId,
-                  onSelected: variant.buyable
-                      ? (_) => onSelected(variant.id)
-                      : null,
-                  disabledColor:
-                      theme.colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.5,
-                  ),
-                  labelStyle: TextStyle(
-                    decoration: variant.buyable
-                        ? TextDecoration.none
-                        : TextDecoration.lineThrough,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.pillAll,
-                    side: BorderSide(
-                      color: theme.colorScheme.outlineVariant,
-                    ),
-                  ),
+              if (selected != null)
+                TextSpan(
+                  text: '  ${selected.label}',
+                  style: context.text.bodySecondary,
                 ),
             ],
           ),
-        ],
-      ),
+          style: context.text.title,
+        ),
+        const SizedBox(height: AppSpacing.smd),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (final variant in variants)
+              AppChip(
+                // Show the price on each chip only when options differ in
+                // price — otherwise it's noise.
+                label: prices.length > 1
+                    ? '${variant.label} · ${formatInr(variant.price)}'
+                    : variant.label,
+                selected: variant.id == selectedId,
+                enabled: variant.buyable,
+                onTap: () => onSelected(variant.id),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

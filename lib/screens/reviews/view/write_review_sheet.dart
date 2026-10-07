@@ -1,14 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/tokens/spacing_tokens.dart';
+import '../../../components/ui/ui.dart';
+import '../../../core/network/api_envelope.dart';
 import '../../../models/order_data.dart';
 import '../../../models/review_data.dart';
 
-/// Bottom sheet for submitting a review against a specific paid order item.
-/// [onSubmitted] refreshes the caller's review list — this sheet doesn't
-/// know how the list is fetched, just that a review landed.
+/// Opens the write-review sheet for a specific paid order item.
+/// [onSubmitted] refreshes the caller's review list — the sheet doesn't know
+/// how the list is fetched, just that a review landed.
+Future<void> showWriteReviewSheet(
+  BuildContext context, {
+  required String productId,
+  required OrderItem orderItem,
+  required VoidCallback onSubmitted,
+}) async {
+  final submitted = await showAppSheet<bool>(
+    context,
+    title: 'Write a review',
+    builder: (_) => WriteReviewSheet(
+      productId: productId,
+      orderItem: orderItem,
+      onSubmitted: onSubmitted,
+    ),
+  );
+  if (submitted == true && context.mounted) {
+    AppSnack.success(context, 'Thanks! Your review is live.');
+  }
+}
+
 class WriteReviewSheet extends ConsumerStatefulWidget {
   const WriteReviewSheet({
     super.key,
@@ -26,8 +46,13 @@ class WriteReviewSheet extends ConsumerStatefulWidget {
 }
 
 class _WriteReviewSheetState extends ConsumerState<WriteReviewSheet> {
+  static const _maxComment = 1000;
+  static const _labels = ['Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
+
+  final _formKey = GlobalKey<FormState>();
   final _commentController = TextEditingController();
-  double _rating = 5;
+  int _rating = 0;
+  bool _ratingMissing = false;
   bool _submitting = false;
   String? _error;
 
@@ -37,7 +62,19 @@ class _WriteReviewSheetState extends ConsumerState<WriteReviewSheet> {
     super.dispose();
   }
 
+  String _errorMessage(Object e) {
+    if (e is ApiException && e.isConflict) {
+      return 'You have already reviewed this item.';
+    }
+    return friendlyError(e);
+  }
+
   Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
+    final formOk = _formKey.currentState?.validate() ?? false;
+    if (_rating < 1) setState(() => _ratingMissing = true);
+    if (!formOk || _rating < 1) return;
+
     setState(() {
       _submitting = true;
       _error = null;
@@ -45,13 +82,13 @@ class _WriteReviewSheetState extends ConsumerState<WriteReviewSheet> {
     try {
       await ref.read(reviewsRepositoryProvider).submit(
             orderItemId: widget.orderItem.id,
-            rating: _rating.round(),
+            rating: _rating,
             comment: _commentController.text,
           );
       widget.onSubmitted();
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted) setState(() => _error = _errorMessage(e));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -59,58 +96,90 @@ class _WriteReviewSheetState extends ConsumerState<WriteReviewSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: AppSpacing.md,
-        right: AppSpacing.md,
-        top: AppSpacing.md,
-        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
-      ),
+    final c = context.colors;
+    return Form(
+      key: _formKey,
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Review ${widget.orderItem.name}',
-            style: Theme.of(context).textTheme.titleMedium,
+            widget.orderItem.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: context.text.bodySecondary,
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.lg),
           Center(
-            child: RatingBar.builder(
-              initialRating: _rating,
-              minRating: 1,
-              itemCount: 5,
-              itemSize: 36,
-              itemBuilder: (context, _) =>
-                  const Icon(Icons.star_rounded, color: Colors.amber),
-              onRatingUpdate: (v) => setState(() => _rating = v),
+            child: Column(
+              children: [
+                Text('How would you rate it?', style: context.text.title),
+                const SizedBox(height: AppSpacing.smd),
+                RatingInput(
+                  value: _rating,
+                  onChanged: (v) => setState(() {
+                    _rating = v;
+                    _ratingMissing = false;
+                  }),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                AnimatedSwitcher(
+                  duration: AppDurations.fast,
+                  child: Text(
+                    _ratingMissing
+                        ? 'Please choose a star rating'
+                        : _rating == 0
+                            ? 'Tap a star to rate'
+                            : _labels[_rating - 1],
+                    key: ValueKey('$_rating$_ratingMissing'),
+                    style: context.text.label.copyWith(
+                      color: _ratingMissing
+                          ? c.error
+                          : _rating == 0
+                              ? c.textMuted
+                              : c.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          TextField(
+          const SizedBox(height: AppSpacing.lg),
+          AppTextField(
+            label: 'Your review',
+            optional: true,
             controller: _commentController,
-            maxLines: 4,
-            maxLength: 1000,
-            decoration: const InputDecoration(
-              hintText: 'What did you think? (optional)',
+            hint: 'How did it perform in your field? Installation, quality, '
+                'value…',
+            maxLines: 5,
+            maxLength: _maxComment,
+            textCapitalization: TextCapitalization.sentences,
+            validator: (v) {
+              final text = v?.trim() ?? '';
+              if (text.isNotEmpty && text.length < 10) {
+                return 'Add a little more detail (at least 10 characters)';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          ListenableBuilder(
+            listenable: _commentController,
+            builder: (context, _) => Text(
+              '${_commentController.text.length}/$_maxComment',
+              textAlign: TextAlign.end,
+              style: context.text.captionMuted,
             ),
           ),
           if (_error != null) ...[
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.smd),
+            InlineBanner(message: _error!, tone: Tone.error),
           ],
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _submitting ? null : _submit,
-              child: _submitting
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Submit review'),
-            ),
+          const SizedBox(height: AppSpacing.md),
+          AppButton(
+            label: 'Submit review',
+            loading: _submitting,
+            onPressed: _submit,
           ),
         ],
       ),
