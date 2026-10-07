@@ -16,7 +16,8 @@ class UserInfoScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(accountUserProvider);
-    final user = userAsync.valueOrNull ?? ref.watch(authStateProvider).valueOrNull;
+    final user =
+        userAsync.valueOrNull ?? ref.watch(authStateProvider).valueOrNull;
 
     final Widget body;
     if (user != null) {
@@ -59,7 +60,6 @@ class _DetailsFormState extends State<_DetailsForm> {
   final _formKey = GlobalKey<FormState>();
   late final _name =
       TextEditingController(text: widget.user.displayName?.trim() ?? '');
-  late final _email = TextEditingController(text: widget.user.email ?? '');
   bool _saving = false;
   late String _savedName = _name.text;
 
@@ -72,7 +72,6 @@ class _DetailsFormState extends State<_DetailsForm> {
   @override
   void dispose() {
     _name.dispose();
-    _email.dispose();
     super.dispose();
   }
 
@@ -112,7 +111,10 @@ class _DetailsFormState extends State<_DetailsForm> {
       }
     } catch (_) {
       if (mounted) {
-        AppSnack.error(context, 'Could not update your name. Please try again.');
+        AppSnack.error(
+          context,
+          'Could not update your name. Please try again.',
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -121,12 +123,11 @@ class _DetailsFormState extends State<_DetailsForm> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
     final user = widget.user;
-    final displayName =
-        _name.text.trim().isEmpty ? accountDisplayName(user) : _name.text.trim();
-    final isGoogle =
-        user.providerData.any((p) => p.providerId == 'google.com');
+    final displayName = _name.text.trim().isEmpty
+        ? accountDisplayName(user)
+        : _name.text.trim();
+    final isGoogle = user.providerData.any((p) => p.providerId == 'google.com');
 
     return Column(
       children: [
@@ -139,7 +140,7 @@ class _DetailsFormState extends State<_DetailsForm> {
                 AppSpacing.gutter,
                 AppSpacing.md,
                 AppSpacing.gutter,
-                AppSpacing.lg,
+                AppSpacing.xl,
               ),
               children: [
                 Center(
@@ -150,7 +151,7 @@ class _DetailsFormState extends State<_DetailsForm> {
                     ring: true,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.smd),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   displayName,
                   textAlign: TextAlign.center,
@@ -158,45 +159,32 @@ class _DetailsFormState extends State<_DetailsForm> {
                   overflow: TextOverflow.ellipsis,
                   style: context.text.h2,
                 ),
-                if (user.photoURL != null) ...[
-                  const SizedBox(height: AppSpacing.xs),
+                if (user.email != null) ...[
+                  const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    'Profile photo comes from your Google account',
+                    user.email!,
                     textAlign: TextAlign.center,
-                    style: context.text.captionMuted,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.bodySecondary,
                   ),
                 ],
-                const SizedBox(height: AppSpacing.lg),
-                SectionCard(
-                  title: 'Profile',
-                  icon: Icons.person_outline_rounded,
-                  child: Column(
-                    children: [
-                      AppTextField(
-                        label: 'Display name',
-                        controller: _name,
-                        hint: 'e.g. Ravi Kumar',
-                        helper: 'Shown on your orders and invoices',
-                        validator: _validateName,
-                        maxLength: 40,
-                        textCapitalization: TextCapitalization.words,
-                        textInputAction: TextInputAction.done,
-                        autofillHints: const [AutofillHints.name],
-                        prefixIcon: Icons.badge_rounded,
-                        onSubmitted: (_) => _dirty && !_saving ? _save() : null,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      AppTextField(
-                        label: 'Email',
-                        controller: _email,
-                        enabled: false,
-                        prefixIcon: Icons.mail_outline_rounded,
-                        helper: isGoogle ? 'Managed by Google' : null,
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: AppSpacing.xl),
+                const _Overline('Profile'),
+                const SizedBox(height: AppSpacing.smd),
+                AppTextField(
+                  label: 'Display name',
+                  controller: _name,
+                  hint: 'e.g. Ravi Kumar',
+                  helper: 'Shown on your orders and invoices',
+                  validator: _validateName,
+                  maxLength: 40,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.name],
+                  onSubmitted: (_) => _dirty && !_saving ? _save() : null,
                 ),
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.xl),
                 SettingsGroup(
                   title: 'Sign-in method',
                   children: [
@@ -205,7 +193,7 @@ class _DetailsFormState extends State<_DetailsForm> {
                           ? Icons.g_mobiledata_rounded
                           : Icons.alternate_email_rounded,
                       title: isGoogle ? 'Google' : 'Email & password',
-                      subtitle: user.email,
+                      subtitle: isGoogle ? 'Managed by Google' : user.email,
                       showChevron: false,
                       trailing: const StatusPill(
                         label: 'Connected',
@@ -226,16 +214,23 @@ class _DetailsFormState extends State<_DetailsForm> {
             onPressed: _dirty && !_saving ? _save : null,
           ),
         ),
-        // Keeps the footer flush with the system nav bar.
-        ColoredBox(
-          color: c.surface,
-          child: SizedBox(height: context.bottomInset),
-        ),
       ],
     );
   }
 }
 
+class _Overline extends StatelessWidget {
+  const _Overline(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(text.toUpperCase(), style: context.text.overline);
+}
+
+/// Canvas-coloured bar pinned under the form — no rule, no shadow; the pill
+/// carries it.
 class _StickyFooter extends StatelessWidget {
   const _StickyFooter({required this.child});
 
@@ -244,18 +239,20 @@ class _StickyFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.gutter,
-        AppSpacing.smd,
-        AppSpacing.gutter,
-        AppSpacing.smd,
+    return ColoredBox(
+      color: c.background,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.gutter,
+            AppSpacing.smd,
+            AppSpacing.gutter,
+            AppSpacing.smd,
+          ),
+          child: child,
+        ),
       ),
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border(top: BorderSide(color: c.border)),
-      ),
-      child: child,
     );
   }
 }
@@ -278,10 +275,12 @@ class _DetailsSkeleton extends StatelessWidget {
         ),
         SizedBox(height: AppSpacing.md),
         Center(child: ShimmerBox(height: 20, width: 160)),
-        SizedBox(height: AppSpacing.lg),
-        ShimmerBox(height: 180, borderRadius: AppRadius.mdAll),
+        SizedBox(height: AppSpacing.xl),
+        ShimmerBox(height: 14, width: 80),
         SizedBox(height: AppSpacing.md),
-        ShimmerBox(height: 64, borderRadius: AppRadius.mdAll),
+        ShimmerBox(height: 56, borderRadius: AppRadius.mdAll),
+        SizedBox(height: AppSpacing.lg),
+        ShimmerBox(height: 56, borderRadius: AppRadius.mdAll),
       ],
     );
   }

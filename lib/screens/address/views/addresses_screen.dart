@@ -23,9 +23,10 @@ class AddressesScreen extends ConsumerWidget {
     final addressesAsync = ref.watch(addressControllerProvider);
     final count = addressesAsync.valueOrNull?.length ?? 0;
     final hasList = addressesAsync.hasValue && count > 0;
+    final c = context.colors;
 
     return Scaffold(
-      backgroundColor: context.colors.background,
+      backgroundColor: c.background,
       appBar: AppTopBar(
         title: _isPicker ? 'Choose delivery address' : 'Saved addresses',
         subtitle: hasList
@@ -58,14 +59,14 @@ class AddressesScreen extends ConsumerWidget {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.gutter,
-                    AppSpacing.sm,
+                    0,
                     AppSpacing.gutter,
                     AppSpacing.lg,
                   ),
                   itemCount: value.length,
                   separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.smd),
-                  itemBuilder: (context, i) => _AddressCard(
+                      Divider(height: 1, color: c.divider),
+                  itemBuilder: (context, i) => _AddressRow(
                     address: value[i],
                     onPick: _isPicker ? () => onPicked!(value[i]) : null,
                   ),
@@ -82,6 +83,8 @@ class AddressesScreen extends ConsumerWidget {
   }
 }
 
+/// Canvas-coloured sticky bar; a soft upward shadow separates it from the
+/// list scrolling beneath.
 class _BottomBar extends StatelessWidget {
   const _BottomBar({required this.child});
 
@@ -90,10 +93,17 @@ class _BottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: c.surface,
-        border: Border(top: BorderSide(color: c.border)),
+        color: c.background,
+        boxShadow: [
+          for (final s in c.shadowRaised)
+            BoxShadow(
+              color: s.color,
+              blurRadius: s.blurRadius,
+              offset: Offset(0, -s.offset.dy / 4),
+            ),
+        ],
       ),
       child: SafeArea(
         top: false,
@@ -111,19 +121,21 @@ class _BottomBar extends StatelessWidget {
   }
 }
 
-class _AddressCard extends ConsumerStatefulWidget {
-  const _AddressCard({required this.address, required this.onPick});
+/// One address on the canvas: name + Default pill, phone, address, then
+/// inline text actions. Rows are separated by hairlines, never boxed.
+class _AddressRow extends ConsumerStatefulWidget {
+  const _AddressRow({required this.address, required this.onPick});
 
   final Address address;
 
-  /// Set in picker mode: tapping the card chooses it.
+  /// Set in picker mode: tapping the row chooses it.
   final VoidCallback? onPick;
 
   @override
-  ConsumerState<_AddressCard> createState() => _AddressCardState();
+  ConsumerState<_AddressRow> createState() => _AddressRowState();
 }
 
-class _AddressCardState extends ConsumerState<_AddressCard> {
+class _AddressRowState extends ConsumerState<_AddressRow> {
   bool _busy = false;
 
   Address get _a => widget.address;
@@ -158,7 +170,7 @@ class _AddressCardState extends ConsumerState<_AddressCard> {
 
   Future<void> _run(Future<void> Function() action, {required String success}) async {
     setState(() => _busy = true);
-    // Grab the messenger context before the card may be removed (delete).
+    // Grab the messenger context before the row may be removed (delete).
     final messengerContext = Navigator.of(context).context;
     try {
       await action();
@@ -183,125 +195,127 @@ class _AddressCardState extends ConsumerState<_AddressCard> {
       '${a.city}, ${a.state} – ${a.pincode}',
     ].join('\n');
 
-    return AppCard(
-      onTap: widget.onPick,
-      padding: EdgeInsets.zero,
-      borderColor: a.isDefault ? c.primary : null,
-      child: Column(
+    final content = Padding(
+      padding: const EdgeInsets.only(
+        top: AppSpacing.mdPlus,
+        bottom: AppSpacing.xs,
+      ),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.smd,
-            ),
-            child: Row(
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: a.isDefault ? c.primarySoft : c.surfaceSunken,
-                    borderRadius: AppRadius.smAll,
-                  ),
-                  child: Icon(
-                    a.isDefault
-                        ? Icons.home_rounded
-                        : Icons.location_on_rounded,
-                    size: 20,
-                    color: a.isDefault ? c.onPrimarySoft : c.textSecondary,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.smd),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              a.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: context.text.title,
-                            ),
-                          ),
-                          if (a.isDefault) ...[
-                            const SizedBox(width: AppSpacing.sm),
-                            const StatusPill(
-                              label: 'Default',
-                              tone: Tone.primary,
-                            ),
-                          ],
-                        ],
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        a.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.h3,
                       ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.phone_rounded,
-                            size: 14,
-                            color: c.textMuted,
-                          ),
-                          const SizedBox(width: AppSpacing.xs),
-                          Text(_formatPhone(a.phone), style: context.text.caption),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(fullAddress, style: context.text.bodySecondary),
+                    ),
+                    if (a.isDefault) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      const StatusPill(label: 'Default', tone: Tone.primary),
                     ],
-                  ),
+                  ],
                 ),
-                if (widget.onPick != null)
-                  Icon(Icons.chevron_right_rounded, color: c.textMuted),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(_formatPhone(a.phone), style: context.text.caption),
+                const SizedBox(height: AppSpacing.sm),
+                Text(fullAddress, style: context.text.bodySecondary),
+                const SizedBox(height: AppSpacing.xs),
+                SizedBox(
+                  height: 40,
+                  child: _busy
+                      ? Align(
+                          alignment: Alignment.centerLeft,
+                          child: SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: c.primary,
+                            ),
+                          ),
+                        )
+                      : Row(
+                          children: [
+                            _TextAction(label: 'Edit', onTap: _edit),
+                            const _Dot(),
+                            _TextAction(
+                              label: 'Delete',
+                              onTap: _delete,
+                              color: c.textSecondary,
+                            ),
+                            if (!a.isDefault) ...[
+                              const _Dot(),
+                              _TextAction(
+                                label: 'Set as default',
+                                onTap: _setDefault,
+                              ),
+                            ],
+                          ],
+                        ),
+                ),
               ],
             ),
           ),
-          Divider(height: 1, color: c.divider),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs,
+          if (widget.onPick != null)
+            Padding(
+              padding: const EdgeInsets.only(left: AppSpacing.sm),
+              child: Icon(Icons.chevron_right_rounded, color: c.textMuted),
             ),
-            child: _busy
-                ? const Padding(
-                    padding: EdgeInsets.all(AppSpacing.smd),
-                    child: Center(
-                      child: SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                  )
-                : Row(
-                    children: [
-                      AppButton.ghost(
-                        label: 'Edit',
-                        icon: Icons.edit_rounded,
-                        size: AppButtonSize.sm,
-                        onPressed: _edit,
-                      ),
-                      AppButton.ghost(
-                        label: 'Delete',
-                        icon: Icons.delete_outline_rounded,
-                        size: AppButtonSize.sm,
-                        onPressed: _delete,
-                      ),
-                      const Spacer(),
-                      if (!a.isDefault)
-                        AppButton.ghost(
-                          label: 'Set as default',
-                          size: AppButtonSize.sm,
-                          onPressed: _setDefault,
-                        ),
-                    ],
-                  ),
-          ),
         ],
+      ),
+    );
+
+    if (widget.onPick == null) return content;
+    return InkWell(onTap: widget.onPick, child: content);
+  }
+}
+
+/// Inline text link used in the address row's action line.
+class _TextAction extends StatelessWidget {
+  const _TextAction({required this.label, required this.onTap, this.color});
+
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.xsAll,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xxs,
+          vertical: AppSpacing.smd,
+        ),
+        child: Text(
+          label,
+          style: context.text.label.copyWith(
+            color: color ?? context.colors.primary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Dot extends StatelessWidget {
+  const _Dot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      child: Text(
+        '·',
+        style: context.text.label.copyWith(color: context.colors.textMuted),
       ),
     );
   }

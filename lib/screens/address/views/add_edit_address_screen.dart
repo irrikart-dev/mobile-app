@@ -131,34 +131,42 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    const gap = SizedBox(height: AppSpacing.md);
+    const gap = SizedBox(height: AppSpacing.mdPlus);
     final alreadyDefault = widget.existing?.isDefault ?? false;
 
     return Scaffold(
       backgroundColor: c.background,
       appBar: AppTopBar(title: _isEdit ? 'Edit address' : 'Add address'),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
-          color: c.surface,
-          border: Border(top: BorderSide(color: c.border)),
+          color: c.background,
+          boxShadow: [
+            for (final s in c.shadowRaised)
+              BoxShadow(
+                color: s.color,
+                blurRadius: s.blurRadius,
+                offset: Offset(0, -s.offset.dy / 4),
+              ),
+          ],
         ),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.gutter,
-              AppSpacing.smd,
-              AppSpacing.gutter,
-              AppSpacing.smd,
-            ),
-            child: AppButton(
-              label: _isEdit ? 'Save changes' : 'Save address',
-              icon: Icons.check_rounded,
-              loading: _saving,
-              onPressed: _saving ? null : _save,
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
+                AppSpacing.smd,
+                AppSpacing.gutter,
+                AppSpacing.smd,
+              ),
+              child: AppButton(
+                label: _isEdit ? 'Save changes' : 'Save address',
+                loading: _saving,
+                onPressed: _saving ? null : _save,
+              ),
             ),
           ),
         ),
@@ -175,102 +183,96 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
               AppSpacing.xl,
             ),
             children: [
-              SectionCard(
-                title: 'Contact',
-                icon: Icons.person_outline_rounded,
-                child: Column(
-                  children: [
-                    AppTextField(
-                      label: 'Full name',
-                      controller: _name,
-                      hint: 'Who will receive the delivery',
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.name],
-                      maxLength: 60,
-                      validator: (v) {
-                        final t = v?.trim() ?? '';
-                        if (t.isEmpty) return 'Enter the recipient’s name';
-                        if (t.length < 2) return 'Name is too short';
-                        return null;
-                      },
-                    ),
-                    gap,
-                    AppTextField(
-                      label: 'Mobile number',
-                      controller: _phone,
-                      hint: '98765 43210',
-                      helper: '+91 · used by the courier to reach you',
-                      prefixIcon: Icons.phone_rounded,
-                      keyboardType: TextInputType.phone,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.telephoneNumberNational],
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(10),
-                      ],
-                      validator: (v) {
-                        final t = v?.trim() ?? '';
-                        if (t.isEmpty) return 'Enter a mobile number';
-                        if (!RegExp(r'^[6-9]\d{9}$').hasMatch(t)) {
-                          return 'Enter a valid 10-digit mobile number';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
+              const _Overline('Contact'),
+              const SizedBox(height: AppSpacing.smd),
+              AppTextField(
+                label: 'Full name',
+                controller: _name,
+                hint: 'Who will receive the delivery',
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.name],
+                maxLength: 60,
+                validator: (v) {
+                  final t = v?.trim() ?? '';
+                  if (t.isEmpty) return 'Enter the recipient’s name';
+                  if (t.length < 2) return 'Name is too short';
+                  return null;
+                },
               ),
-              const SizedBox(height: AppSpacing.md),
-              SectionCard(
-                title: 'Delivery address',
-                icon: Icons.location_on_rounded,
-                child: Column(
-                  children: [
-                    AppTextField(
-                      label: 'Pincode',
-                      controller: _pincode,
-                      hint: '6-digit pincode',
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.postalCode],
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(6),
-                      ],
-                      validator: (v) {
-                        final t = v?.trim() ?? '';
-                        if (t.isEmpty) return 'Enter the pincode';
-                        if (!RegExp(r'^[1-9]\d{5}$').hasMatch(t)) {
-                          return 'Enter a valid 6-digit pincode';
-                        }
-                        return null;
-                      },
-                    ),
-                    gap,
-                    AppTextField(
-                      label: 'Address line 1',
-                      controller: _line1,
-                      hint: 'House / farm no., village, street',
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.streetAddressLine1],
-                      maxLength: 120,
-                      validator: (v) => _required(v, 'the address'),
-                    ),
-                    gap,
-                    AppTextField(
-                      label: 'Address line 2',
-                      optional: true,
-                      controller: _line2,
-                      hint: 'Landmark, tehsil, post office',
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.streetAddressLine2],
-                      maxLength: 120,
-                    ),
-                    gap,
-                    AppTextField(
+              gap,
+              AppTextField(
+                label: 'Mobile number',
+                controller: _phone,
+                hint: '98765 43210',
+                helper: '+91 · used by the courier to reach you',
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.telephoneNumberNational],
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                validator: (v) {
+                  final t = v?.trim() ?? '';
+                  if (t.isEmpty) return 'Enter a mobile number';
+                  if (!RegExp(r'^[6-9]\d{9}$').hasMatch(t)) {
+                    return 'Enter a valid 10-digit mobile number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              const _Overline('Delivery address'),
+              const SizedBox(height: AppSpacing.smd),
+              AppTextField(
+                label: 'Pincode',
+                controller: _pincode,
+                hint: '6-digit pincode',
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.postalCode],
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6),
+                ],
+                validator: (v) {
+                  final t = v?.trim() ?? '';
+                  if (t.isEmpty) return 'Enter the pincode';
+                  if (!RegExp(r'^[1-9]\d{5}$').hasMatch(t)) {
+                    return 'Enter a valid 6-digit pincode';
+                  }
+                  return null;
+                },
+              ),
+              gap,
+              AppTextField(
+                label: 'Address line 1',
+                controller: _line1,
+                hint: 'House / farm no., village, street',
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.streetAddressLine1],
+                maxLength: 120,
+                validator: (v) => _required(v, 'the address'),
+              ),
+              gap,
+              AppTextField(
+                label: 'Address line 2',
+                optional: true,
+                controller: _line2,
+                hint: 'Landmark, tehsil, post office',
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.streetAddressLine2],
+                maxLength: 120,
+              ),
+              gap,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: AppTextField(
                       label: 'City / District',
                       controller: _city,
                       hint: 'e.g. Nashik',
@@ -278,18 +280,19 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
                       textInputAction: TextInputAction.done,
                       autofillHints: const [AutofillHints.addressCity],
                       maxLength: 60,
-                      validator: (v) => _required(v, 'the city or district'),
+                      validator: (v) => _required(v, 'the city'),
                     ),
-                    gap,
-                    GestureDetector(
+                  ),
+                  const SizedBox(width: AppSpacing.smd),
+                  Expanded(
+                    child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: _pickState,
                       child: AbsorbPointer(
                         child: AppTextField(
                           label: 'State',
                           controller: _state,
-                          hint: 'Select state or UT',
-                          prefixIcon: Icons.map_rounded,
+                          hint: 'Select',
                           suffix: Icon(
                             Icons.expand_more_rounded,
                             color: c.textMuted,
@@ -298,27 +301,49 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              AppCard(
-                padding: EdgeInsets.zero,
-                child: SwitchListTile.adaptive(
-                  value: _makeDefault,
-                  onChanged: alreadyDefault
-                      ? null
-                      : (v) => setState(() => _makeDefault = v),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.xs,
                   ),
-                  title: Text('Set as default', style: context.text.bodyStrong),
-                  subtitle: Text(
-                    alreadyDefault
-                        ? 'This is your default delivery address'
-                        : 'Pre-selected at checkout',
-                    style: context.text.caption,
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Divider(height: 1, color: c.divider),
+              const SizedBox(height: AppSpacing.xs),
+              MergeSemantics(
+                child: InkWell(
+                  onTap: alreadyDefault
+                      ? null
+                      : () => setState(() => _makeDefault = !_makeDefault),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: AppSpacing.smd),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Set as default',
+                                style: context.text.bodyStrong,
+                              ),
+                              const SizedBox(height: AppSpacing.xxs),
+                              Text(
+                                alreadyDefault
+                                    ? 'This is your default delivery address'
+                                    : 'Pre-selected at checkout',
+                                style: context.text.caption,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Switch.adaptive(
+                          value: _makeDefault,
+                          onChanged: alreadyDefault
+                              ? null
+                              : (v) => setState(() => _makeDefault = v),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -328,4 +353,14 @@ class _AddEditAddressScreenState extends ConsumerState<AddEditAddressScreen> {
       ),
     );
   }
+}
+
+class _Overline extends StatelessWidget {
+  const _Overline(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(text.toUpperCase(), style: context.text.overline);
 }

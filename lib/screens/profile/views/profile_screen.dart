@@ -15,13 +15,14 @@ import '../../../core/theme/theme_mode_controller.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../entry_point_tab.dart';
 import '../../../models/address_data.dart';
+import '../../../models/order_data.dart';
 import '../../../models/wishlist_state.dart';
 import '../../../route/route_constants.dart';
 import 'account_providers.dart';
 import 'components/account_avatar.dart';
 
 /// Account tab root: who you are, shortcuts to orders/wishlist/addresses,
-/// settings, support and sign-out.
+/// settings, support and sign-out — all sitting directly on the canvas.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -31,50 +32,44 @@ class ProfileScreen extends ConsumerWidget {
         ref.watch(authStateProvider).valueOrNull;
     final signedIn = user != null;
     final themeMode = ref.watch(themeModeProvider);
+    final c = context.colors;
 
     return Scaffold(
-      backgroundColor: context.colors.background,
+      backgroundColor: c.background,
       appBar: const AppTopBar(title: 'Account', large: true, showBack: false),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
           AppSpacing.gutter,
           AppSpacing.sm,
           AppSpacing.gutter,
-          AppSpacing.fabClearance + context.bottomInset,
+          AppSpacing.fabClearance + MediaQuery.paddingOf(context).bottom,
         ),
         children: [
           if (signedIn) _ProfileHeader(user: user) else const _SignInPrompt(),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.lg),
           _QuickActions(signedIn: signedIn),
-          const SizedBox(height: AppSpacing.sectionGap),
-          if (signedIn) ...[
-            SettingsGroup(
-              title: 'Account',
-              children: [
+          const SizedBox(height: AppSpacing.xl),
+          SettingsGroup(
+            title: 'Settings',
+            children: [
+              if (signedIn) ...[
                 SettingsTile(
-                  icon: Icons.person_outline_rounded,
+                  icon: Icons.person_rounded,
                   title: 'Your details',
-                  subtitle: 'Name and sign-in info',
-                  onTap: () => Navigator.pushNamed(context, userInfoScreenRoute),
+                  onTap: () =>
+                      Navigator.pushNamed(context, userInfoScreenRoute),
                 ),
                 SettingsTile(
                   icon: Icons.location_on_rounded,
                   title: 'Saved addresses',
-                  subtitle: 'Delivery locations for your orders',
                   onTap: () =>
                       Navigator.pushNamed(context, addressesScreenRoute),
                 ),
               ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-          ],
-          SettingsGroup(
-            title: 'Preferences',
-            children: [
               SettingsTile(
                 icon: Icons.palette_rounded,
                 title: 'Appearance',
-                subtitle: _themeLabel(themeMode),
+                trailing: _TrailingValue(_themeLabel(themeMode)),
                 onTap: () =>
                     Navigator.pushNamed(context, preferencesScreenRoute),
               ),
@@ -82,12 +77,11 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           SettingsGroup(
-            title: 'Support',
+            title: 'Help & legal',
             children: [
               SettingsTile(
-                icon: Icons.chat_rounded,
+                icon: Icons.chat_bubble_rounded,
                 title: 'Chat on WhatsApp',
-                subtitle: 'Product advice, orders, bulk enquiries',
                 onTap: () => openWhatsAppSupport(
                   context,
                   message: 'Hi IrriKart team, I need some help.',
@@ -96,7 +90,6 @@ class ProfileScreen extends ConsumerWidget {
               SettingsTile(
                 icon: Icons.assignment_return_rounded,
                 title: 'Returns & refunds',
-                subtitle: 'How returns work on IrriKart',
                 onTap: () =>
                     Navigator.pushNamed(context, productReturnsScreenRoute),
               ),
@@ -137,16 +130,13 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ],
           if (signedIn) ...[
-            const SizedBox(height: AppSpacing.lg),
-            SettingsGroup(
-              children: [
-                SettingsTile(
-                  icon: Icons.logout_rounded,
-                  title: 'Log out',
-                  destructive: true,
-                  onTap: () => _confirmSignOut(context, ref),
-                ),
-              ],
+            const SizedBox(height: AppSpacing.md),
+            Divider(height: 1, color: c.divider),
+            SettingsTile(
+              icon: Icons.logout_rounded,
+              title: 'Log out',
+              destructive: true,
+              onTap: () => _confirmSignOut(context, ref),
             ),
           ],
           const SizedBox(height: AppSpacing.xl),
@@ -160,14 +150,32 @@ class ProfileScreen extends ConsumerWidget {
 String _themeLabel(ThemeMode mode) => switch (mode) {
       ThemeMode.light => 'Light',
       ThemeMode.dark => 'Dark',
-      ThemeMode.system => 'Match system',
+      ThemeMode.system => 'System',
     };
 
 Widget _externalIcon(BuildContext context) => Icon(
-      Icons.open_in_new_rounded,
+      Icons.north_east_rounded,
       size: 18,
       color: context.colors.textMuted,
     );
+
+/// Muted current-value label shown before a row's chevron ("Light").
+class _TrailingValue extends StatelessWidget {
+  const _TrailingValue(this.value);
+
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.xs),
+      child: Text(
+        value,
+        style: context.text.body.copyWith(color: context.colors.textMuted),
+      ),
+    );
+  }
+}
 
 Future<void> _openUrl(BuildContext context, String url) async {
   final ok = await launchUrl(
@@ -204,6 +212,7 @@ Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
   );
 }
 
+/// Avatar, name and email straight on the canvas — no card.
 class _ProfileHeader extends StatelessWidget {
   const _ProfileHeader({required this.user});
 
@@ -214,48 +223,68 @@ class _ProfileHeader extends StatelessWidget {
     final name = accountDisplayName(user);
     final email = user.email;
 
-    return AppCard(
-      onTap: () => Navigator.pushNamed(context, userInfoScreenRoute),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        children: [
-          AccountAvatar(name: name, photoUrl: user.photoURL, size: 60),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+    return Row(
+      children: [
+        AccountAvatar(name: name, photoUrl: user.photoURL, size: 72),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.text.h2,
+              ),
+              if (email != null) ...[
+                const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  name,
+                  email,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.text.title,
-                ),
-                if (email != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    email,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.text.caption,
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.sm),
-                const StatusPill(
-                  label: 'Verified account',
-                  tone: Tone.success,
-                  icon: Icons.verified_rounded,
+                  style: context.text.caption,
                 ),
               ],
-            ),
+              const SizedBox(height: AppSpacing.smd),
+              _SmallPill(
+                label: 'Edit profile',
+                onTap: () => Navigator.pushNamed(context, userInfoScreenRoute),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.sm),
-          AppButton.ghost(
-            label: 'Edit',
-            size: AppButtonSize.sm,
-            onPressed: () => Navigator.pushNamed(context, userInfoScreenRoute),
+        ),
+      ],
+    );
+  }
+}
+
+/// Compact tonal pill for low-weight header actions.
+class _SmallPill extends StatelessWidget {
+  const _SmallPill({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Material(
+      color: c.primarySoft,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.smd + AppSpacing.xxs,
+            vertical: AppSpacing.sm - AppSpacing.xxs,
           ),
-        ],
+          child: Text(
+            label,
+            style: context.text.label.copyWith(color: c.onPrimarySoft),
+          ),
+        ),
       ),
     );
   }
@@ -267,39 +296,41 @@ class _SignInPrompt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return AppCard(
-      color: c.primarySoft,
-      borderColor: c.primarySoft,
-      padding: const EdgeInsets.all(AppSpacing.mdPlus),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(color: c.surface, shape: BoxShape.circle),
-            child: Icon(Icons.person_rounded, color: c.primary),
-          ),
-          const SizedBox(height: AppSpacing.smd),
-          Text(
-            'Sign in to IrriKart',
-            style: context.text.h3.copyWith(color: c.onPrimarySoft),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Track orders, save delivery addresses and keep your wishlist '
-            'in sync across devices.',
-            style: context.text.bodySecondary,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          AppButton(
-            label: 'Sign in',
-            icon: Icons.login_rounded,
-            size: AppButtonSize.md,
-            onPressed: () => Navigator.pushNamed(context, logInScreenRoute),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(color: c.tint, shape: BoxShape.circle),
+              child: Icon(Icons.person_rounded, size: 32, color: c.primary),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Welcome to IrriKart', style: context.text.h2),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    'Sign in to track orders, save delivery addresses and '
+                    'sync your wishlist.',
+                    style: context.text.caption,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.mdPlus),
+        AppButton(
+          label: 'Sign in',
+          size: AppButtonSize.md,
+          onPressed: () => Navigator.pushNamed(context, logInScreenRoute),
+        ),
+      ],
     );
   }
 }
@@ -316,7 +347,10 @@ class _QuickActions extends ConsumerWidget {
     );
     final addressCount = signedIn
         ? ref.watch(addressControllerProvider).valueOrNull?.length
-        : null;
+        : 0;
+    final orderCount = signedIn
+        ? ref.watch(orderHistoryProvider).valueOrNull?.length
+        : 0;
 
     void requireSignIn(VoidCallback action) {
       if (signedIn) {
@@ -326,102 +360,111 @@ class _QuickActions extends ConsumerWidget {
       }
     }
 
-    return Row(
-      children: [
-        Expanded(
-          child: _QuickActionTile(
-            icon: Icons.receipt_long_rounded,
-            label: 'Orders',
-            caption: 'Track & reorder',
-            onTap: () => requireSignIn(
-              () => ref.read(entryTabIndexProvider.notifier).state = 3,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _QuickActionTile(
+              icon: Icons.receipt_long_rounded,
+              label: 'Orders',
+              count: orderCount,
+              onTap: () => requireSignIn(
+                () => ref.read(entryTabIndexProvider.notifier).state = 3,
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.smd),
-        Expanded(
-          child: _QuickActionTile(
-            icon: Icons.favorite_rounded,
-            label: 'Wishlist',
-            caption: wishlistCount == 1 ? '1 item' : '$wishlistCount items',
-            onTap: () => Navigator.pushNamed(context, bookmarkScreenRoute),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.smd),
-        Expanded(
-          child: _QuickActionTile(
-            icon: Icons.location_on_rounded,
-            label: 'Addresses',
-            caption: addressCount == null
-                ? 'Manage'
-                : addressCount == 1
-                    ? '1 saved'
-                    : '$addressCount saved',
-            onTap: () => requireSignIn(
-              () => Navigator.pushNamed(context, addressesScreenRoute),
+          const SizedBox(width: AppSpacing.smd),
+          Expanded(
+            child: _QuickActionTile(
+              icon: Icons.favorite_rounded,
+              label: 'Wishlist',
+              count: wishlistCount,
+              onTap: () => Navigator.pushNamed(context, bookmarkScreenRoute),
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: AppSpacing.smd),
+          Expanded(
+            child: _QuickActionTile(
+              icon: Icons.location_on_rounded,
+              label: 'Addresses',
+              count: addressCount,
+              onTap: () => requireSignIn(
+                () => Navigator.pushNamed(context, addressesScreenRoute),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
+/// Sage shortcut tile: icon disc, big count, label. The only tinted blocks
+/// on the Account screen.
 class _QuickActionTile extends StatelessWidget {
   const _QuickActionTile({
     required this.icon,
     required this.label,
-    required this.caption,
+    required this.count,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
-  final String caption;
+
+  /// Null while still loading.
+  final int? count;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return PressableScale(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.smd,
-          vertical: AppSpacing.md,
-        ),
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: AppRadius.mdAll,
-          border: Border.all(color: c.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: c.primarySoft,
-                borderRadius: AppRadius.smAll,
+    final n = count;
+    return Semantics(
+      button: true,
+      label: n == null ? label : '$label, $n',
+      excludeSemantics: true,
+      child: PressableScale(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.smd + AppSpacing.xxs,
+            AppSpacing.smd + AppSpacing.xxs,
+            AppSpacing.smd,
+            AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            color: c.tint,
+            borderRadius: AppRadius.lgAll,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: c.background,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 18, color: c.primary),
               ),
-              child: Icon(icon, size: 22, color: c.onPrimarySoft),
-            ),
-            const SizedBox(height: AppSpacing.smd),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.text.titleSm,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              caption,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.text.captionMuted,
-            ),
-          ],
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                n == null ? '–' : '$n',
+                style: context.text.h1.copyWith(
+                  color: n == null ? c.textMuted : null,
+                ),
+              ),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.text.caption,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -434,22 +477,11 @@ class _VersionFooter extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final version = ref.watch(appVersionProvider).valueOrNull;
-    return Column(
-      children: [
-        Icon(Icons.water_drop_rounded, size: 20, color: context.colors.primary),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          version == null ? 'IrriKart' : 'IrriKart v$version',
-          textAlign: TextAlign.center,
-          style: context.text.captionMuted,
-        ),
-        const SizedBox(height: 2),
-        Text(
-          'Made for Indian farmers',
-          textAlign: TextAlign.center,
-          style: context.text.captionMuted,
-        ),
-      ],
+    return Text(
+      '${version == null ? 'IrriKart' : 'IrriKart v$version'}'
+      '  ·  Made for Indian farmers',
+      textAlign: TextAlign.center,
+      style: context.text.captionMuted,
     );
   }
 }
