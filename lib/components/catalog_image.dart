@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../core/utils/context_ext.dart';
+
 /// Renders a catalogue image regardless of where it lives.
 ///
 /// Products carried over from the IrriKart site ship as bundled assets;
@@ -13,6 +15,8 @@ class CatalogImage extends StatelessWidget {
     required this.source,
     this.fit = BoxFit.cover,
     this.isRemote,
+    this.color,
+    this.colorBlendMode,
   });
 
   /// Asset path (`assets/...`) or an absolute URL.
@@ -23,53 +27,44 @@ class CatalogImage extends StatelessWidget {
   /// Overrides the http:// sniffing when the caller already knows.
   final bool? isRemote;
 
+  /// Optional blend, e.g. `BlendMode.multiply` with the sage tint so a
+  /// product shot's white studio background melts into its tile.
+  final Color? color;
+  final BlendMode? colorBlendMode;
+
   bool get _remote => isRemote ?? (source?.startsWith('http') ?? false);
 
   @override
   Widget build(BuildContext context) {
     final src = source;
-    if (src == null || src.isEmpty) {
-      return const _Placeholder(icon: Icons.image_not_supported_outlined);
-    }
+    if (src == null || src.isEmpty) return const _Placeholder();
 
     if (_remote) {
       return CachedNetworkImage(
         imageUrl: src,
         fit: fit,
+        color: color,
+        colorBlendMode: colorBlendMode,
         placeholder: (_, __) => const _Placeholder(),
-        errorWidget: (_, __, ___) =>
-            const _Placeholder(icon: Icons.broken_image_outlined),
+        errorWidget: (_, __, ___) => const _Placeholder(),
       );
     }
     return Image.asset(
       src,
       fit: fit,
-      errorBuilder: (_, __, ___) =>
-          const _Placeholder(icon: Icons.broken_image_outlined),
+      color: color,
+      colorBlendMode: colorBlendMode,
+      errorBuilder: (_, __, ___) => const _Placeholder(),
     );
   }
 }
 
+/// Plain sage block — no "broken image" glyph; the tile shape alone reads
+/// as "image goes here".
 class _Placeholder extends StatelessWidget {
-  const _Placeholder({this.icon});
-
-  final IconData? icon;
+  const _Placeholder();
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ColoredBox(
-      color: theme.colorScheme.surfaceContainerHighest,
-      child: icon == null
-          ? const SizedBox.expand()
-          : Center(
-              child: Icon(
-                icon,
-                size: 28,
-                color:
-                    theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-              ),
-            ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      ColoredBox(color: context.colors.tint, child: const SizedBox.expand());
 }

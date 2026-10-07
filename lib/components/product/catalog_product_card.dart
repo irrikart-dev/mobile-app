@@ -64,10 +64,24 @@ class CatalogProductCard extends ConsumerWidget {
                       color: c.tint,
                       child: Opacity(
                         opacity: product.buyable ? 1 : 0.5,
-                        child: CatalogImage(
-                          source: product.displayImage,
-                          isRemote: product.hasRemoteImage,
-                        ),
+                        // Light mode: product shots (white studio backdrop)
+                        // are multiplied onto the sage so they sit *in* the
+                        // tile instead of as a white square on top of it.
+                        child: context.isDark
+                            ? CatalogImage(
+                                source: product.displayImage,
+                                isRemote: product.hasRemoteImage,
+                              )
+                            : Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: CatalogImage(
+                                  source: product.displayImage,
+                                  isRemote: product.hasRemoteImage,
+                                  fit: BoxFit.contain,
+                                  color: c.tint,
+                                  colorBlendMode: BlendMode.multiply,
+                                ),
+                              ),
                       ),
                     ),
                     Positioned(
@@ -106,19 +120,18 @@ class CatalogProductCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      height: 36,
-                      child: Text(
-                        product.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.text.titleSm.copyWith(
-                          fontWeight: FontWeight.w600,
-                          height: 1.35,
-                        ),
+                    // Natural height (1–2 lines): price follows the name
+                    // directly; the fixed outer box absorbs the difference.
+                    Text(
+                      product.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.titleSm.copyWith(
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     SizedBox(
                       height: 22,
                       child: Row(

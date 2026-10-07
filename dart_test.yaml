@@ -1,0 +1,6 @@
+tags:
+  # Screenshot review harness (test/_shots). Renders every screen to PNG for
+  # visual QA; not a regression suite. Run explicitly:
+  #   flutter test test/_shots --run-skipped -t shots --update-goldens
+  shots:
+    skip: "visual QA harness — run with --run-skipped -t shots --update-goldens"

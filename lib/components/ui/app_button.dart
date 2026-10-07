@@ -125,7 +125,7 @@ class AppButton extends StatelessWidget {
         (s) => s.contains(WidgetState.disabled)
             ? (variant == AppButtonVariant.ghost
                 ? Colors.transparent
-                : c.surfaceSunken)
+                : (context.isDark ? c.border : c.surfaceSunken))
             : bg,
       ),
       foregroundColor: WidgetStateProperty.resolveWith(
