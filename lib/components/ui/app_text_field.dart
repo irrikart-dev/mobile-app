@@ -131,12 +131,12 @@ class AppSearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final border = OutlineInputBorder(
-      borderRadius: AppRadius.mdAll,
-      borderSide: BorderSide(color: c.border),
+    const border = OutlineInputBorder(
+      borderRadius: AppRadius.pillAll,
+      borderSide: BorderSide.none,
     );
     return SizedBox(
-      height: 48,
+      height: 50,
       child: TextField(
         controller: controller,
         focusNode: focusNode,
@@ -151,8 +151,11 @@ class AppSearchField extends StatelessWidget {
           hintText: hint,
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          fillColor: c.surface,
-          prefixIcon: Icon(Icons.search_rounded, color: c.textMuted, size: 22),
+          fillColor: c.tint,
+          prefixIcon: Padding(
+            padding: const EdgeInsets.only(left: 6),
+            child: Icon(Icons.search_rounded, color: c.textSecondary, size: 22),
+          ),
           suffixIcon: onClear == null || controller == null
               ? null
               : ListenableBuilder(
@@ -171,7 +174,7 @@ class AppSearchField extends StatelessWidget {
           border: border,
           enabledBorder: border,
           focusedBorder: border.copyWith(
-            borderSide: BorderSide(color: c.primary, width: 1.6),
+            borderSide: BorderSide(color: c.primary, width: 1.4),
           ),
         ),
       ),

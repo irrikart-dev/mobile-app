@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens/radius_tokens.dart';
 import '../../core/theme/tokens/spacing_tokens.dart';
-import '../../core/utils/context_ext.dart';
 import '../ui/skeleton.dart';
 import 'catalog_product_card.dart';
 
@@ -15,43 +14,30 @@ class ProductCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
-    return Container(
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: AppRadius.mdAll,
-        border: Border.all(color: c.border),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AspectRatio(
-            aspectRatio: 1,
-            child: ShimmerBox(borderRadius: BorderRadius.zero),
-          ),
-          SizedBox(
-            height: kProductCardContentHeight,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(12, 12, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ShimmerBox(height: 12, width: 120),
-                  SizedBox(height: 6),
-                  ShimmerBox(height: 12, width: 80),
-                  SizedBox(height: 10),
-                  ShimmerBox(height: 10, width: 60),
-                  Spacer(),
-                  ShimmerBox(height: 16, width: 70),
-                  SizedBox(height: 10),
-                  ShimmerBox(height: 32, borderRadius: AppRadius.pillAll),
-                ],
-              ),
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AspectRatio(
+          aspectRatio: 1,
+          child: ShimmerBox(borderRadius: AppRadius.lgAll),
+        ),
+        SizedBox(
+          height: kProductCardContentHeight,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(2, 12, 2, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShimmerBox(height: 12, width: 120),
+                SizedBox(height: 8),
+                ShimmerBox(height: 12, width: 80),
+                SizedBox(height: 12),
+                ShimmerBox(height: 16, width: 64),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

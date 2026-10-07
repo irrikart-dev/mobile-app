@@ -4,8 +4,12 @@ import '../../core/theme/tokens/radius_tokens.dart';
 import '../../core/theme/tokens/spacing_tokens.dart';
 import '../../core/utils/context_ext.dart';
 
-/// Surface card: white (or dark surface) with a hairline border and the soft
-/// card shadow. Tappable when [onTap] is set.
+/// Soft sage block — the one "container" in the visual language. No border,
+/// no shadow: it groups content by tint alone. Tappable when [onTap] is set.
+///
+/// Use it sparingly (a summary, a promo, a highlighted fact). Lists and
+/// sections should sit directly on the canvas, separated by whitespace and
+/// dividers — see [Section].
 class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
@@ -15,7 +19,7 @@ class AppCard extends StatelessWidget {
     this.margin,
     this.color,
     this.borderColor,
-    this.radius = AppRadius.mdAll,
+    this.radius = AppRadius.lgAll,
     this.elevated = false,
   });
 
@@ -23,11 +27,15 @@ class AppCard extends StatelessWidget {
   final VoidCallback? onTap;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry? margin;
+
+  /// Defaults to `context.colors.tint`.
   final Color? color;
+
+  /// Only for selected/outlined states (e.g. a chosen address).
   final Color? borderColor;
   final BorderRadius radius;
 
-  /// Adds the card shadow (light mode only — dark relies on the border).
+  /// Floating elements only (sticky bars, overlapping sheets).
   final bool elevated;
 
   @override
@@ -36,10 +44,12 @@ class AppCard extends StatelessWidget {
     return Container(
       margin: margin,
       decoration: BoxDecoration(
-        color: color ?? c.surface,
+        color: color ?? c.tint,
         borderRadius: radius,
-        border: Border.all(color: borderColor ?? c.border),
-        boxShadow: elevated ? c.shadowCard : null,
+        border: borderColor == null
+            ? null
+            : Border.all(color: borderColor!, width: 1.5),
+        boxShadow: elevated ? c.shadowRaised : null,
       ),
       child: Material(
         type: MaterialType.transparency,
@@ -56,8 +66,84 @@ class AppCard extends StatelessWidget {
   }
 }
 
-/// Card with a title row (icon + title + optional trailing action) on top.
-/// Used for checkout sections and order-detail blocks.
+/// Un-boxed content section: title row (optional trailing action) and the
+/// content beneath, sitting on the canvas. Stack sections with
+/// [SectionDivider] between them.
+class Section extends StatelessWidget {
+  const Section({
+    super.key,
+    required this.title,
+    required this.child,
+    this.trailing,
+    this.subtitle,
+    this.padding = const EdgeInsets.symmetric(
+      horizontal: AppSpacing.gutter,
+      vertical: AppSpacing.mdPlus,
+    ),
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget child;
+  final Widget? trailing;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: padding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: context.text.h3),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(subtitle!, style: context.text.caption),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing!,
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+/// Full-bleed 8px tinted band between [Section]s — reads as a page break
+/// without drawing a box around anything.
+class SectionDivider extends StatelessWidget {
+  const SectionDivider({super.key, this.thin = false});
+
+  /// A 1px hairline with gutter insets instead of the band.
+  final bool thin;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return thin
+        ? Divider(
+            height: 1,
+            indent: AppSpacing.gutter,
+            endIndent: AppSpacing.gutter,
+            color: c.divider,
+          )
+        : Container(height: 8, color: c.surfaceSunken);
+  }
+}
+
+/// Kept for call sites that still use the boxed API: renders a borderless
+/// tinted block with a title row.
 class SectionCard extends StatelessWidget {
   const SectionCard({
     super.key,

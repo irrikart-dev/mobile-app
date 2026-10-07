@@ -2,18 +2,16 @@ import 'package:flutter/material.dart';
 
 /// Font families and the Material text scale.
 ///
-/// Poppins carries headings and prices, Open Sans carries body and UI copy.
+/// One family — Plus Jakarta Sans — for everything; hierarchy comes from
+/// weight, size and tracking.
 /// Every style sets an explicit [TextStyle.height]: both faces' built-in
 /// leading runs tall, and fixed-height cards overflow without it.
 ///
 /// Screens should use the role-based styles in `AppText` (`context.text`),
 /// which sit on top of this scale.
 abstract final class AppTypography {
-  static const String headingFont = 'Poppins';
-  static const String bodyFont = 'Open Sans';
-
-  /// Kept only so legacy widgets compile; no new code should use a script face.
-  static const String scriptFont = 'Caveat';
+  static const String headingFont = 'Plus Jakarta Sans';
+  static const String bodyFont = 'Plus Jakarta Sans';
 
   static TextTheme textTheme(Color onSurface, Color secondary) {
     TextStyle heading(

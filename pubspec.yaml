@@ -94,30 +94,17 @@ flutter:
     - assets/mock/products/
 
   fonts:
-    - family: Poppins
+    - family: Plus Jakarta Sans
       fonts:
-        - asset: assets/fonts/poppins/Poppins-Regular.ttf
-        - asset: assets/fonts/poppins/Poppins-Medium.ttf
+        - asset: assets/fonts/plus_jakarta_sans/PlusJakartaSans-Regular.ttf
+        - asset: assets/fonts/plus_jakarta_sans/PlusJakartaSans-Medium.ttf
           weight: 500
-        - asset: assets/fonts/poppins/Poppins-SemiBold.ttf
+        - asset: assets/fonts/plus_jakarta_sans/PlusJakartaSans-SemiBold.ttf
           weight: 600
-        - asset: assets/fonts/poppins/Poppins-Bold.ttf
+        - asset: assets/fonts/plus_jakarta_sans/PlusJakartaSans-Bold.ttf
           weight: 700
-        - asset: assets/fonts/poppins/Poppins-ExtraBold.ttf
+        - asset: assets/fonts/plus_jakarta_sans/PlusJakartaSans-ExtraBold.ttf
           weight: 800
-    - family: Open Sans
-      fonts:
-        - asset: assets/fonts/open_sans/OpenSans-Regular.ttf
-        - asset: assets/fonts/open_sans/OpenSans-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/open_sans/OpenSans-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/open_sans/OpenSans-Bold.ttf
-          weight: 700
-    - family: Caveat
-      fonts:
-        - asset: assets/fonts/caveat/Caveat-SemiBold.ttf
-          weight: 600
 
 # App icon. Source PNGs are pre-composed (assets/icon/, built from the
 # client's droplet mark) rather than left to the tool's own auto-cropping:
@@ -140,13 +127,15 @@ flutter_launcher_icons:
 flutter_native_splash:
   color: "#FFFFFF"
   image: assets/logo/irrikart_logo_full.png
-  color_dark: "#0F1311"
+  color_dark: "#0E1210"
   image_dark: assets/logo/irrikart_logo_full_dark.png
+  # Android 12+ masks the splash icon to a circle (2/3 of the canvas), so
+  # the lockup is pre-scaled into that safe zone or the name gets clipped.
   android_12:
-    image: assets/logo/irrikart_logo_full.png
+    image: assets/logo/irrikart_splash_android12.png
     icon_background_color: "#FFFFFF"
-    image_dark: assets/logo/irrikart_logo_full_dark.png
-    icon_background_color_dark: "#0F1311"
+    image_dark: assets/logo/irrikart_splash_android12_dark.png
+    icon_background_color_dark: "#0E1210"
   android: true
   ios: true
   web: false

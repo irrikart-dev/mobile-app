@@ -33,6 +33,7 @@ class EntryPoint extends ConsumerWidget {
         if (!didPop) setTab.state = 0;
       },
       child: Scaffold(
+        extendBody: true,
         body: IndexedStack(index: currentIndex, children: _pages),
         bottomNavigationBar: AppBottomNavBar(
           currentIndex: currentIndex,

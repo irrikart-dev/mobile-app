@@ -65,9 +65,8 @@ class QuantityStepper extends StatelessWidget {
       child: Container(
         height: size.height,
         decoration: BoxDecoration(
-          color: filled ? c.primary : c.surface,
+          color: filled ? c.primary : c.tint,
           borderRadius: AppRadius.pillAll,
-          border: filled ? null : Border.all(color: c.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

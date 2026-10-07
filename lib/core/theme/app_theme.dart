@@ -14,7 +14,7 @@ abstract final class AppTheme {
   static ThemeData get light => _build(Brightness.light);
   static ThemeData get dark => _build(Brightness.dark);
 
-  static const double buttonHeight = 52;
+  static const double buttonHeight = 54;
 
   static ThemeData _build(Brightness brightness) {
     final isLight = brightness == Brightness.light;
@@ -54,7 +54,7 @@ abstract final class AppTheme {
     final textTheme = AppTypography.textTheme(c.textPrimary, c.textSecondary);
     final labelStyle = textTheme.labelLarge;
 
-    const buttonShape = RoundedRectangleBorder(borderRadius: AppRadius.mdAll);
+    const buttonShape = StadiumBorder();
     const buttonPadding = EdgeInsets.symmetric(horizontal: AppSpacing.lg);
 
     return ThemeData(
@@ -150,7 +150,7 @@ abstract final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: c.surface,
+        fillColor: c.surfaceSunken,
         isDense: false,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
@@ -163,36 +163,33 @@ abstract final class AppTheme {
         errorStyle: textTheme.bodySmall?.copyWith(color: c.error),
         prefixIconColor: c.textMuted,
         suffixIconColor: c.textMuted,
-        border: _border(c.border),
-        enabledBorder: _border(c.border),
+        border: _border(Colors.transparent),
+        enabledBorder: _border(Colors.transparent),
         disabledBorder: _border(c.divider),
         focusedBorder: _border(c.primary, width: 1.6),
         errorBorder: _border(c.error),
         focusedErrorBorder: _border(c.error, width: 1.6),
       ),
       cardTheme: CardThemeData(
-        color: c.surface,
+        color: c.tint,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.mdAll,
-          side: BorderSide(color: c.border),
-        ),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: c.surface,
-        selectedColor: c.primarySoft,
+        backgroundColor: c.tint,
+        selectedColor: c.primary,
         disabledColor: c.surfaceSunken,
         checkmarkColor: c.onPrimarySoft,
         labelStyle: textTheme.labelMedium?.copyWith(color: c.textPrimary),
         secondaryLabelStyle:
-            textTheme.labelMedium?.copyWith(color: c.onPrimarySoft),
+            textTheme.labelMedium?.copyWith(color: c.textOnPrimary),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.xs,
         ),
-        side: BorderSide(color: c.border),
+        side: BorderSide.none,
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
         showCheckmark: false,
       ),

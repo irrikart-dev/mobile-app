@@ -23,6 +23,12 @@ abstract final class AppColors {
   static const Color primaryDark = Color(0xFF4A9C37);
   static const Color primaryLight = Color(0xFF8ACD78);
 
+  /// Deep forest green derived from the brand green — the "ink" colour for
+  /// CTAs, the sign-in hero, the nav bar and selected states. The bright
+  /// [primary] stays as the fresh accent (badges, highlights, dark-mode CTA).
+  static const Color forest = Color(0xFF1F5C3A);
+  static const Color forestDark = Color(0xFF163F29);
+
   /// Tonal ramp, used for tinted surfaces and the MaterialColor swatch.
   static const MaterialColor primarySwatch = MaterialColor(0xFF67BD50, {
     50: Color(0xFFEEF8EB),
@@ -82,13 +88,17 @@ abstract final class AppColors {
 
   // A faintly warm off-white page with pure-white cards on top — the card
   // edge reads without needing a shadow, which is what keeps lists calm.
-  static const Color lightBackground = Color(0xFFF6F7F5);
+  // White canvas; content separates by whitespace and soft sage tiles
+  // rather than bordered boxes.
+  static const Color lightBackground = Color(0xFFFFFFFF);
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSurfaceVariant = Color(0xFFF0F2EF);
+  static const Color lightSurfaceVariant = Color(0xFFF4F6F3);
+  static const Color lightTint = Color(0xFFF1F5EE);
 
   static const Color darkBackground = Color(0xFF0E1210);
   static const Color darkSurface = Color(0xFF161B18);
   static const Color darkSurfaceVariant = Color(0xFF1D2420);
+  static const Color darkTint = Color(0xFF18211B);
 
   // ---------------------------------------------------------------------
   // Text & lines — light / dark
@@ -118,6 +128,11 @@ abstract final class AppColors {
   static const Color warning = Color(0xFFF59E0B);
   static const Color error = Color(0xFFDC2626);
   static const Color info = Color(0xFF2563EB);
+
+  /// Illustration accents for the geometric brand art (sun, soil/sand).
+  static const Color sun = Color(0xFFF2C14E);
+  static const Color sand = Color(0xFFEDE3CC);
+  static const Color sage = Color(0xFFCFE3C4);
 
   /// Star ratings.
   static const Color rating = Color(0xFFF5A524);

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -70,120 +71,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final authAvailable = ref.watch(authServiceProvider).isAvailable;
-    final c = context.colors;
 
-    return Scaffold(
-      backgroundColor: c.background,
-      body: LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const _Hero(),
-                  Expanded(
-                    child: _SignInPanel(
-                      authAvailable: authAvailable,
-                      busy: _busy,
-                      error: _error,
-                      onContinueWithGoogle: _continueWithGoogle,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Brand-gradient header: wordmark, headline, soft decorative circles.
-/// White-on-gradient is the one place the brand colours carry the screen;
-/// it reads the same in light and dark mode on purpose.
-class _Hero extends StatelessWidget {
-  const _Hero();
-
-  @override
-  Widget build(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
-    const onHero = AppColors.white;
-
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(
-        bottom: Radius.circular(AppRadius.xl),
-      ),
-      child: Container(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          top + AppSpacing.xl,
-          AppSpacing.lg,
-          AppSpacing.xlPlus,
-        ),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.primaryDark, AppColors.secondaryDark],
-          ),
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: AppColors.forest,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Positioned(
-              top: -90,
-              right: -70,
-              child: _Circle(size: 220, color: onHero.withValues(alpha: 0.10)),
-            ),
-            Positioned(
-              bottom: -110,
-              left: -80,
-              child: _Circle(size: 200, color: onHero.withValues(alpha: 0.08)),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      height: 48,
-                      width: 48,
-                      padding: const EdgeInsets.all(9),
-                      decoration: BoxDecoration(
-                        color: onHero.withValues(alpha: 0.16),
-                        borderRadius: AppRadius.mdAll,
-                      ),
-                      child: Image.asset(
-                        'assets/logo/irrikart_logo_mark.png',
-                        color: onHero,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.smd),
-                    Text(
-                      'IrriKart',
-                      style: context.text.h2.copyWith(
-                        color: onHero,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Text(
-                  'Everything your farm needs, one tap away.',
-                  style: context.text.display.copyWith(color: onHero),
-                ),
-                const SizedBox(height: AppSpacing.smd),
-                Text(
-                  'Pumps, drip irrigation and farm tools from brands you trust.',
-                  style: context.text.body.copyWith(
-                    color: onHero.withValues(alpha: 0.85),
-                  ),
-                ),
-              ],
+            const Expanded(child: _Hero()),
+            _SignInSheet(
+              authAvailable: authAvailable,
+              busy: _busy,
+              error: _error,
+              onContinueWithGoogle: _continueWithGoogle,
             ),
           ],
         ),
@@ -192,22 +93,58 @@ class _Hero extends StatelessWidget {
   }
 }
 
-class _Circle extends StatelessWidget {
-  const _Circle({required this.size, required this.color});
-
-  final double size;
-  final Color color;
+/// Deep-green top: the white IrriKart lockup and the geometric brand art.
+/// Same in light and dark mode on purpose — it's the brand moment.
+class _Hero extends StatelessWidget {
+  const _Hero();
 
   @override
-  Widget build(BuildContext context) => Container(
-        height: size,
-        width: size,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-      );
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.forest, AppColors.forestDark],
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          top + AppSpacing.lg,
+          AppSpacing.xl,
+          AppSpacing.lg,
+        ),
+        child: Column(
+          children: [
+            Image.asset(
+              'assets/logo/irrikart_logo_full_white.png',
+              height: 72,
+              semanticLabel: 'IrriKart',
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            const Expanded(
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: GeoMosaic.columns / GeoMosaic.rows,
+                  child: ClipRRect(
+                    borderRadius: AppRadius.xlAll,
+                    child: GeoMosaic(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _SignInPanel extends StatelessWidget {
-  const _SignInPanel({
+/// White rounded sheet overlapping the hero's bottom edge.
+class _SignInSheet extends StatelessWidget {
+  const _SignInSheet({
     required this.authAvailable,
     required this.busy,
     required this.error,
@@ -227,127 +164,122 @@ class _SignInPanel extends StatelessWidget {
     final c = context.colors;
     final linkStyle = context.text.caption.copyWith(
       color: c.textPrimary,
-      fontWeight: FontWeight.w600,
-      decoration: TextDecoration.underline,
-      decorationColor: c.textMuted,
+      fontWeight: FontWeight.w700,
     );
 
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.md,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const _ValueProp(
-              icon: Icons.verified_outlined,
-              title: 'Genuine products',
-              subtitle: 'Sourced directly from trusted brands',
-            ),
-            const _ValueProp(
-              icon: Icons.local_shipping_outlined,
-              title: 'Delivered across India',
-              subtitle: 'Track every order to your doorstep',
-            ),
-            const _ValueProp(
-              icon: Icons.lock_outline_rounded,
-              title: 'Secure prepaid checkout',
-              subtitle: 'UPI, cards and netbanking via Razorpay',
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            if (!authAvailable) ...[
-              const AuthUnavailableNotice(),
-              const SizedBox(height: AppSpacing.md),
-            ],
-            GoogleSignInButton(
-              busy: busy,
-              onPressed: authAvailable ? onContinueWithGoogle : null,
-            ),
-            AnimatedSize(
-              duration: AppDurations.fast,
-              child: error == null
-                  ? const SizedBox(width: double.infinity)
-                  : Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.smd),
-                      child: InlineBanner(message: error!, tone: Tone.error),
-                    ),
-            ),
-            const Spacer(),
-            const SizedBox(height: AppSpacing.lg),
-            Text.rich(
-              TextSpan(
-                text: 'By continuing, you agree to IrriKart’s ',
-                style: context.text.caption,
-                children: [
-                  TextSpan(
-                    text: 'Terms of Service',
-                    style: linkStyle,
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () => _open(SupportConfig.termsUrl),
-                  ),
-                  const TextSpan(text: ' and '),
-                  TextSpan(
-                    text: 'Privacy Policy',
-                    style: linkStyle,
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () => _open(SupportConfig.privacyUrl),
-                  ),
-                  const TextSpan(text: '.'),
-                ],
-              ),
-              textAlign: TextAlign.center,
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: c.background,
+        borderRadius: AppRadius.sheetTop,
+      ),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        MediaQuery.paddingOf(context).bottom + AppSpacing.lg,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Welcome to IrriKart', style: context.text.h1),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Genuine irrigation and farm gear, delivered to your field.',
+            style: context.text.bodySecondary,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          if (!authAvailable) ...[
+            const AuthUnavailableNotice(),
+            const SizedBox(height: AppSpacing.md),
           ],
-        ),
+          GoogleSignInButton(
+            busy: busy,
+            onPressed: authAvailable ? onContinueWithGoogle : null,
+          ),
+          AnimatedSize(
+            duration: AppDurations.fast,
+            child: error == null
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.smd),
+                    child: InlineBanner(message: error!, tone: Tone.error),
+                  ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const Row(
+            children: [
+              Expanded(
+                child: _Promise(
+                  icon: Icons.verified_rounded,
+                  label: 'Genuine brands',
+                ),
+              ),
+              Expanded(
+                child: _Promise(
+                  icon: Icons.local_shipping_rounded,
+                  label: 'Pan-India delivery',
+                ),
+              ),
+              Expanded(
+                child: _Promise(
+                  icon: Icons.lock_rounded,
+                  label: 'Secure payments',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text.rich(
+            TextSpan(
+              text: 'By continuing you agree to our ',
+              style: context.text.caption,
+              children: [
+                TextSpan(
+                  text: 'Terms',
+                  style: linkStyle,
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () => _open(SupportConfig.termsUrl),
+                ),
+                const TextSpan(text: ' and '),
+                TextSpan(
+                  text: 'Privacy Policy',
+                  style: linkStyle,
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () => _open(SupportConfig.privacyUrl),
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ValueProp extends StatelessWidget {
-  const _ValueProp({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
+class _Promise extends StatelessWidget {
+  const _Promise({required this.icon, required this.label});
 
   final IconData icon;
-  final String title;
-  final String subtitle;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: c.primarySoft,
-              borderRadius: AppRadius.smAll,
-            ),
-            child: Icon(icon, size: 20, color: c.onPrimarySoft),
+    return Column(
+      children: [
+        Icon(icon, size: 22, color: c.accent),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: context.text.caption.copyWith(
+            color: c.textPrimary,
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(width: AppSpacing.smd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: context.text.title),
-                Text(subtitle, style: context.text.caption),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

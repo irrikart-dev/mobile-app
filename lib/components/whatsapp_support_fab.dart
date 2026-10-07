@@ -54,7 +54,11 @@ class WhatsAppSupportFab extends ConsumerWidget {
             (inShell && tab == _cartTabIndex);
         final inset = MediaQuery.paddingOf(context).bottom;
         final bottom =
-            inset + (inShell ? AppSpacing.navBarHeight : 0) + AppSpacing.md;
+            inset +
+            (inShell
+                ? AppSpacing.navBarHeight + AppSpacing.navFloatGap
+                : 0) +
+            AppSpacing.md;
 
         return Positioned(
           right: AppSpacing.md,

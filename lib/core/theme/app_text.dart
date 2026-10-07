@@ -21,43 +21,43 @@ class AppText {
   static const _h = AppTypography.headingFont;
   static const _b = AppTypography.bodyFont;
 
-  /// Hero headlines (onboarding, success screens). 32 / 800.
+  /// Hero headlines (onboarding, success screens). 34 / 800.
   TextStyle get display => TextStyle(
         fontFamily: _h,
-        fontSize: 32,
+        fontSize: 34,
         fontWeight: FontWeight.w800,
-        letterSpacing: -0.8,
-        height: 1.15,
+        letterSpacing: -1.2,
+        height: 1.1,
         color: _c.textPrimary,
       );
 
-  /// Screen titles. 24 / 700.
+  /// Screen titles. 26 / 800.
   TextStyle get h1 => TextStyle(
         fontFamily: _h,
-        fontSize: 24,
+        fontSize: 26,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.8,
+        height: 1.18,
+        color: _c.textPrimary,
+      );
+
+  /// Section titles. 21 / 700.
+  TextStyle get h2 => TextStyle(
+        fontFamily: _h,
+        fontSize: 21,
         fontWeight: FontWeight.w700,
-        letterSpacing: -0.4,
+        letterSpacing: -0.5,
         height: 1.22,
         color: _c.textPrimary,
       );
 
-  /// Section titles. 20 / 700.
-  TextStyle get h2 => TextStyle(
-        fontFamily: _h,
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.3,
-        height: 1.25,
-        color: _c.textPrimary,
-      );
-
-  /// Card / sheet titles. 17 / 600.
+  /// Card / sheet titles. 17 / 700.
   TextStyle get h3 => TextStyle(
         fontFamily: _h,
         fontSize: 17,
-        fontWeight: FontWeight.w600,
-        letterSpacing: -0.2,
-        height: 1.3,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+        height: 1.28,
         color: _c.textPrimary,
       );
 
@@ -142,13 +142,13 @@ class AppText {
         color: _c.textPrimary,
       );
 
-  /// PDP / totals price. 26 / 800.
+  /// PDP / totals price. 28 / 800.
   TextStyle get priceLarge => TextStyle(
         fontFamily: _h,
-        fontSize: 26,
+        fontSize: 28,
         fontWeight: FontWeight.w800,
-        letterSpacing: -0.6,
-        height: 1.15,
+        letterSpacing: -0.8,
+        height: 1.12,
         color: _c.textPrimary,
       );
 

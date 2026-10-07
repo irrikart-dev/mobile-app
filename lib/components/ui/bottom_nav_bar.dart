@@ -21,8 +21,9 @@ class NavItem {
   final int badge;
 }
 
-/// Solid bottom navigation: surface background, top hairline, an animated
-/// tinted pill behind the active icon, count badges, and a selection haptic.
+/// Floating forest-green pill navigation. Inactive tabs are icons only; the
+/// active tab expands into a light pill with its label. Used with
+/// `Scaffold.extendBody` so content scrolls underneath it.
 class AppBottomNavBar extends StatelessWidget {
   const AppBottomNavBar({
     super.key,
@@ -38,30 +39,37 @@ class AppBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border(top: BorderSide(color: c.border)),
+    final inset = MediaQuery.paddingOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        0,
+        AppSpacing.gutter,
+        inset + AppSpacing.navFloatGap,
       ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: AppSpacing.navBarHeight,
-          child: Row(
-            children: [
-              for (var i = 0; i < items.length; i++)
-                Expanded(
-                  child: _NavButton(
-                    item: items[i],
-                    active: i == currentIndex,
-                    onTap: () {
-                      if (i != currentIndex) HapticFeedback.selectionClick();
-                      onTap(i);
-                    },
-                  ),
+      child: Container(
+        height: AppSpacing.navBarHeight,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: c.navBar,
+          borderRadius: AppRadius.pillAll,
+          boxShadow: c.shadowFloating,
+        ),
+        child: Row(
+          children: [
+            for (var i = 0; i < items.length; i++)
+              Expanded(
+                flex: i == currentIndex ? 2 : 1,
+                child: _NavButton(
+                  item: items[i],
+                  active: i == currentIndex,
+                  onTap: () {
+                    if (i != currentIndex) HapticFeedback.selectionClick();
+                    onTap(i);
+                  },
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
@@ -82,56 +90,65 @@ class _NavButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final color = active ? c.onPrimarySoft : c.textMuted;
+    final activeBg = context.isDark ? c.accent : c.surface;
+    final activeFg = context.isDark ? c.background : c.navBar;
+    final icon = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(
+          active ? item.activeIcon : item.icon,
+          size: 22,
+          color: active ? activeFg : c.onNavBar.withValues(alpha: 0.72),
+        ),
+        if (item.badge > 0)
+          Positioned(
+            top: -6,
+            right: -9,
+            child: CountBadge(count: item.badge),
+          ),
+      ],
+    );
+
     return Semantics(
       selected: active,
       button: true,
       label: item.label,
-      child: InkResponse(
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        highlightShape: BoxShape.rectangle,
-        containedInkWell: true,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedContainer(
-              duration: AppDurations.fast,
-              curve: AppCurves.standard,
-              width: active ? 56 : 40,
-              height: 30,
-              decoration: BoxDecoration(
-                color: active ? c.primarySoft : Colors.transparent,
-                borderRadius: AppRadius.pillAll,
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  Icon(
-                    active ? item.activeIcon : item.icon,
-                    size: 22,
-                    color: active ? c.primary : c.textMuted,
-                  ),
-                  if (item.badge > 0)
-                    Positioned(
-                      top: -3,
-                      right: active ? 8 : 0,
-                      child: CountBadge(count: item.badge),
+        child: Center(
+          child: AnimatedContainer(
+            duration: AppDurations.normal,
+            curve: AppCurves.emphasized,
+            height: 44,
+            padding: EdgeInsets.symmetric(horizontal: active ? 14 : 0),
+            decoration: BoxDecoration(
+              color: active ? activeBg : Colors.transparent,
+              borderRadius: AppRadius.pillAll,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                icon,
+                if (active) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      item.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      style: context.text.label.copyWith(
+                        color: activeFg,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
+                  ),
                 ],
-              ),
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              item.label,
-              maxLines: 1,
-              style: context.text.badge.copyWith(
-                fontSize: 11,
-                color: color,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

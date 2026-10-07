@@ -26,10 +26,15 @@ abstract final class AppSpacing {
   /// Card interior padding.
   static const double cardPad = 16;
 
-  /// Height of the bottom navigation bar, excluding the system inset.
+  /// Height of the floating bottom navigation bar.
   static const double navBarHeight = 64;
 
-  /// Bottom padding for scrollables that the floating WhatsApp button can sit
-  /// over (tab roots, lists) — lets the last item scroll clear of it.
-  static const double fabClearance = 84;
+  /// Gap between the floating nav bar and the bottom of the screen (on top
+  /// of the system inset).
+  static const double navFloatGap = 12;
+
+  /// Bottom padding for scrollables in the tab shell (content runs under the
+  /// floating nav) and lists the WhatsApp button floats over — lets the last
+  /// item scroll fully clear of both. Add the system bottom inset on top.
+  static const double fabClearance = navBarHeight + navFloatGap + 72;
 }

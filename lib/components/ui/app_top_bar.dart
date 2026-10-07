@@ -36,7 +36,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   final Color? backgroundColor;
   final bool centerTitle;
 
-  double get _toolbarHeight => large ? (subtitle == null ? 64 : 72) : 56;
+  double get _toolbarHeight => large ? (subtitle == null ? 68 : 76) : 56;
 
   @override
   Size get preferredSize =>
@@ -77,8 +77,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
       toolbarHeight: _toolbarHeight,
       backgroundColor: backgroundColor ?? c.background,
       surfaceTintColor: Colors.transparent,
-      shadowColor: c.border,
-      scrolledUnderElevation: 1,
+      scrolledUnderElevation: 0,
       centerTitle: centerTitle,
       automaticallyImplyLeading: false,
       titleSpacing: canPop ? 0 : AppSpacing.gutter,

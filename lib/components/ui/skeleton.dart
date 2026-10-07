@@ -108,21 +108,12 @@ class ListSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
     return ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(AppSpacing.gutter),
       itemCount: itemCount,
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.smd),
-      itemBuilder: (_, __) => Container(
-        padding: const EdgeInsets.all(AppSpacing.smd),
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: AppRadius.mdAll,
-          border: Border.all(color: c.border),
-        ),
-        child: ListRowSkeleton(thumb: thumb),
-      ),
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.mdPlus),
+      itemBuilder: (_, __) => ListRowSkeleton(thumb: thumb),
     );
   }
 }

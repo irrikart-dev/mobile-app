@@ -12,6 +12,10 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     required this.surface,
     required this.surfaceRaised,
     required this.surfaceSunken,
+    required this.tint,
+    required this.accent,
+    required this.navBar,
+    required this.onNavBar,
     required this.textPrimary,
     required this.textSecondary,
     required this.textMuted,
@@ -52,6 +56,18 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
   final Color surface;
   final Color surfaceRaised;
   final Color surfaceSunken;
+
+  /// Soft sage behind product images, category tiles and promo blocks —
+  /// the main way content is grouped without drawing boxes.
+  final Color tint;
+
+  /// The bright brand green (#67BD50) for highlights; [primary] is the deep
+  /// forest green used for CTAs and selection.
+  final Color accent;
+
+  /// Floating bottom navigation bar background / foreground.
+  final Color navBar;
+  final Color onNavBar;
 
   // Text
   final Color textPrimary;
@@ -106,6 +122,10 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     surface: AppColors.lightSurface,
     surfaceRaised: AppColors.lightSurface,
     surfaceSunken: AppColors.lightSurfaceVariant,
+    tint: AppColors.lightTint,
+    accent: AppColors.primary,
+    navBar: AppColors.forest,
+    onNavBar: AppColors.white,
     textPrimary: AppColors.ink,
     textSecondary: AppColors.inkSecondary,
     textMuted: AppColors.inkMuted,
@@ -114,9 +134,9 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     border: AppColors.line,
     borderStrong: AppColors.lineStrong,
     divider: AppColors.lineSoft,
-    primary: AppColors.primary,
-    primarySoft: Color(0xFFEAF6E5),
-    onPrimarySoft: AppColors.primaryDark,
+    primary: AppColors.forest,
+    primarySoft: Color(0xFFE6F1E0),
+    onPrimarySoft: AppColors.forest,
     secondary: AppColors.secondaryDark,
     secondarySoft: Color(0xFFE3F5FC),
     success: AppColors.success,
@@ -137,8 +157,7 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     vendorBadge: AppColors.vendorBadge,
     rfqBadge: AppColors.rfqBadge,
     shadowCard: [
-      BoxShadow(color: Color(0x0A141A16), offset: Offset(0, 1), blurRadius: 2),
-      BoxShadow(color: Color(0x0D141A16), offset: Offset(0, 6), blurRadius: 16),
+      BoxShadow(color: Color(0x0F1F5C3A), offset: Offset(0, 8), blurRadius: 24),
     ],
     shadowRaised: [
       BoxShadow(color: Color(0x14141A16), offset: Offset(0, 8), blurRadius: 24),
@@ -153,15 +172,19 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     surface: AppColors.darkSurface,
     surfaceRaised: AppColors.darkSurfaceVariant,
     surfaceSunken: Color(0xFF121714),
+    tint: AppColors.darkTint,
+    accent: AppColors.primary,
+    navBar: Color(0xFF1B241E),
+    onNavBar: AppColors.inkDark,
     textPrimary: AppColors.inkDark,
     textSecondary: AppColors.inkSecondaryDark,
     textMuted: AppColors.inkMutedDark,
     textDisabled: AppColors.inkDisabledDark,
-    textOnPrimary: AppColors.white,
+    textOnPrimary: AppColors.darkBackground,
     border: AppColors.lineDark,
     borderStrong: AppColors.lineStrongDark,
     divider: AppColors.lineSoftDark,
-    primary: AppColors.primaryLight,
+    primary: AppColors.primary,
     primarySoft: Color(0xFF1C2D18),
     onPrimarySoft: AppColors.primaryLight,
     secondary: AppColors.secondaryLight,
@@ -204,6 +227,10 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
       surface: l(surface, other.surface),
       surfaceRaised: l(surfaceRaised, other.surfaceRaised),
       surfaceSunken: l(surfaceSunken, other.surfaceSunken),
+      tint: l(tint, other.tint),
+      accent: l(accent, other.accent),
+      navBar: l(navBar, other.navBar),
+      onNavBar: l(onNavBar, other.onNavBar),
       textPrimary: l(textPrimary, other.textPrimary),
       textSecondary: l(textSecondary, other.textSecondary),
       textMuted: l(textMuted, other.textMuted),

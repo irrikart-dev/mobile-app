@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/tokens/radius_tokens.dart';
 import '../../core/theme/tokens/spacing_tokens.dart';
 import '../../core/utils/context_ext.dart';
 import 'badges.dart';
@@ -10,7 +9,7 @@ enum AppButtonVariant { primary, secondary, outline, ghost, destructive }
 enum AppButtonSize {
   sm(40, 13),
   md(46, 14),
-  lg(52, 15);
+  lg(54, 15);
 
   const AppButtonSize(this.height, this.fontSize);
   final double height;
@@ -91,7 +90,7 @@ class AppButton extends StatelessWidget {
     final (bg, fg, border) = switch (variant) {
       AppButtonVariant.primary => (c.primary, c.textOnPrimary, null),
       AppButtonVariant.secondary => (c.primarySoft, c.onPrimarySoft, null),
-      AppButtonVariant.outline => (c.surface, c.textPrimary, c.borderStrong),
+      AppButtonVariant.outline => (Colors.transparent, c.textPrimary, c.border),
       AppButtonVariant.ghost => (Colors.transparent, c.primary, null),
       AppButtonVariant.destructive => (c.errorSoft, c.error, null),
     };
@@ -116,8 +115,7 @@ class AppButton extends StatelessWidget {
       ),
       elevation: const WidgetStatePropertyAll(0),
       shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(
-          borderRadius: AppRadius.mdAll,
+        StadiumBorder(
           side: border == null
               ? BorderSide.none
               : BorderSide(color: enabled ? border : c.border),
@@ -174,8 +172,8 @@ class AppButton extends StatelessWidget {
   }
 }
 
-/// Square-ish icon button used in top bars and on media. [filled] gives it a
-/// surface + hairline border so it reads over images and busy backgrounds.
+/// Round icon button used in top bars and on media. [filled] puts it on a
+/// soft sage disc so it reads over images and busy backgrounds.
 class AppIconButton extends StatelessWidget {
   const AppIconButton({
     super.key,
@@ -213,10 +211,8 @@ class AppIconButton extends StatelessWidget {
     }
 
     final button = Material(
-      color: filled ? c.surface : Colors.transparent,
-      shape: CircleBorder(
-        side: filled ? BorderSide(color: c.border) : BorderSide.none,
-      ),
+      color: filled ? c.tint : Colors.transparent,
+      shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onPressed,

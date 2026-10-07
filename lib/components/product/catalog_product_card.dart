@@ -17,14 +17,15 @@ import '../ui/price.dart';
 import '../ui/quantity_stepper.dart';
 import '../ui/rating.dart';
 
-/// Height of everything below the square image. Fixed — every line in the
-/// content area has a fixed height and text scaling is clamped inside the
-/// card — so grids can use an exact `mainAxisExtent` and never overflow.
-const double kProductCardContentHeight = 146;
+/// Height of everything below the square image tile. Fixed — every line has
+/// a fixed height and text scaling is clamped inside the card — so grids can
+/// use an exact `mainAxisExtent` and never overflow.
+const double kProductCardContentHeight = 96;
 
-/// Product card for grids and rails: square photo with wishlist heart and
-/// stock badge, 2-line name, rating, price, and an inline Add button that
-/// turns into a quantity stepper once the item is in the cart.
+/// Frameless product card for grids and rails: a rounded sage image tile
+/// (wishlist heart, stock badge, and a round "+" that becomes a quantity
+/// stepper once the item is in the cart), then name, price and rating set
+/// directly on the canvas — no card border.
 class CatalogProductCard extends ConsumerWidget {
   const CatalogProductCard({super.key, required this.product, this.onTap});
 
@@ -49,25 +50,20 @@ class CatalogProductCard extends ConsumerWidget {
                   productDetailsScreenRoute,
                   arguments: product.slug,
                 ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: AppRadius.mdAll,
-            border: Border.all(color: c.border),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AspectRatio(
-                aspectRatio: 1,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AspectRatio(
+              aspectRatio: 1,
+              child: ClipRRect(
+                borderRadius: AppRadius.lgAll,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     ColoredBox(
-                      color: c.surfaceSunken,
+                      color: c.tint,
                       child: Opacity(
-                        opacity: product.buyable ? 1 : 0.55,
+                        opacity: product.buyable ? 1 : 0.5,
                         child: CatalogImage(
                           source: product.displayImage,
                           isRemote: product.hasRemoteImage,
@@ -75,8 +71,8 @@ class CatalogProductCard extends ConsumerWidget {
                       ),
                     ),
                     Positioned(
-                      top: 8,
-                      right: 8,
+                      top: 10,
+                      right: 10,
                       child: WishlistHeart(
                         active: isWishlisted,
                         onTap: () => ref
@@ -86,71 +82,73 @@ class CatalogProductCard extends ConsumerWidget {
                     ),
                     if (!product.buyable)
                       const Positioned(
-                        left: 8,
-                        top: 8,
-                        child: AppBadge(label: 'OUT OF STOCK'),
+                        left: 10,
+                        top: 10,
+                        child: AppBadge(label: 'SOLD OUT'),
                       ),
+                    Positioned(
+                      right: 10,
+                      bottom: 10,
+                      left: 10,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: _CartAction(product: product),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              SizedBox(
-                height: kProductCardContentHeight,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.smd,
-                    10,
-                    AppSpacing.smd,
-                    AppSpacing.smd,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        height: 34,
-                        child: Text(
-                          product.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.text.titleSm,
+            ),
+            SizedBox(
+              height: kProductCardContentHeight,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(2, 10, 2, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 36,
+                      child: Text(
+                        product.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.titleSm.copyWith(
+                          fontWeight: FontWeight.w600,
+                          height: 1.35,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      SizedBox(
-                        height: 16,
-                        child: RatingLabel(
-                          rating: product.rating,
-                          count: product.reviewCount,
-                        ),
-                      ),
-                      const Spacer(),
-                      SizedBox(
-                        height: 22,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Flexible(child: PriceText(product.price)),
-                            const SizedBox(width: 4),
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 2),
-                              child: Text(
-                                '/ ${product.unit}',
-                                style: context.text.captionMuted,
-                              ),
+                    ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      height: 22,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Flexible(child: PriceText(product.price)),
+                          const SizedBox(width: 4),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 2),
+                            child: Text(
+                              '/ ${product.unit}',
+                              style: context.text.captionMuted,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 32,
-                        child: _CartAction(product: product),
+                    ),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      height: 16,
+                      child: RatingLabel(
+                        rating: product.rating,
+                        count: product.reviewCount,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -258,51 +256,47 @@ class _CartActionState extends ConsumerState<_CartAction> {
     );
     final notifier = ref.read(cartControllerProvider.notifier);
 
+    if (!product.buyable && line == null) return const SizedBox.shrink();
+
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutBack,
+      transitionBuilder: (child, a) => ScaleTransition(
+        scale: a,
+        alignment: Alignment.centerRight,
+        child: FadeTransition(opacity: a, child: child),
+      ),
       child: line == null
-          ? SizedBox(
+          ? Material(
               key: const ValueKey('add'),
-              width: double.infinity,
-              child: Material(
-                color: product.buyable ? c.primarySoft : c.surfaceSunken,
-                borderRadius: AppRadius.pillAll,
-                child: InkWell(
-                  borderRadius: AppRadius.pillAll,
-                  onTap: product.buyable && !_busy
-                      ? () {
-                          HapticFeedback.lightImpact();
-                          _run(() => notifier.add(product.variantId));
-                        }
-                      : null,
+              color: c.primary,
+              shape: const CircleBorder(),
+              elevation: 2,
+              shadowColor: c.primary.withValues(alpha: 0.4),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: _busy
+                    ? null
+                    : () {
+                        HapticFeedback.lightImpact();
+                        _run(() => notifier.add(product.variantId));
+                      },
+                child: SizedBox.square(
+                  dimension: 36,
                   child: Center(
                     child: _busy
                         ? SizedBox.square(
                             dimension: 14,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: c.onPrimarySoft,
+                              color: c.textOnPrimary,
                             ),
                           )
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (product.buyable)
-                                Icon(
-                                  Icons.add_rounded,
-                                  size: 16,
-                                  color: c.onPrimarySoft,
-                                ),
-                              const SizedBox(width: 2),
-                              Text(
-                                product.buyable ? 'Add' : 'Unavailable',
-                                style: context.text.label.copyWith(
-                                  color: product.buyable
-                                      ? c.onPrimarySoft
-                                      : c.textDisabled,
-                                ),
-                              ),
-                            ],
+                        : Icon(
+                            Icons.add_rounded,
+                            size: 22,
+                            color: c.textOnPrimary,
+                            semanticLabel: 'Add to cart',
                           ),
                   ),
                 ),
@@ -345,7 +339,7 @@ class SliverProductGrid extends StatelessWidget {
   /// Overrides the default "open product page" tap.
   final void Function(CatalogProduct product)? onProductTap;
 
-  static const double spacing = AppSpacing.smd;
+  static const double spacing = AppSpacing.md;
 
   @override
   Widget build(BuildContext context) {

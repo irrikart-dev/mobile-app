@@ -64,3 +64,4 @@ config/*.json
 android/local.properties
 *.log
 coverage/
+test/_shots/out/

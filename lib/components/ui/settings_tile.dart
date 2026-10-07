@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/tokens/radius_tokens.dart';
 import '../../core/theme/tokens/spacing_tokens.dart';
 import '../../core/utils/context_ext.dart';
 
-/// Titled group of [SettingsTile]s inside one card, separated by hairlines.
+/// A titled run of [SettingsTile]s sitting directly on the canvas — overline
+/// header, rows separated by inset hairlines, no surrounding box.
 class SettingsGroup extends StatelessWidget {
   const SettingsGroup({super.key, this.title, required this.children});
 
@@ -20,28 +20,15 @@ class SettingsGroup extends StatelessWidget {
         if (title != null)
           Padding(
             padding: const EdgeInsets.only(
-              left: AppSpacing.xs,
-              bottom: AppSpacing.sm,
+              top: AppSpacing.sm,
+              bottom: AppSpacing.xs,
             ),
             child: Text(title!.toUpperCase(), style: context.text.overline),
           ),
-        Container(
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: AppRadius.mdAll,
-            border: Border.all(color: c.border),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0)
-                  Divider(height: 1, indent: 60, color: c.divider),
-                children[i],
-              ],
-            ],
-          ),
-        ),
+        for (var i = 0; i < children.length; i++) ...[
+          if (i > 0) Divider(height: 1, indent: 40, color: c.divider),
+          children[i],
+        ],
       ],
     );
   }
@@ -74,22 +61,20 @@ class SettingsTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.smd,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
           children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: destructive ? c.errorSoft : c.surfaceSunken,
-                borderRadius: AppRadius.smAll,
+            SizedBox(
+              width: 40,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Icon(
+                  icon,
+                  size: 22,
+                  color: destructive ? c.error : c.textSecondary,
+                ),
               ),
-              child: Icon(icon, size: 18, color: destructive ? c.error : c.textSecondary),
             ),
-            const SizedBox(width: AppSpacing.smd),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -32,7 +32,7 @@ class AppChip extends StatelessWidget {
     final fg = !enabled
         ? c.textDisabled
         : selected
-            ? c.onPrimarySoft
+            ? c.textOnPrimary
             : c.textPrimary;
     return Material(
       color: Colors.transparent,
@@ -47,15 +47,11 @@ class AppChip extends StatelessWidget {
         child: AnimatedContainer(
           duration: AppDurations.fast,
           curve: AppCurves.standard,
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: selected ? c.primarySoft : c.surface,
+            color: selected ? c.primary : c.tint,
             borderRadius: AppRadius.pillAll,
-            border: Border.all(
-              color: selected ? c.primary : c.border,
-              width: selected ? 1.4 : 1,
-            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

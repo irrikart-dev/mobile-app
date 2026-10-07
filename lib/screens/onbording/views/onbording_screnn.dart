@@ -147,6 +147,7 @@ class _OnBordingScreenState extends ConsumerState<OnBordingScreen> {
                 AppSpacing.lg,
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _PageDots(count: _slides.length, index: _index),
                   const SizedBox(height: AppSpacing.lg),
@@ -182,7 +183,7 @@ class _SlideView extends StatelessWidget {
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: c.primarySoft,
+                color: c.tint,
                 borderRadius: AppRadius.xlAll,
               ),
               padding: const EdgeInsets.all(AppSpacing.lg),
@@ -192,18 +193,20 @@ class _SlideView extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
           // Natural height; the illustration above absorbs whatever space
           // is left, so short screens shrink the art rather than overflow.
-          Text(
-            slide.title,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            style: context.text.h1,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              slide.title,
+              maxLines: 2,
+              style: context.text.display.copyWith(fontSize: 30),
+            ),
           ),
           const SizedBox(height: AppSpacing.smd),
           SizedBox(
             height: 64,
+            width: double.infinity,
             child: Text(
               slide.description,
-              textAlign: TextAlign.center,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: context.text.bodySecondary,
@@ -225,13 +228,12 @@ class _PageDots extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         for (var i = 0; i < count; i++)
           AnimatedContainer(
             duration: AppDurations.normal,
             curve: AppCurves.standard,
-            margin: const EdgeInsets.symmetric(horizontal: 3),
+            margin: const EdgeInsets.only(right: 6),
             width: i == index ? 22 : 7,
             height: 7,
             decoration: BoxDecoration(

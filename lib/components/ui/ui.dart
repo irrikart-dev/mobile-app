@@ -19,6 +19,7 @@ export 'app_top_bar.dart';
 export 'badges.dart';
 export 'bottom_nav_bar.dart';
 export 'dialogs.dart';
+export 'geo_mosaic.dart';
 export 'inline_banner.dart';
 export 'pressable.dart';
 export 'price.dart';
