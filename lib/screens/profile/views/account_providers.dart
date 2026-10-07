@@ -4,6 +4,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../core/auth/auth_service.dart';
 import '../../../core/firebase/firebase_bootstrap.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/network/api_envelope.dart';
+import '../../../core/storage/local_store.dart';
+import '../../../models/wishlist_state.dart';
 
 /// The signed-in user, re-emitting on profile edits too.
 ///
@@ -46,4 +50,21 @@ String accountInitials(String name) {
   final last =
       parts.length > 1 ? String.fromCharCode(parts.last.runes.first) : '';
   return (first + last).toUpperCase();
+}
+
+/// Permanently deletes the signed-in account (`DELETE /auth/account`), then
+/// clears this device: Firebase/Google session and locally stored wishlist,
+/// searches and recently viewed. Throws on failure, leaving everything as-is.
+Future<void> deleteAccount(WidgetRef ref) async {
+  final dio = ref.read(dioProvider);
+  await apiRequest(() => dio.delete<dynamic>('/auth/account'), (_) {});
+
+  await ref.read(localStoreProvider).clearPersonalData();
+  ref
+    ..invalidate(wishlistControllerProvider)
+    ..invalidate(recentlyViewedProvider)
+    ..invalidate(recentSearchesProvider);
+  // The Firebase user no longer exists server-side; this just drops the
+  // local session and Google's cached account.
+  await ref.read(authServiceProvider).signOut().catchError((_) {});
 }

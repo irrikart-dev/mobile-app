@@ -105,7 +105,13 @@ Future<void> Function(WidgetTester) _scroll(double dy) => (t) async {
 void main() {
   setUpAll(() async {
     await loadShotFonts();
-    _data = await CatalogData.loadBundled();
+    // Bundled fixtures, presented as a live (online) catalogue so shots
+    // match what users normally see.
+    final bundled = await CatalogData.loadBundled();
+    _data = CatalogData.forTesting(
+      categories: bundled.categories,
+      products: bundled.products,
+    );
   });
   for (final dark in [false, true]) {
     // Categories without images (e.g. fresh from the admin dashboard) fall

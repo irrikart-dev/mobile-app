@@ -138,6 +138,13 @@ class ProfileScreen extends ConsumerWidget {
               destructive: true,
               onTap: () => _confirmSignOut(context, ref),
             ),
+            SettingsTile(
+              icon: Icons.delete_forever_rounded,
+              title: 'Delete account',
+              subtitle: 'Permanently erase your account and data',
+              destructive: true,
+              onTap: () => _confirmDeleteAccount(context, ref),
+            ),
           ],
           const SizedBox(height: AppSpacing.xl),
           const _VersionFooter(),
@@ -209,6 +216,49 @@ Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
   if (!context.mounted) return;
   unawaited(
     Navigator.pushNamedAndRemoveUntil(context, logInScreenRoute, (_) => false),
+  );
+}
+
+/// Account deletion (Play policy requires it in-app). Two steps: a clear
+/// explanation of what is erased vs. kept, then a blocking progress dialog
+/// while the server deletes everything.
+Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
+  final confirmed = await showConfirmDialog(
+    context,
+    title: 'Delete your account?',
+    message: 'This permanently erases your profile, saved addresses, cart, '
+        'wishlist and reviews. Past orders are kept without your name for '
+        'GST records. This cannot be undone.',
+    confirmLabel: 'Delete',
+    destructive: true,
+    icon: Icons.delete_forever_rounded,
+  );
+  if (!confirmed || !context.mounted) return;
+
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final messenger = ScaffoldMessenger.of(context);
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+    ),
+  );
+
+  try {
+    await deleteAccount(ref);
+  } catch (e) {
+    navigator.pop();
+    if (context.mounted) AppSnack.error(context, friendlyError(e));
+    return;
+  }
+  navigator.pop();
+  unawaited(navigator.pushNamedAndRemoveUntil(logInScreenRoute, (_) => false));
+  messenger.showSnackBar(
+    const SnackBar(content: Text('Your account has been deleted.')),
   );
 }
 

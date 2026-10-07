@@ -8,6 +8,10 @@ abstract final class SupportConfig {
   static const whatsAppDefaultMessage =
       'Hi IrriKart, I have a question about your products.';
 
-  static const termsUrl = 'https://irrikart.com/terms';
-  static const privacyUrl = 'https://irrikart.com/privacy';
+  /// Public legal pages, hosted by the web-frontend app. Also linked from the
+  /// Google Play listing (privacy policy + account deletion URL).
+  static const _legalOrigin = 'https://web-frontend-alpha-two.vercel.app';
+  static const termsUrl = '$_legalOrigin/terms';
+  static const privacyUrl = '$_legalOrigin/privacy';
+  static const deleteAccountUrl = '$_legalOrigin/delete-account';
 }

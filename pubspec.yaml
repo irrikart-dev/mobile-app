@@ -3,7 +3,7 @@ description: "IrriKart — agricultural tools and inputs marketplace for India."
 
 publish_to: "none"
 
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
@@ -15,13 +15,8 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # --- state management (code generation) ---
+  # --- state management ---
   flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
-
-  # --- models ---
-  freezed_annotation: ^2.4.4
-  json_annotation: ^4.9.0
 
   # --- auth ---
   firebase_core: ^3.15.2
@@ -32,20 +27,11 @@ dependencies:
   dio: ^5.7.0
   pretty_dio_logger: ^1.4.0
 
-  # --- routing ---
-  go_router: ^14.6.2
-
   # --- storage ---
-  flutter_secure_storage: ^9.2.2
   shared_preferences: ^2.3.3
 
   # --- platform / device ---
-  connectivity_plus: ^6.1.0
   package_info_plus: ^8.1.2
-  device_info_plus: ^11.2.0
-
-  # --- monitoring ---
-  sentry_flutter: ^8.12.0
 
   # --- ui (carried over from the template) ---
   cupertino_icons: ^1.0.8
@@ -58,8 +44,6 @@ dependencies:
 
   # --- utils ---
   intl: ^0.20.2
-  logger: ^2.5.0
-  collection: ^1.18.0
   hugeicons: ^1.1.7
 
 dev_dependencies:
@@ -68,10 +52,6 @@ dev_dependencies:
   integration_test:
     sdk: flutter
 
-  build_runner: ^2.4.13
-  riverpod_generator: ^2.6.3
-  freezed: ^2.5.7
-  json_serializable: ^6.9.0
 
   custom_lint: ^0.7.0
   riverpod_lint: ^2.6.3

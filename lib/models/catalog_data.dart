@@ -46,6 +46,14 @@ class CatalogData {
     required this.source,
   });
 
+  /// Builds a catalogue directly — tests and screenshot tooling only.
+  @visibleForTesting
+  const CatalogData.forTesting({
+    required this.categories,
+    required this.products,
+    this.source = CatalogSource.api,
+  });
+
   final List<CatalogCategory> categories;
   final List<CatalogProduct> products;
   final CatalogSource source;

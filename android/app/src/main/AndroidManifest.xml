@@ -1,9 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- connectivity_plus -->
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <!-- FCM prompts for this from API 33 (order and delivery updates) -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <!-- Backup off: a restored Firebase Auth keyset without its (never backed
          up) Keystore key leaves the user signed out on every launch. See
@@ -52,5 +48,12 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- url_launcher: WhatsApp support (wa.me), legal pages, demo videos. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <package android:name="com.whatsapp"/>
+        <package android:name="com.whatsapp.w4b"/>
     </queries>
 </manifest>

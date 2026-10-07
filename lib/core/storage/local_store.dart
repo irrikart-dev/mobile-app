@@ -45,6 +45,14 @@ class LocalStore {
   Future<void> setRecentSearches(List<String> terms) =>
       _prefs.setStringList(_recentSearches, terms);
 
+  /// Wipes everything tied to the person using the device (not app-level
+  /// settings like theme or onboarding) — used after account deletion.
+  Future<void> clearPersonalData() async {
+    await _prefs.remove(_wishlist);
+    await _prefs.remove(_recentSearches);
+    await _prefs.remove(_recentlyViewed);
+  }
+
   List<String> get recentlyViewed => _prefs.getStringList(_recentlyViewed) ?? const [];
   Future<void> setRecentlyViewed(List<String> slugs) =>
       _prefs.setStringList(_recentlyViewed, slugs);
