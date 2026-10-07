@@ -28,18 +28,21 @@ class VariantSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text.rich(
-          TextSpan(
-            text: 'Option',
-            children: [
-              if (selected != null)
-                TextSpan(
-                  text: '  ${selected.label}',
-                  style: context.text.bodySecondary,
+        Row(
+          children: [
+            Text('OPTION', style: context.text.overline),
+            if (selected != null) ...[
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  selected.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.label,
                 ),
+              ),
             ],
-          ),
-          style: context.text.title,
+          ],
         ),
         const SizedBox(height: AppSpacing.smd),
         Wrap(

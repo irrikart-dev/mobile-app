@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../components/ui/ui.dart';
 
-/// Delivery, payment and returns promises, as icon rows in one card.
+/// Delivery, payment and returns promises as plain icon rows — no frame.
 class DeliveryInfoCard extends StatelessWidget {
   const DeliveryInfoCard({super.key, required this.onReturnsTap});
 
@@ -10,90 +10,83 @@ class DeliveryInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
-    return AppCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          const _InfoRow(
-            icon: Icons.local_shipping_rounded,
-            title: 'Dispatch in 24–48 hrs',
-            subtitle: 'Packed and handed to our courier partner',
-          ),
-          Divider(height: 1, color: c.divider, indent: 64),
-          const _InfoRow(
-            icon: Icons.public_rounded,
-            title: 'Delivery across India',
-            subtitle: 'Tracked shipping to farms, towns and cities',
-          ),
-          Divider(height: 1, color: c.divider, indent: 64),
-          const _InfoRow(
-            icon: Icons.verified_user_rounded,
-            title: 'Secure prepaid payment',
-            subtitle: 'UPI, cards and netbanking',
-          ),
-          Divider(height: 1, color: c.divider, indent: 64),
-          _InfoRow(
-            icon: Icons.assignment_return_rounded,
-            title: 'Easy returns',
-            subtitle: '7-day returns on eligible items',
-            onTap: onReturnsTap,
-          ),
-        ],
-      ),
+    return Column(
+      children: [
+        const PdpIconRow(
+          icon: Icons.local_shipping_rounded,
+          title: 'Dispatch in 24–48 hrs',
+          subtitle: 'Tracked delivery to farms, towns and cities across India',
+        ),
+        const PdpIconRow(
+          icon: Icons.verified_user_rounded,
+          title: 'Secure prepaid payment',
+          subtitle: 'UPI, cards and netbanking',
+        ),
+        PdpIconRow(
+          icon: Icons.assignment_return_rounded,
+          title: '7-day easy returns',
+          subtitle: 'On eligible items · See policy',
+          onTap: onReturnsTap,
+        ),
+      ],
     );
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
+/// Sage icon disc + title + supporting line, optionally tappable. The PDP's
+/// building block for lightweight info rows.
+class PdpIconRow extends StatelessWidget {
+  const PdpIconRow({
+    super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
     this.onTap,
+    this.trailingIcon = Icons.chevron_right_rounded,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback? onTap;
+  final IconData trailingIcon;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final row = Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.smd,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm + 2),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: c.primarySoft,
-              borderRadius: AppRadius.smAll,
-            ),
-            child: Icon(icon, size: 18, color: c.onPrimarySoft),
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: c.tint, shape: BoxShape.circle),
+            child: Icon(icon, size: AppIconSize.sm + 2, color: c.primary),
           ),
-          const SizedBox(width: AppSpacing.smd),
+          const SizedBox(width: AppSpacing.md - 2),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: context.text.titleSm),
-                const SizedBox(height: 2),
-                Text(subtitle, style: context.text.captionMuted),
+                Text(title, style: context.text.title),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(subtitle, style: context.text.caption),
               ],
             ),
           ),
-          if (onTap != null)
-            Icon(Icons.chevron_right_rounded, color: c.textMuted, size: 20),
+          if (onTap != null) ...[
+            const SizedBox(width: AppSpacing.sm),
+            Icon(trailingIcon, color: c.textMuted, size: AppIconSize.md - 2),
+          ],
         ],
       ),
     );
     if (onTap == null) return row;
-    return InkWell(onTap: onTap, child: row);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.mdAll,
+      child: row,
+    );
   }
 }

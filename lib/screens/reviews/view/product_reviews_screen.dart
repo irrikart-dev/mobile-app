@@ -11,7 +11,10 @@ import 'write_review_sheet.dart';
 /// What the PDP hands this screen — just enough to fetch reviews and, if
 /// eligible, offer to write one.
 class ProductReviewsArgs {
-  const ProductReviewsArgs({required this.productId, required this.productName});
+  const ProductReviewsArgs({
+    required this.productId,
+    required this.productName,
+  });
 
   final String productId;
   final String productName;
@@ -77,52 +80,46 @@ class _ReviewsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final sorted = [...reviews]
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.gutter,
-        AppSpacing.sm,
-        AppSpacing.gutter,
+        _pad,
+        AppSpacing.md,
+        _pad,
         AppSpacing.xl + context.bottomInset,
       ),
       children: [
-        AppCard(
-          elevated: true,
-          padding: const EdgeInsets.all(AppSpacing.mdPlus),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              RatingSummary(
-                average: averageRating(reviews),
-                count: reviews.length,
-                histogram: ratingHistogram(reviews),
-              ),
-              if (onWrite != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                Divider(height: 1, color: context.colors.divider),
-                const SizedBox(height: AppSpacing.md),
-                _WritePrompt(onWrite: onWrite!),
-              ],
-            ],
-          ),
+        RatingSummary(
+          average: averageRating(reviews),
+          count: reviews.length,
+          histogram: ratingHistogram(reviews),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        if (onWrite != null) ...[
+          const SizedBox(height: AppSpacing.lg),
+          _WritePrompt(onWrite: onWrite!),
+        ],
+        const SizedBox(height: AppSpacing.xl),
         Text(
-          '${reviews.length} customer review${reviews.length == 1 ? '' : 's'}',
-          style: context.text.h3,
+          '${reviews.length} REVIEW${reviews.length == 1 ? '' : 'S'}'
+          ' · NEWEST FIRST',
+          style: context.text.overline,
         ),
-        const SizedBox(height: AppSpacing.smd),
-        for (final review in sorted) ...[
-          ReviewTile(review: review),
-          const SizedBox(height: AppSpacing.smd),
+        const SizedBox(height: AppSpacing.xs),
+        for (var i = 0; i < sorted.length; i++) ...[
+          if (i > 0) Divider(height: 1, color: c.divider),
+          ReviewTile(review: sorted[i]),
         ],
       ],
     );
   }
 }
+
+/// Page padding for the reviews list.
+const double _pad = AppSpacing.mdPlus;
 
 class _WritePrompt extends StatelessWidget {
   const _WritePrompt({required this.onWrite});
@@ -131,29 +128,44 @@ class _WritePrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('You bought this', style: context.text.titleSm),
-              const SizedBox(height: 2),
-              Text(
-                'Help other farmers decide',
-                style: context.text.captionMuted,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.colors.tint,
+        borderRadius: AppRadius.lgAll,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md + 2,
+          AppSpacing.md,
+          AppSpacing.smd,
+          AppSpacing.md,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('You bought this', style: context.text.title),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    'Help other farmers decide',
+                    style: context.text.caption,
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            AppButton(
+              label: 'Write a review',
+              icon: Icons.rate_review_rounded,
+              size: AppButtonSize.sm,
+              expand: false,
+              onPressed: onWrite,
+            ),
+          ],
         ),
-        AppButton.secondary(
-          label: 'Write a review',
-          icon: Icons.rate_review_rounded,
-          size: AppButtonSize.sm,
-          expand: false,
-          onPressed: onWrite,
-        ),
-      ],
+      ),
     );
   }
 }
@@ -204,83 +216,63 @@ class _ReviewsSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    Widget card(Widget child) => Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: AppRadius.mdAll,
-            border: Border.all(color: c.border),
-          ),
-          child: child,
-        );
-
-    return ListView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.gutter,
-        AppSpacing.sm,
-        AppSpacing.gutter,
-        AppSpacing.md,
-      ),
-      children: [
-        card(
-          const Row(
+    const review = Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.mdPlus),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
+              ShimmerBox(
+                height: 40,
+                width: 40,
+                borderRadius: AppRadius.pillAll,
+              ),
+              SizedBox(width: AppSpacing.smd),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ShimmerBox(height: 40, width: 64),
-                  SizedBox(height: AppSpacing.sm),
-                  ShimmerBox(height: 12, width: 84),
+                  ShimmerBox(height: 12, width: 120),
+                  SizedBox(height: 6),
+                  ShimmerBox(height: 10, width: 72),
                 ],
-              ),
-              SizedBox(width: AppSpacing.lg),
-              Expanded(
-                child: Column(
-                  children: [
-                    _Bar(),
-                    _Bar(),
-                    _Bar(),
-                    _Bar(),
-                    _Bar(),
-                  ],
-                ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        for (var i = 0; i < 4; i++) ...[
-          card(
-            const Column(
+          SizedBox(height: AppSpacing.smd),
+          ShimmerBox(height: 12),
+          SizedBox(height: 6),
+          ShimmerBox(height: 12, width: 200),
+        ],
+      ),
+    );
+
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(_pad, AppSpacing.md, _pad, 0),
+      children: [
+        const Row(
+          children: [
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    ShimmerBox(
-                      height: 40,
-                      width: 40,
-                      borderRadius: AppRadius.pillAll,
-                    ),
-                    SizedBox(width: AppSpacing.smd),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ShimmerBox(height: 12, width: 120),
-                        SizedBox(height: 6),
-                        ShimmerBox(height: 10, width: 72),
-                      ],
-                    ),
-                  ],
-                ),
-                SizedBox(height: AppSpacing.smd),
-                ShimmerBox(height: 12),
-                SizedBox(height: 6),
-                ShimmerBox(height: 12, width: 200),
+                ShimmerBox(height: 40, width: 64),
+                SizedBox(height: AppSpacing.sm),
+                ShimmerBox(height: 12, width: 84),
               ],
             ),
-          ),
-          const SizedBox(height: AppSpacing.smd),
+            SizedBox(width: AppSpacing.lg),
+            Expanded(
+              child: Column(
+                children: [_Bar(), _Bar(), _Bar(), _Bar(), _Bar()],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        for (var i = 0; i < 4; i++) ...[
+          if (i > 0) Divider(height: 1, color: c.divider),
+          review,
         ],
       ],
     );

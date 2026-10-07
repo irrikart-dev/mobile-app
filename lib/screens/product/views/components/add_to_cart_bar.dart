@@ -13,7 +13,7 @@ import '../../../../models/catalog_data.dart';
 import '../../../../models/catalog_product.dart';
 import '../../../../route/route_constants.dart';
 
-/// Sticky PDP footer: total for the chosen quantity + the primary action.
+/// Sticky PDP footer: quantity stepper + a pill "Add to cart · ₹total".
 ///
 /// "Add to cart" re-fetches the product live first (contract rule — price
 /// and stock are what's most likely to have moved since the screen loaded).
@@ -25,12 +25,18 @@ class AddToCartBar extends ConsumerStatefulWidget {
     required this.product,
     required this.variant,
     required this.qty,
+    required this.maxQty,
+    required this.onQtyChanged,
     required this.onGoToCart,
   });
 
   final CatalogProduct product;
   final CatalogVariant variant;
   final int qty;
+
+  /// Upper bound for the stepper — what can actually be bought.
+  final int maxQty;
+  final ValueChanged<int> onQtyChanged;
   final VoidCallback onGoToCart;
 
   @override
@@ -124,83 +130,71 @@ class _AddToCartBarState extends ConsumerState<AddToCartBar> {
     final c = context.colors;
     final variant = widget.variant;
     final buyable = variant.buyable;
+    final total = formatInr(variant.price * widget.qty);
+
+    final Widget action = !buyable
+        ? const AppButton(
+            key: ValueKey('oos'),
+            label: 'Out of stock',
+            onPressed: null,
+          )
+        : _added
+            ? AppButton(
+                key: const ValueKey('go'),
+                label: 'Go to cart',
+                trailingIcon: Icons.arrow_forward_rounded,
+                onPressed: widget.onGoToCart,
+              )
+            : AppButton(
+                key: const ValueKey('add'),
+                label: 'Add to cart · $total',
+                loading: _busy,
+                onPressed: _addToCart,
+              );
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: c.surface,
-        border: Border(top: BorderSide(color: c.border)),
+        color: c.background,
         boxShadow: c.shadowRaised,
       ),
       child: SafeArea(
         top: false,
+        minimum: const EdgeInsets.only(bottom: AppSpacing.smd),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
-            AppSpacing.gutter,
+            AppSpacing.mdPlus,
             AppSpacing.smd,
-            AppSpacing.gutter,
-            AppSpacing.smd,
+            AppSpacing.mdPlus,
+            AppSpacing.xs,
           ),
           child: Row(
             children: [
-              Expanded(
-                flex: 4,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      buyable
-                          ? 'Total · ${widget.qty} ${variant.unit}'
-                          : 'Price',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.text.captionMuted,
-                    ),
-                    const SizedBox(height: 2),
-                    AnimatedSwitcher(
-                      duration: AppDurations.fast,
-                      transitionBuilder: (child, a) =>
-                          FadeTransition(opacity: a, child: child),
-                      child: FittedBox(
-                        key: ValueKey(variant.price * widget.qty),
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          formatInr(
-                            buyable ? variant.price * widget.qty : variant.price,
-                          ),
-                          style: context.text.priceLarge,
-                        ),
-                      ),
-                    ),
-                  ],
+              if (buyable) ...[
+                // The stepper is a 40pt sage pill; seat it in a sage pill as
+                // tall as the CTA so the two read as one matched row.
+                Container(
+                  height: AppButtonSize.lg.height,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs + 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: c.tint,
+                    borderRadius: AppRadius.pillAll,
+                  ),
+                  alignment: Alignment.center,
+                  child: QuantityStepper(
+                    value: widget.qty,
+                    max: widget.maxQty,
+                    busy: _busy,
+                    onChanged: widget.onQtyChanged,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.smd),
+                const SizedBox(width: AppSpacing.smd),
+              ],
               Expanded(
-                flex: 6,
                 child: AnimatedSwitcher(
                   duration: AppDurations.fast,
-                  child: !buyable
-                      ? const AppButton(
-                          key: ValueKey('oos'),
-                          label: 'Out of stock',
-                          onPressed: null,
-                        )
-                      : _added
-                          ? AppButton.secondary(
-                              key: const ValueKey('go'),
-                              label: 'Go to cart',
-                              trailingIcon: Icons.arrow_forward_rounded,
-                              onPressed: widget.onGoToCart,
-                            )
-                          : AppButton(
-                              key: const ValueKey('add'),
-                              label: 'Add to cart',
-                              icon: Icons.add_shopping_cart_rounded,
-                              loading: _busy,
-                              onPressed: _addToCart,
-                            ),
+                  child: action,
                 ),
               ),
             ],

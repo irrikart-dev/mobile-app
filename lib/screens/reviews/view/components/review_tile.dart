@@ -4,14 +4,22 @@ import 'package:intl/intl.dart';
 import '../../../../components/ui/ui.dart';
 import '../../../../models/review_data.dart';
 
-/// One review: initials avatar, name + date, stars and the comment.
+/// One review, flat: initials avatar, name + date, stars, then the comment.
+/// No frame — lists separate tiles with hairline dividers.
 class ReviewTile extends StatelessWidget {
-  const ReviewTile({super.key, required this.review, this.maxLines});
+  const ReviewTile({
+    super.key,
+    required this.review,
+    this.maxLines,
+    this.padding = const EdgeInsets.symmetric(vertical: AppSpacing.mdPlus),
+  });
 
   final ProductReview review;
 
   /// Clamp the comment (used for the PDP preview).
   final int? maxLines;
+
+  final EdgeInsetsGeometry padding;
 
   static final _date = DateFormat('d MMM yyyy');
 
@@ -32,7 +40,8 @@ class ReviewTile extends StatelessWidget {
     final c = context.colors;
     final comment = review.comment?.trim() ?? '';
 
-    return AppCard(
+    return Padding(
+      padding: padding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -43,12 +52,12 @@ class ReviewTile extends StatelessWidget {
                 height: 40,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: c.primarySoft,
+                  color: c.tint,
                   shape: BoxShape.circle,
                 ),
                 child: Text(
                   _initials,
-                  style: context.text.label.copyWith(color: c.onPrimarySoft),
+                  style: context.text.label.copyWith(color: c.primary),
                 ),
               ),
               const SizedBox(width: AppSpacing.smd),
@@ -60,9 +69,9 @@ class ReviewTile extends StatelessWidget {
                       review.userName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: context.text.titleSm,
+                      style: context.text.title,
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: AppSpacing.xxs),
                     Text(
                       _date.format(review.createdAt),
                       style: context.text.captionMuted,
@@ -70,6 +79,7 @@ class ReviewTile extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
               RatingStars(rating: review.rating.toDouble(), size: 15),
             ],
           ),
@@ -79,7 +89,7 @@ class ReviewTile extends StatelessWidget {
               comment,
               maxLines: maxLines,
               overflow: maxLines == null ? null : TextOverflow.ellipsis,
-              style: context.text.body,
+              style: context.text.body.copyWith(height: 1.55),
             ),
           ],
         ],

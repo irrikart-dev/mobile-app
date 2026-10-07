@@ -37,7 +37,8 @@ class FullscreenGallery extends StatefulWidget {
           initialPage: initialPage,
         ),
         transitionsBuilder: (_, animation, __, child) => FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: AppCurves.standard),
+          opacity:
+              CurvedAnimation(parent: animation, curve: AppCurves.standard),
           child: child,
         ),
       ),
@@ -57,8 +58,7 @@ class _FullscreenGalleryState extends State<FullscreenGallery> {
   double _drag = 0;
   Offset _tapPoint = Offset.zero;
 
-  TransformationController _zoomFor(int i) =>
-      _zoom.putIfAbsent(i, () {
+  TransformationController _zoomFor(int i) => _zoom.putIfAbsent(i, () {
         final ctrl = TransformationController();
         ctrl.addListener(() {
           if (i != _page) return;
@@ -97,8 +97,8 @@ class _FullscreenGalleryState extends State<FullscreenGallery> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
-    final fg = c.textOnPrimary;
+    // Viewer chrome sits on true black in both themes, so it's always white.
+    const fg = Colors.white;
     final total = widget.images.length;
     final dismissProgress = (_drag.abs() / 300).clamp(0.0, 1.0);
 
@@ -110,8 +110,7 @@ class _FullscreenGalleryState extends State<FullscreenGallery> {
         onVerticalDragEnd: _zoomed
             ? null
             : (d) {
-                if (_drag.abs() > 120 ||
-                    (d.primaryVelocity ?? 0).abs() > 900) {
+                if (_drag.abs() > 120 || (d.primaryVelocity ?? 0).abs() > 900) {
                   _close();
                 } else {
                   setState(() => _drag = 0);
@@ -150,7 +149,8 @@ class _FullscreenGalleryState extends State<FullscreenGallery> {
                     child: Center(
                       child: CatalogImage(
                         source: widget.images[i],
-                        isRemote: widget.isRemote,
+                        isRemote: widget.isRemote &&
+                            !widget.images[i].startsWith('assets/'),
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -221,7 +221,7 @@ class _ViewerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = context.colors.textOnPrimary;
+    const fg = Colors.white;
     return Tooltip(
       message: tooltip,
       child: Material(

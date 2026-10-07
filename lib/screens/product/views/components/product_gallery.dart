@@ -4,22 +4,33 @@ import '../../../../components/catalog_image.dart';
 import '../../../../components/ui/ui.dart';
 import 'fullscreen_gallery.dart';
 
-/// Full-bleed, square PDP gallery: swipeable photos on a sunken surface, an
-/// animated pill page indicator and an "n / total" counter. Tapping a photo
-/// opens [FullscreenGallery] at that page.
+/// Full-bleed PDP gallery: swipeable photos floating on a sage field, with
+/// pill page dots. The content sheet overlaps its bottom [overlap] pixels, so
+/// the photos and dots sit above that band. Tapping a photo opens
+/// [FullscreenGallery] at that page.
 ///
-/// Falls back to a single image when the product predates the multi-image
-/// gallery (bundled offline fixtures, or a product without extra angles).
+/// Catalogue photos are shot on white; in light mode they're multiplied into
+/// the sage so the product appears to sit directly on the page. Dark mode
+/// can't do that without muddying the photo, so it shows the photo on its
+/// own rounded plate instead.
 class ProductGallery extends StatefulWidget {
   const ProductGallery({
     super.key,
     required this.images,
     required this.isRemote,
+    required this.height,
+    this.overlap = 0,
     this.dimmed = false,
   });
 
   final List<String> images;
   final bool isRemote;
+
+  /// Total height, including the status-bar area it extends under.
+  final double height;
+
+  /// How much of the bottom is covered by the content sheet.
+  final double overlap;
 
   /// Fades the photo slightly — used when the selected option is out of stock.
   final bool dimmed;
@@ -47,6 +58,10 @@ class _ProductGalleryState extends State<ProductGallery> {
     super.dispose();
   }
 
+  /// Bundled `assets/` paths are always local, whatever the product says.
+  bool _isRemote(String? src) =>
+      widget.isRemote && !(src?.startsWith('assets/') ?? false);
+
   Future<void> _openViewer() async {
     if (widget.images.isEmpty) return;
     final page = await FullscreenGallery.open(
@@ -62,66 +77,84 @@ class _ProductGalleryState extends State<ProductGallery> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final dark = context.isDark;
     final images = widget.images;
     final multi = images.length > 1;
+    final top = MediaQuery.paddingOf(context).top;
+    const dotsBand = AppSpacing.xlPlus;
 
-    Widget photo(String? src) => Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            AppSpacing.xxl + AppSpacing.lg,
-            AppSpacing.xl,
-            AppSpacing.xl,
-          ),
+    Widget photo(String? src) {
+      Widget image = CatalogImage(
+        source: src,
+        isRemote: _isRemote(src),
+        fit: BoxFit.contain,
+      );
+      image = dark
+          // Knock the white plate back a touch so it doesn't glare.
+          ? ClipRRect(
+              borderRadius: AppRadius.lgAll,
+              child: ColorFiltered(
+                colorFilter:
+                    ColorFilter.mode(c.textPrimary, BlendMode.multiply),
+                child: image,
+              ),
+            )
+          : ColorFiltered(
+              colorFilter: ColorFilter.mode(c.tint, BlendMode.multiply),
+              child: image,
+            );
+      return Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          top + AppSpacing.xxxl,
+          AppSpacing.xl,
+          widget.overlap + dotsBand,
+        ),
+        child: Center(
           child: AnimatedOpacity(
-            opacity: widget.dimmed ? 0.55 : 1,
+            opacity: widget.dimmed ? 0.5 : 1,
             duration: AppDurations.normal,
-            child: CatalogImage(
-              source: src,
-              isRemote: widget.isRemote,
-              fit: BoxFit.contain,
-            ),
+            child: image,
           ),
-        );
+        ),
+      );
+    }
 
-    return AspectRatio(
-      aspectRatio: 1,
+    return SizedBox(
+      height: widget.height,
       child: ColoredBox(
-        color: c.surfaceSunken,
+        color: c.tint,
         child: Stack(
           fit: StackFit.expand,
           children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: images.isEmpty ? null : _openViewer,
-              child: multi
-                  ? PageView.builder(
-                      controller: _controller,
-                      itemCount: images.length,
-                      onPageChanged: (i) => setState(() => _page = i),
-                      itemBuilder: (context, i) => photo(images[i]),
-                    )
-                  : photo(images.isEmpty ? null : images.first),
+            Semantics(
+              button: images.isNotEmpty,
+              label: 'Product photos, tap to view full screen',
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: images.isEmpty ? null : _openViewer,
+                child: multi
+                    ? PageView.builder(
+                        controller: _controller,
+                        itemCount: images.length,
+                        onPageChanged: (i) => setState(() => _page = i),
+                        itemBuilder: (context, i) => photo(images[i]),
+                      )
+                    : photo(images.isEmpty ? null : images.first),
+              ),
             ),
             if (multi)
               Positioned(
                 left: 0,
                 right: 0,
-                bottom: AppSpacing.md,
+                bottom: widget.overlap + AppSpacing.mdPlus,
                 child: Center(
-                  child: GalleryDots(count: images.length, index: _page),
+                  child: GalleryDots(
+                    count: images.length,
+                    index: _page,
+                    inactiveColor: c.primary.withValues(alpha: 0.18),
+                  ),
                 ),
-              ),
-            if (multi)
-              Positioned(
-                right: AppSpacing.gutter,
-                bottom: AppSpacing.smd,
-                child: _Counter(index: _page, total: images.length),
-              ),
-            if (images.isNotEmpty)
-              Positioned(
-                left: AppSpacing.gutter,
-                bottom: AppSpacing.smd,
-                child: _ZoomHint(onTap: _openViewer),
               ),
           ],
         ),
@@ -156,8 +189,8 @@ class GalleryDots extends StatelessWidget {
             duration: AppDurations.fast,
             curve: AppCurves.standard,
             margin: const EdgeInsets.symmetric(horizontal: 3),
-            width: i == index ? 20 : 6,
-            height: 6,
+            width: i == index ? 22 : 7,
+            height: 7,
             decoration: BoxDecoration(
               color: i == index
                   ? (activeColor ?? c.primary)
@@ -166,65 +199,6 @@ class GalleryDots extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _Counter extends StatelessWidget {
-  const _Counter({required this.index, required this.total});
-
-  final int index;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: c.surface.withValues(alpha: 0.92),
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: c.border),
-      ),
-      child: Text(
-        '${index + 1} / $total',
-        style: context.text.badge.copyWith(color: c.textSecondary),
-      ),
-    );
-  }
-}
-
-class _ZoomHint extends StatelessWidget {
-  const _ZoomHint({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Semantics(
-      button: true,
-      label: 'View full screen',
-      child: PressableScale(
-        onTap: onTap,
-        child: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: c.surface.withValues(alpha: 0.92),
-            shape: BoxShape.circle,
-            border: Border.all(color: c.border),
-          ),
-          child: Icon(
-            Icons.zoom_out_map_rounded,
-            size: 16,
-            color: c.textSecondary,
-          ),
-        ),
-      ),
     );
   }
 }

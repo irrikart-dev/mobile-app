@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../components/ui/ui.dart';
 
-/// Key highlights (first few features as check rows) followed by the
-/// description, collapsed to a few lines with a "Read more" toggle.
+/// The description — collapsed to a few lines with a "Read more" toggle —
+/// followed by key highlights (the first few features) as check rows.
+/// Untitled: the PDP wraps it in its own section header.
 class ProductOverview extends StatefulWidget {
   const ProductOverview({
     super.key,
@@ -26,7 +27,6 @@ class _ProductOverviewState extends State<ProductOverview> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
     final highlights =
         widget.features.take(ProductOverview.maxHighlights).toList();
     final description = widget.description.trim();
@@ -34,42 +34,10 @@ class _ProductOverviewState extends State<ProductOverview> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (highlights.isNotEmpty) ...[
-          Text('Highlights', style: context.text.h3),
-          const SizedBox(height: AppSpacing.smd),
-          for (final feature in highlights)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.smd),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 1),
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: c.primarySoft,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.check_rounded,
-                      size: 13,
-                      color: c.onPrimarySoft,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.smd),
-                  Expanded(child: Text(feature, style: context.text.body)),
-                ],
-              ),
-            ),
-        ],
-        if (description.isNotEmpty) ...[
-          if (highlights.isNotEmpty) const SizedBox(height: AppSpacing.md),
-          Text('About this product', style: context.text.h3),
-          const SizedBox(height: AppSpacing.sm),
+        if (description.isNotEmpty)
           LayoutBuilder(
             builder: (context, constraints) {
-              final style = context.text.bodySecondary;
+              final style = context.text.bodySecondary.copyWith(height: 1.6);
               final painter = TextPainter(
                 text: TextSpan(text: description, style: style),
                 maxLines: ProductOverview.collapsedLines,
@@ -98,24 +66,79 @@ class _ProductOverviewState extends State<ProductOverview> {
                     ),
                   ),
                   if (overflows)
-                    Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.xs),
-                      child: AppButton.ghost(
-                        label: _expanded ? 'Show less' : 'Read more',
-                        trailingIcon: _expanded
-                            ? Icons.keyboard_arrow_up_rounded
-                            : Icons.keyboard_arrow_down_rounded,
-                        size: AppButtonSize.sm,
-                        onPressed: () =>
-                            setState(() => _expanded = !_expanded),
-                      ),
+                    _TextLink(
+                      label: _expanded ? 'Show less' : 'Read more',
+                      onTap: () => setState(() => _expanded = !_expanded),
                     ),
                 ],
               );
             },
           ),
+        if (highlights.isNotEmpty) ...[
+          if (description.isNotEmpty) const SizedBox(height: AppSpacing.mdPlus),
+          for (var i = 0; i < highlights.length; i++)
+            Padding(
+              padding: EdgeInsets.only(
+                top: i == 0 ? 0 : AppSpacing.smd,
+              ),
+              child: _CheckRow(text: highlights[i]),
+            ),
         ],
       ],
+    );
+  }
+}
+
+class _CheckRow extends StatelessWidget {
+  const _CheckRow({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 1),
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(color: c.tint, shape: BoxShape.circle),
+          child: Icon(Icons.check_rounded, size: 13, color: c.primary),
+        ),
+        const SizedBox(width: AppSpacing.smd),
+        Expanded(child: Text(text, style: context.text.body)),
+      ],
+    );
+  }
+}
+
+/// Bare inline text action, aligned flush with the copy above it.
+class _TextLink extends StatelessWidget {
+  const _TextLink({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.xsAll,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Text(
+            label,
+            style: context.text.label.copyWith(
+              color: context.colors.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

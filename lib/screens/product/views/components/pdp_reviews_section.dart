@@ -5,8 +5,9 @@ import '../../../../components/ui/ui.dart';
 import '../../../reviews/view/components/review_tile.dart';
 import '../../../reviews/view/reviews_providers.dart';
 
-/// Ratings preview on the PDP: summary histogram, the two most recent
-/// reviews, and a link to the full list.
+/// Ratings preview on the PDP, flat: summary histogram, the two most recent
+/// reviews separated by hairlines, and a link to the full list. The PDP
+/// supplies the section title.
 class PdpReviewsSection extends ConsumerWidget {
   const PdpReviewsSection({
     super.key,
@@ -28,111 +29,89 @@ class PdpReviewsSection extends ConsumerWidget {
     final c = context.colors;
     final async = ref.watch(productReviewsProvider(productId));
 
-    final header = SectionHeader(
-      title: 'Ratings & reviews',
-      padding: EdgeInsets.zero,
-      actionLabel: 'See all',
-      onAction: onSeeAll,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        header,
-        const SizedBox(height: AppSpacing.smd),
-        async.when(
-          loading: () => const _Loading(),
-          error: (err, _) => AppCard(
-            child: Row(
-              children: [
-                Expanded(
-                  child: fallbackCount > 0
-                      ? RatingLabel(
-                          rating: fallbackRating,
-                          count: fallbackCount,
-                          compact: false,
-                        )
-                      : Text(
-                          'Couldn’t load reviews',
-                          style: context.text.bodySecondary,
-                        ),
-                ),
-                AppButton.ghost(
-                  label: 'Retry',
-                  icon: Icons.refresh_rounded,
-                  size: AppButtonSize.sm,
-                  onPressed: () =>
-                      ref.invalidate(productReviewsProvider(productId)),
-                ),
-              ],
-            ),
+    return async.when(
+      loading: () => const _Loading(),
+      error: (err, _) => Row(
+        children: [
+          Expanded(
+            child: fallbackCount > 0
+                ? RatingLabel(
+                    rating: fallbackRating,
+                    count: fallbackCount,
+                    compact: false,
+                  )
+                : Text(
+                    'Couldn’t load reviews',
+                    style: context.text.bodySecondary,
+                  ),
           ),
-          data: (reviews) {
-            if (reviews.isEmpty) {
-              return AppCard(
-                child: Row(
+          AppButton.ghost(
+            label: 'Retry',
+            icon: Icons.refresh_rounded,
+            size: AppButtonSize.sm,
+            onPressed: () => ref.invalidate(productReviewsProvider(productId)),
+          ),
+        ],
+      ),
+      data: (reviews) {
+        if (reviews.isEmpty) {
+          return Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration:
+                    BoxDecoration(color: c.tint, shape: BoxShape.circle),
+                child: Icon(
+                  Icons.star_rounded,
+                  color: c.primary,
+                  size: AppIconSize.md - 2,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md - 2),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: c.surfaceSunken,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.star_outline_rounded,
-                        color: c.textMuted,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.smd),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('No reviews yet', style: context.text.titleSm),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Bought this? Share how it worked for you.',
-                            style: context.text.captionMuted,
-                          ),
-                        ],
-                      ),
+                    Text('No reviews yet', style: context.text.title),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      'Bought this? Share how it worked for you.',
+                      style: context.text.caption,
                     ),
                   ],
                 ),
-              );
-            }
-            final recent = [...reviews]
-              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AppCard(
-                  child: RatingSummary(
-                    average: averageRating(reviews),
-                    count: reviews.length,
-                    histogram: ratingHistogram(reviews),
-                  ),
-                ),
-                for (final review in recent.take(2)) ...[
-                  const SizedBox(height: AppSpacing.smd),
-                  ReviewTile(review: review, maxLines: 4),
-                ],
-                if (reviews.length > 2) ...[
-                  const SizedBox(height: AppSpacing.smd),
-                  AppButton.outline(
-                    label: 'See all ${reviews.length} reviews',
-                    size: AppButtonSize.md,
-                    trailingIcon: Icons.arrow_forward_rounded,
-                    onPressed: onSeeAll,
-                  ),
-                ],
-              ],
-            );
-          },
-        ),
-      ],
+              ),
+            ],
+          );
+        }
+        final recent = [...reviews]
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            RatingSummary(
+              average: averageRating(reviews),
+              count: reviews.length,
+              histogram: ratingHistogram(reviews),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            for (final review in recent.take(2)) ...[
+              Divider(height: 1, color: c.divider),
+              ReviewTile(review: review, maxLines: 4),
+            ],
+            if (reviews.length > 2) ...[
+              const SizedBox(height: AppSpacing.xs),
+              AppButton.secondary(
+                label: 'Read all ${reviews.length} reviews',
+                size: AppButtonSize.md,
+                trailingIcon: Icons.arrow_forward_rounded,
+                onPressed: onSeeAll,
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }
@@ -143,10 +122,15 @@ class _Loading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ShimmerBox(height: 120, borderRadius: AppRadius.mdAll),
-        SizedBox(height: AppSpacing.smd),
         ShimmerBox(height: 96, borderRadius: AppRadius.mdAll),
+        SizedBox(height: AppSpacing.mdPlus),
+        ShimmerBox(height: 14, width: 160),
+        SizedBox(height: AppSpacing.sm),
+        ShimmerBox(height: 12),
+        SizedBox(height: AppSpacing.xs + 2),
+        ShimmerBox(height: 12, width: 220),
       ],
     );
   }
