@@ -50,21 +50,20 @@ class AppBottomNavBar extends StatelessWidget {
       ),
       child: Container(
         height: AppSpacing.navBarHeight,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           color: c.navBar,
           borderRadius: AppRadius.pillAll,
           boxShadow: c.shadowFloating,
         ),
-        // Inactive tabs are fixed 44px targets; the active pill takes the
-        // remaining room (natural width when it fits). On very narrow phones
-        // its label scales down instead of being clipped.
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             for (var i = 0; i < items.length; i++)
-              _slot(
-                active: i == currentIndex,
+              Expanded(
+                // The active tab gets a wider slot; long labels
+                // ("Categories") a little more so they aren't clipped.
+                flex:
+                    i == currentIndex ? (items[i].label.length > 6 ? 3 : 2) : 1,
                 child: _NavButton(
                   item: items[i],
                   active: i == currentIndex,
@@ -79,11 +78,6 @@ class AppBottomNavBar extends StatelessWidget {
       ),
     );
   }
-
-  static Widget _slot({required bool active, required Widget child}) =>
-      active
-          ? Flexible(child: child)
-          : SizedBox(width: 44, child: child);
 }
 
 class _NavButton extends StatelessWidget {
@@ -100,8 +94,8 @@ class _NavButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    // Dark mode: forest pill with white content on the near-black bar.
-    final activeBg = context.isDark ? AppColors.forest : c.surface;
+    // Dark mode: brand-green pill with white content.
+    final activeBg = context.isDark ? c.accent : c.surface;
     final activeFg = context.isDark ? AppColors.white : c.navBar;
     final icon = Stack(
       clipBehavior: Clip.none,
@@ -129,37 +123,41 @@ class _NavButton extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Center(
+          // Only the fill animates; padding switches instantly so a tab
+          // losing its wide slot never briefly overflows it.
           child: AnimatedContainer(
-            duration: AppDurations.normal,
-            curve: AppCurves.emphasized,
+            duration: AppDurations.fast,
+            curve: AppCurves.standard,
             height: 44,
-            padding: EdgeInsets.symmetric(horizontal: active ? 12 : 0),
             decoration: BoxDecoration(
               color: active ? activeBg : Colors.transparent,
               borderRadius: AppRadius.pillAll,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                icon,
-                if (active) ...[
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        item.label,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: context.text.label.copyWith(
-                          color: activeFg,
-                          fontWeight: FontWeight.w700,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: active ? 14 : 0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  icon,
+                  if (active) ...[
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          item.label,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: context.text.label.copyWith(
+                            color: activeFg,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
