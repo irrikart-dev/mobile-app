@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/theme/tokens/color_tokens.dart';
 import '../../core/theme/tokens/duration_tokens.dart';
 import '../../core/theme/tokens/radius_tokens.dart';
 import '../../core/theme/tokens/spacing_tokens.dart';
@@ -49,17 +50,21 @@ class AppBottomNavBar extends StatelessWidget {
       ),
       child: Container(
         height: AppSpacing.navBarHeight,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
           color: c.navBar,
           borderRadius: AppRadius.pillAll,
           boxShadow: c.shadowFloating,
         ),
+        // Inactive tabs are fixed 44px targets; the active pill takes the
+        // remaining room (natural width when it fits). On very narrow phones
+        // its label scales down instead of being clipped.
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             for (var i = 0; i < items.length; i++)
-              Expanded(
-                flex: i == currentIndex ? 2 : 1,
+              _slot(
+                active: i == currentIndex,
                 child: _NavButton(
                   item: items[i],
                   active: i == currentIndex,
@@ -74,6 +79,11 @@ class AppBottomNavBar extends StatelessWidget {
       ),
     );
   }
+
+  static Widget _slot({required bool active, required Widget child}) =>
+      active
+          ? Flexible(child: child)
+          : SizedBox(width: 44, child: child);
 }
 
 class _NavButton extends StatelessWidget {
@@ -90,8 +100,9 @@ class _NavButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final activeBg = context.isDark ? c.accent : c.surface;
-    final activeFg = context.isDark ? c.background : c.navBar;
+    // Dark mode: forest pill with white content on the near-black bar.
+    final activeBg = context.isDark ? AppColors.forest : c.surface;
+    final activeFg = context.isDark ? AppColors.white : c.navBar;
     final icon = Stack(
       clipBehavior: Clip.none,
       children: [
@@ -122,7 +133,7 @@ class _NavButton extends StatelessWidget {
             duration: AppDurations.normal,
             curve: AppCurves.emphasized,
             height: 44,
-            padding: EdgeInsets.symmetric(horizontal: active ? 14 : 0),
+            padding: EdgeInsets.symmetric(horizontal: active ? 12 : 0),
             decoration: BoxDecoration(
               color: active ? activeBg : Colors.transparent,
               borderRadius: AppRadius.pillAll,
@@ -134,14 +145,16 @@ class _NavButton extends StatelessWidget {
                 if (active) ...[
                   const SizedBox(width: 8),
                   Flexible(
-                    child: Text(
-                      item.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.fade,
-                      softWrap: false,
-                      style: context.text.label.copyWith(
-                        color: activeFg,
-                        fontWeight: FontWeight.w700,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        item.label,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: context.text.label.copyWith(
+                          color: activeFg,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
