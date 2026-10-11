@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,6 +28,19 @@ class LocalStore {
   static const _wishlist = 'wishlist_slugs';
   static const _recentSearches = 'recent_searches';
   static const _recentlyViewed = 'recently_viewed_slugs';
+  static const _termsAcceptedAt = 'terms_accepted_at';
+
+  /// When the Terms & Conditions / Privacy Policy box was ticked on the
+  /// sign-in screen on this device (null = not accepted). Device-level, so a
+  /// returning user sees it pre-ticked even after logging out.
+  DateTime? get termsAcceptedAt {
+    final raw = _prefs.getString(_termsAcceptedAt);
+    return raw == null ? null : DateTime.tryParse(raw);
+  }
+
+  Future<void> setTermsAcceptedAt(DateTime? at) => at == null
+      ? _prefs.remove(_termsAcceptedAt)
+      : _prefs.setString(_termsAcceptedAt, at.toUtc().toIso8601String());
 
   bool get onboardingCompleted => _prefs.getBool(_onboardingDone) ?? false;
   Future<void> markOnboardingCompleted() => _prefs.setBool(_onboardingDone, true);
@@ -56,4 +71,23 @@ class LocalStore {
   List<String> get recentlyViewed => _prefs.getStringList(_recentlyViewed) ?? const [];
   Future<void> setRecentlyViewed(List<String> slugs) =>
       _prefs.setStringList(_recentlyViewed, slugs);
+
+  static const _guestCart = 'guest_cart_v1';
+
+  /// The signed-out cart: one JSON map per line (`variantId`, `quantity`
+  /// plus the display fields `CartController` snapshots from the
+  /// catalogue). Merged into the server cart and cleared on sign-in.
+  List<Map<String, dynamic>> get guestCart {
+    final raw = _prefs.getString(_guestCart);
+    if (raw == null) return const [];
+    try {
+      return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+    } catch (_) {
+      return const []; // corrupt — start over rather than crash
+    }
+  }
+
+  Future<void> setGuestCart(List<Map<String, dynamic>> lines) => lines.isEmpty
+      ? _prefs.remove(_guestCart)
+      : _prefs.setString(_guestCart, jsonEncode(lines));
 }

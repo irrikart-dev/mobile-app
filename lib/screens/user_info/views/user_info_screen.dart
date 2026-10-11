@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../components/ui/ui.dart';
 import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_validators.dart';
+import '../../../core/auth/profile_api.dart';
+import '../../../core/network/api_envelope.dart';
 import '../../../route/route_constants.dart';
 import '../../profile/views/account_providers.dart';
 import '../../profile/views/components/account_avatar.dart';
 
-/// "Your details": edit display name; email and sign-in method are shown
-/// read-only because Google owns them.
+/// "Your details": edit display name (saved to both Firebase and the
+/// backend profile); email/phone and sign-in methods are shown read-only
+/// because the sign-in provider owns them.
 class UserInfoScreen extends ConsumerWidget {
   const UserInfoScreen({super.key});
 
@@ -47,16 +51,16 @@ class UserInfoScreen extends ConsumerWidget {
   }
 }
 
-class _DetailsForm extends StatefulWidget {
+class _DetailsForm extends ConsumerStatefulWidget {
   const _DetailsForm({required this.user});
 
   final User user;
 
   @override
-  State<_DetailsForm> createState() => _DetailsFormState();
+  ConsumerState<_DetailsForm> createState() => _DetailsFormState();
 }
 
-class _DetailsFormState extends State<_DetailsForm> {
+class _DetailsFormState extends ConsumerState<_DetailsForm> {
   final _formKey = GlobalKey<FormState>();
   late final _name =
       TextEditingController(text: widget.user.displayName?.trim() ?? '');
@@ -79,14 +83,11 @@ class _DetailsFormState extends State<_DetailsForm> {
 
   bool get _dirty => _name.text.trim() != _savedName;
 
-  String? _validateName(String? value) {
-    final v = value?.trim() ?? '';
-    if (v.isEmpty) return 'Enter your name';
-    if (v.length < 2) return 'Name must be at least 2 characters';
-    if (v.length > 40) return 'Name must be 40 characters or fewer';
-    return null;
-  }
+  static const _saveFailed = 'Could not update your name. Please try again.';
 
+  /// Writes the backend profile first — it's what orders and invoices read,
+  /// and it validates the name — then mirrors it onto the Firebase profile
+  /// so the Account header updates.
   Future<void> _save() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
@@ -95,27 +96,34 @@ class _DetailsFormState extends State<_DetailsForm> {
     try {
       final current = FirebaseAuth.instance.currentUser;
       if (current == null) throw StateError('Signed out');
+      await ref.read(profileApiProvider).updateName(name);
       await current.updateDisplayName(name);
       await current.reload();
       if (!mounted) return;
       setState(() => _savedName = name);
       AppSnack.success(context, 'Your name has been updated');
+    } on ApiException catch (e) {
+      if (mounted) {
+        AppSnack.error(
+          context,
+          e.statusCode == null
+              ? 'You appear to be offline. Check your connection and try again.'
+              : e.isServerError || e.isUnauthorized
+                  ? _saveFailed
+                  : e.message,
+        );
+      }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         AppSnack.error(
           context,
           e.code == 'network-request-failed'
               ? 'You appear to be offline. Check your connection and try again.'
-              : 'Could not update your name. Please try again.',
+              : _saveFailed,
         );
       }
     } catch (_) {
-      if (mounted) {
-        AppSnack.error(
-          context,
-          'Could not update your name. Please try again.',
-        );
-      }
+      if (mounted) AppSnack.error(context, _saveFailed);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -127,7 +135,14 @@ class _DetailsFormState extends State<_DetailsForm> {
     final displayName = _name.text.trim().isEmpty
         ? accountDisplayName(user)
         : _name.text.trim();
-    final isGoogle = user.providerData.any((p) => p.providerId == 'google.com');
+    final phone = user.phoneNumber;
+    final phoneLabel = phone == null || phone.isEmpty
+        ? null
+        : AuthValidators.formatPhone(phone);
+    // Email, else the phone number for phone-OTP accounts — unless the name
+    // line above is already showing it.
+    final contact = user.email ?? phoneLabel;
+    final providers = _signInMethods(user, phoneLabel);
 
     return Column(
       children: [
@@ -159,10 +174,10 @@ class _DetailsFormState extends State<_DetailsForm> {
                   overflow: TextOverflow.ellipsis,
                   style: context.text.h2,
                 ),
-                if (user.email != null) ...[
+                if (contact != null && contact != displayName) ...[
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    user.email!,
+                    contact,
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -177,8 +192,8 @@ class _DetailsFormState extends State<_DetailsForm> {
                   controller: _name,
                   hint: 'e.g. Ravi Kumar',
                   helper: 'Shown on your orders and invoices',
-                  validator: _validateName,
-                  maxLength: 40,
+                  validator: AuthValidators.nameError,
+                  maxLength: AuthValidators.maxNameLength,
                   textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.done,
                   autofillHints: const [AutofillHints.name],
@@ -186,21 +201,22 @@ class _DetailsFormState extends State<_DetailsForm> {
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 SettingsGroup(
-                  title: 'Sign-in method',
+                  title: providers.length > 1
+                      ? 'Sign-in methods'
+                      : 'Sign-in method',
                   children: [
-                    SettingsTile(
-                      icon: isGoogle
-                          ? Icons.g_mobiledata_rounded
-                          : Icons.alternate_email_rounded,
-                      title: isGoogle ? 'Google' : 'Email & password',
-                      subtitle: isGoogle ? 'Managed by Google' : user.email,
-                      showChevron: false,
-                      trailing: const StatusPill(
-                        label: 'Connected',
-                        tone: Tone.success,
-                        dot: true,
+                    for (final m in providers)
+                      SettingsTile(
+                        icon: m.icon,
+                        title: m.title,
+                        subtitle: m.subtitle,
+                        showChevron: false,
+                        trailing: const StatusPill(
+                          label: 'Connected',
+                          tone: Tone.success,
+                          dot: true,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -217,6 +233,51 @@ class _DetailsFormState extends State<_DetailsForm> {
       ],
     );
   }
+}
+
+typedef _SignInMethod = ({IconData icon, String title, String? subtitle});
+
+/// One row per provider linked to [user] — Google, phone and/or email.
+List<_SignInMethod> _signInMethods(User user, String? phoneLabel) {
+  final ids = user.providerData.map((p) => p.providerId).toSet();
+  final methods = <_SignInMethod>[
+    if (ids.contains('google.com'))
+      (
+        icon: Icons.g_mobiledata_rounded,
+        title: 'Google',
+        subtitle: user.email ?? 'Managed by Google',
+      ),
+    if (ids.contains('phone'))
+      (
+        icon: Icons.smartphone_rounded,
+        title: 'Mobile number',
+        subtitle: phoneLabel ?? 'Verified by SMS',
+      ),
+    if (ids.contains('password'))
+      (
+        icon: Icons.alternate_email_rounded,
+        title: 'Email & password',
+        subtitle: user.email,
+      ),
+  ];
+  if (methods.isEmpty && phoneLabel != null) {
+    return [
+      (
+        icon: Icons.smartphone_rounded,
+        title: 'Mobile number',
+        subtitle: phoneLabel,
+      ),
+    ];
+  }
+  return methods.isEmpty
+      ? [
+          (
+            icon: Icons.alternate_email_rounded,
+            title: 'Email & password',
+            subtitle: user.email,
+          ),
+        ]
+      : methods;
 }
 
 class _Overline extends StatelessWidget {

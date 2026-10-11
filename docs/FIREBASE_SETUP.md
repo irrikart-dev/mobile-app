@@ -1,5 +1,67 @@
 # Firebase setup — email authentication
 
+## Sign-in screen: enable Phone + Email/Password (do this first)
+
+The sign-in screen (`lib/screens/auth/views/auth_screen.dart`) offers three
+methods: **mobile number + OTP** (main path), **Google**, and **email +
+password**. All three run entirely on the Firebase client SDK — no backend
+OTP or Admin SDK needed. Google is already enabled on `irrikart-auth`; the
+other two must be switched on in the console. Until they are, tapping them
+shows *"This sign-in method isn't enabled yet"* (`operation-not-allowed`)
+instead of failing.
+
+In <https://console.firebase.google.com> → project **irrikart-auth** →
+**Build → Authentication → Sign-in method**:
+
+1. **Email/Password** → *Add new provider* → enable **Email/Password**
+   (leave *Email link (passwordless sign-in)* off) → **Save**.
+   - Recommended: **Settings → User actions → Email enumeration
+     protection** stays **on** (the default). The app already handles its
+     side effect: a wrong password and an unknown email both come back as
+     `invalid-credential` → "That email and password don't match".
+   - Optional: **Templates → Password reset** — set the sender name to
+     *IrriKart* and customise the copy of the reset email.
+2. **Phone** → *Add new provider* → enable **Phone** → **Save**.
+   - **Requires the Blaze (pay-as-you-go) plan.** On Spark, sending an SMS
+     fails with `billing-not-enabled`/`quota-exceeded`. Upgrade under
+     **⚙ → Usage and billing → Details & settings → Modify plan**. Set a
+     budget alert; SMS to India is billed per message.
+   - **Settings → SMS region policy**: *Allow* only **India (+91)** — the
+     app only accepts Indian mobile numbers, and this blocks SMS-pumping
+     fraud to premium-rate countries.
+   - Optional for testing without SMS charges: **Phone numbers for testing**
+     → add e.g. `+91 99999 00000` with code `123456`.
+
+Android specifics for Phone auth:
+
+- The app's **SHA-1 and SHA-256** fingerprints must be registered on the
+  Firebase Android app (already done for the debug key — see *4b. Google
+  Sign-In*). **Add the release / Play App Signing keys too before shipping**
+  (Play Console → *Test and release → App integrity* lists the Play signing
+  SHA-1/SHA-256) — otherwise phone sign-in fails on store builds with
+  `app-not-authorized` / `missing-client-identifier` ("We couldn't verify
+  this device for SMS sign-in").
+- Firebase verifies the app with **Play Integrity**; enable the *Play
+  Integrity API* for the project in Google Cloud Console (APIs & Services)
+  if it isn't already. On devices/emulators without Play services or when
+  the check fails, Firebase falls back to a **reCAPTCHA** web page in a
+  browser tab — expected, not a bug. Emulators often only work with the
+  test numbers above.
+- When Play services can read the SMS itself, Firebase signs the user in
+  automatically (`verificationCompleted`); the OTP boxes fill in and the
+  app proceeds without the user typing anything.
+
+iOS (when that target ships): Phone auth needs APNs (upload an APNs auth key
+under **Project settings → Cloud Messaging**) or falls back to reCAPTCHA,
+which requires the reversed client id URL scheme already in `Info.plist`.
+
+After any sign-in the app calls `POST /auth/firebase/sync`; a name typed on
+"Create account" or edited on *Your details* is sent with `PATCH /auth/me`.
+
+> The rest of this document predates the current sign-in screen (it
+> describes an older backend-OTP email sign-up). The project/app
+> registration and Google sections still apply.
+
 Sign-in and sign-up split across two pieces of config, in two different repos:
 
 | | Configures | Repo |

@@ -37,11 +37,20 @@ class AccountAvatar extends StatelessWidget {
             : ColoredBox(
                 color: c.primary,
                 child: Center(
-                  child: Text(
-                    accountInitials(name),
-                    style: (size >= 64 ? context.text.h1 : context.text.h3)
-                        .copyWith(color: c.textOnPrimary),
-                  ),
+                  // No letters to draw initials from (e.g. a phone-only
+                  // account showing its number) → a person glyph.
+                  child: accountInitials(name) == 'IK'
+                      ? Icon(
+                          Icons.person_rounded,
+                          size: size * 0.5,
+                          color: c.textOnPrimary,
+                        )
+                      : Text(
+                          accountInitials(name),
+                          style:
+                              (size >= 64 ? context.text.h1 : context.text.h3)
+                                  .copyWith(color: c.textOnPrimary),
+                        ),
                 ),
               ),
       ),

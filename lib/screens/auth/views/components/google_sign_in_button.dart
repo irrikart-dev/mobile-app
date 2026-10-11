@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../../../../components/ui/ui.dart';
+import 'auth_method_button.dart';
 
-/// "Continue with Google" — the app's only sign-in method. Follows Google's
-/// branding guidance: neutral surface, the multi-colour G, dark label.
+/// "Continue with Google". Follows Google's branding guidance: neutral
+/// surface, the multi-colour G, dark label.
 class GoogleSignInButton extends StatelessWidget {
   const GoogleSignInButton({
     super.key,
@@ -17,42 +17,11 @@ class GoogleSignInButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
-    final disabled = busy || onPressed == null;
-
-    return PressableScale(
-      onTap: disabled ? null : onPressed,
-      child: AnimatedOpacity(
-        opacity: onPressed == null ? 0.5 : 1,
-        duration: AppDurations.fast,
-        child: Container(
-          height: 56,
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: AppRadius.mdAll,
-            border: Border.all(color: c.borderStrong),
-            boxShadow: disabled ? null : c.shadowCard,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (busy)
-                SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
-                    color: c.textMuted,
-                  ),
-                )
-              else ...[
-                SvgPicture.string(_googleLogoSvg, height: 20, width: 20),
-                const SizedBox(width: AppSpacing.smd),
-                Text('Continue with Google', style: context.text.button),
-              ],
-            ],
-          ),
-        ),
-      ),
+    return AuthMethodButton(
+      leading: SvgPicture.string(_googleLogoSvg, height: 20, width: 20),
+      label: 'Continue with Google',
+      onPressed: onPressed,
+      busy: busy,
     );
   }
 }

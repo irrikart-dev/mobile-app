@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../components/ui/ui.dart';
 import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_validators.dart';
 import '../../../core/config/support_config.dart';
 import '../../../core/storage/local_store.dart';
 import '../../../core/theme/theme_mode_controller.dart';
@@ -64,6 +65,14 @@ class ProfileScreen extends ConsumerWidget {
                   title: 'Saved addresses',
                   onTap: () =>
                       Navigator.pushNamed(context, addressesScreenRoute),
+                ),
+                SettingsTile(
+                  icon: Icons.credit_card_rounded,
+                  title: 'Saved payment methods',
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    savedPaymentMethodsScreenRoute,
+                  ),
                 ),
               ],
               SettingsTile(
@@ -271,7 +280,12 @@ class _ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = accountDisplayName(user);
-    final email = user.email;
+    final phone = user.phoneNumber;
+    // Email, else the phone number for phone-OTP accounts — unless the name
+    // line is already showing it.
+    final contact = user.email ??
+        (phone == null || phone.isEmpty ? null : AuthValidators.formatPhone(phone));
+    final email = contact == name ? null : contact;
 
     return Row(
       children: [

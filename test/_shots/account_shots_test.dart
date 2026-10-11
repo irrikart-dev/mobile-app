@@ -31,6 +31,8 @@ class _FakeUser extends Fake implements User {
   @override
   String? get email => 'ravi.patil@gmail.com';
   @override
+  String? get phoneNumber => null;
+  @override
   String? get photoURL => null;
   @override
   List<UserInfo> get providerData => [_FakeProvider()];

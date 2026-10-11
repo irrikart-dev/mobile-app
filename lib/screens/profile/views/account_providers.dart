@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/auth_validators.dart';
 import '../../../core/firebase/firebase_bootstrap.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
@@ -29,26 +30,32 @@ final appVersionProvider = FutureProvider<String>((ref) async {
       : '${info.version} (${info.buildNumber})';
 });
 
-/// Best display name for [user]: profile name, else the email's local part.
+/// Best display name for [user]: profile name, else the email's local part,
+/// else the phone number (phone-OTP accounts have neither name nor email).
 String accountDisplayName(User? user) {
   final name = user?.displayName?.trim();
   if (name != null && name.isNotEmpty) return name;
   final email = user?.email;
   if (email != null && email.contains('@')) return email.split('@').first;
+  final phone = user?.phoneNumber;
+  if (phone != null && phone.isNotEmpty) {
+    return AuthValidators.formatPhone(phone);
+  }
   return 'IrriKart customer';
 }
 
-/// Up to two initials from [name], e.g. "Ravi Kumar" → "RK".
+/// Up to two initials from [name], e.g. "Ravi Kumar" → "RK". A name with
+/// no letters at all (the phone-number fallback) gets the IrriKart "IK".
 String accountInitials(String name) {
-  final parts = name
-      .trim()
-      .split(RegExp(r'\s+'))
-      .where((p) => p.isNotEmpty)
-      .toList();
+  final parts =
+      name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
   if (parts.isEmpty) return '?';
-  final first = String.fromCharCode(parts.first.runes.first);
+  final worded =
+      parts.where((p) => RegExp(r'^\p{L}', unicode: true).hasMatch(p)).toList();
+  if (worded.isEmpty) return 'IK';
+  final first = String.fromCharCode(worded.first.runes.first);
   final last =
-      parts.length > 1 ? String.fromCharCode(parts.last.runes.first) : '';
+      worded.length > 1 ? String.fromCharCode(worded.last.runes.first) : '';
   return (first + last).toUpperCase();
 }
 
