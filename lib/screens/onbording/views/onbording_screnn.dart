@@ -110,11 +110,12 @@ class _OnBordingScreenState extends ConsumerState<OnBordingScreen> {
                 child: Row(
                   children: [
                     Image.asset(
-                      'assets/logo/irrikart_logo_mark.png',
-                      height: 26,
+                      context.isDark
+                          ? 'assets/logo/irrikart_logo_full_white.png'
+                          : 'assets/logo/irrikart_logo_full.png',
+                      height: 30,
+                      semanticLabel: 'IrriKart',
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text('IrriKart', style: context.text.h3),
                     const Spacer(),
                     AnimatedOpacity(
                       opacity: _isLast ? 0 : 1,
@@ -179,15 +180,29 @@ class _SlideView extends StatelessWidget {
       child: Column(
         children: [
           const SizedBox(height: AppSpacing.md),
+          // Banner slot: always 1:1 so client artwork (1080 × 1080 px, key
+          // content inside the centre 80%) drops in without layout changes.
+          // Shrinks on short phones, never stretches.
           Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: c.tint,
-                borderRadius: AppRadius.xlAll,
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: ClipRRect(
+                  borderRadius: AppRadius.xlAll,
+                  child: slide.image.endsWith('.svg')
+                      ? ColoredBox(
+                          color: c.tint,
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: SvgPicture.asset(
+                              slide.image,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        )
+                      : Image.asset(slide.image, fit: BoxFit.cover),
+                ),
               ),
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: SvgPicture.asset(slide.image, fit: BoxFit.contain),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),

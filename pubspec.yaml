@@ -3,7 +3,7 @@ description: "IrriKart — agricultural tools and inputs marketplace for India."
 
 publish_to: "none"
 
-version: 1.0.0+4
+version: 1.1.0+5
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
@@ -45,11 +45,11 @@ dependencies:
   # --- utils ---
   intl: ^0.20.2
   hugeicons: ^1.1.7
+  path_provider: ^2.1.5
+  share_plus: ^10.1.4
 
 dev_dependencies:
   flutter_test:
-    sdk: flutter
-  integration_test:
     sdk: flutter
 
 
@@ -102,7 +102,8 @@ flutter_launcher_icons:
   adaptive_icon_foreground: "assets/icon/icon_foreground.png"
 
 # Splash screen. Uses the full lockup (mark + wordmark), per the client's
-# corporate branding, unlike the launcher icon which uses the mark alone.
+# corporate branding (irriKart wordmark); Android 12+ shows the leaf-K mark
+# in its icon circle plus the wordmark as the bottom branding strip.
 # Regenerate with: dart run flutter_native_splash:create
 flutter_native_splash:
   color: "#FFFFFF"
@@ -116,6 +117,10 @@ flutter_native_splash:
     icon_background_color: "#FFFFFF"
     image_dark: assets/logo/irrikart_splash_android12_dark.png
     icon_background_color_dark: "#0E1210"
+    # Android 12+ can only show an icon in the circle; the wordmark goes in
+    # the branding strip at the bottom.
+    branding: assets/logo/irrikart_branding.png
+    branding_dark: assets/logo/irrikart_branding_dark.png
   android: true
   ios: true
   web: false
