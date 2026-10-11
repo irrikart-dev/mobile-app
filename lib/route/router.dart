@@ -50,6 +50,8 @@ Route<dynamic> generateRoute(RouteSettings settings) {
       return page(
         (_) => AddEditAddressScreen(existing: settings.arguments as Address?),
       );
+    case savedPaymentMethodsScreenRoute:
+      return page((_) => const SavedPaymentMethodsScreen());
     case cartScreenRoute:
       return page((_) => const CartScreen());
     case checkoutScreenRoute:

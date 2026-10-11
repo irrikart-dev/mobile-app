@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../components/ui/ui.dart';
 import '../../../core/utils/formatters.dart';
@@ -8,11 +11,13 @@ import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../models/cart_state.dart' show AuthRequiredException;
 import '../../../models/order_data.dart';
 import '../../../route/route_constants.dart';
+import '../../checkout/views/payment_flow.dart';
 import '../../reviews/view/write_review_sheet.dart';
+import 'order_actions.dart';
 import 'order_ui.dart';
 
-/// The normal fulfillment progression. Cancelled/returned orders render a
-/// short, distinct timeline instead — see [_Timeline].
+/// The normal fulfillment progression. Unpaid, cancelled and returned
+/// orders render their own block instead — see [_StatusHeader].
 const _flow = [
   OrderStatus.placed,
   OrderStatus.confirmed,
@@ -21,6 +26,14 @@ const _flow = [
   OrderStatus.delivered,
 ];
 
+const _flowTitle = {
+  OrderStatus.placed: 'Placed',
+  OrderStatus.confirmed: 'Confirmed',
+  OrderStatus.packed: 'Packed',
+  OrderStatus.shipped: 'Shipped',
+  OrderStatus.delivered: 'Delivered',
+};
+
 const _flowCopy = {
   OrderStatus.placed: 'We’ve received your order',
   OrderStatus.confirmed: 'Payment confirmed',
@@ -28,6 +41,9 @@ const _flowCopy = {
   OrderStatus.shipped: 'On its way to you',
   OrderStatus.delivered: 'Delivered to your address',
 };
+
+/// `8 Oct, 3:45 PM`
+String _shortDateTime(DateTime d) => DateFormat('d MMM, h:mm a').format(d);
 
 /// Order detail from `GET /orders/{id}`.
 ///
@@ -88,6 +104,10 @@ class OrderDetailScreen extends ConsumerWidget {
               ],
               const SectionDivider(thin: true),
               _PaymentSection(order: order),
+              if (_ManageSection.hasActions(order)) ...[
+                const SectionDivider(thin: true),
+                _ManageSection(order: order),
+              ],
               const SectionDivider(thin: true),
               _HelpRow(order: order),
             ],
@@ -141,13 +161,20 @@ class _StatusHeader extends StatelessWidget {
     if (context.mounted) AppSnack.success(context, 'Order number copied');
   }
 
+  String get _headline => switch (order.status) {
+        OrderStatus.placed => 'Complete your payment',
+        OrderStatus.paymentFailed => 'Payment didn’t go through',
+        OrderStatus.confirmed =>
+          order.accepted ? 'Order confirmed' : 'Payment confirmed',
+        OrderStatus.cancelled => 'This order was cancelled',
+        OrderStatus.returned => 'This order was returned',
+        OrderStatus.unknown => 'We’re processing your order',
+        _ => _flowCopy[order.status]!,
+      };
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final tone = orderStatusTone(order.status);
-    final isTerminal = order.status == OrderStatus.cancelled ||
-        order.status == OrderStatus.returned;
-    final isUnknown = order.status == OrderStatus.unknown;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -187,40 +214,179 @@ class _StatusHeader extends StatelessWidget {
               ),
               const Spacer(),
               StatusPill(
-                label: orderStatusLabel(order.status, order.rawStatus),
-                tone: tone,
+                label: orderStatusLabel(order.status),
+                tone: orderStatusTone(order.status),
                 dot: true,
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            switch (order.status) {
-              OrderStatus.cancelled => 'This order was cancelled',
-              OrderStatus.returned => 'This order was returned',
-              _ => _flowCopy[order.status] ??
-                  orderStatusLabel(order.status, order.rawStatus),
-            },
-            style: context.text.h1,
-          ),
+          Text(_headline, style: context.text.h1),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Placed ${formatOrderDateTime(order.createdAt)}',
             style: context.text.captionMuted,
           ),
           const SizedBox(height: AppSpacing.lg),
-          if (isUnknown)
+          if (order.awaitingPayment)
+            _PaymentDue(order: order)
+          else if (order.status == OrderStatus.unknown)
             Text(
-              'Status: ${orderStatusLabel(order.status, order.rawStatus)}. '
-              'Contact support if you have questions about this order.',
+              'We’ll update this order as soon as there’s news. Contact '
+              'support if you have questions about it.',
               style: context.text.bodySecondary,
             )
-          else if (isTerminal)
-            _TerminalTimeline(status: order.status)
-          else
+          else if (order.status == OrderStatus.cancelled)
+            _CancelledBlock(order: order)
+          else if (order.status == OrderStatus.returned)
+            const _TerminalTimeline(
+              title: 'Returned',
+              subtitle: 'Questions about your return? Support can help.',
+            )
+          else ...[
+            if (order.awaitingSellerAcceptance) ...[
+              const InlineBanner(
+                tone: Tone.info,
+                icon: Icons.storefront_rounded,
+                title: 'Waiting for the seller to accept',
+                message: 'Your payment is confirmed. The seller will accept '
+                    'your order shortly, then pack it.',
+              ),
+              const SizedBox(height: AppSpacing.lg),
+            ],
             _Timeline(currentIndex: _flow.indexOf(order.status)),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// `PLACED` / `PAYMENT_FAILED`: the 30-minute window with a live countdown,
+/// then Retry payment / Pay now and Cancel.
+class _PaymentDue extends ConsumerStatefulWidget {
+  const _PaymentDue({required this.order});
+
+  final Order order;
+
+  @override
+  ConsumerState<_PaymentDue> createState() => _PaymentDueState();
+}
+
+class _PaymentDueState extends ConsumerState<_PaymentDue> {
+  bool _paying = false;
+
+  Order get _order => widget.order;
+
+  Future<void> _pay() async {
+    if (_paying) return;
+    setState(() => _paying = true);
+    try {
+      await retryOrderPayment(context, ref, _order.id);
+    } finally {
+      if (mounted) setState(() => _paying = false);
+    }
+  }
+
+  Future<void> _cancel() =>
+      cancelOrderFlow(context, ref, orderId: _order.id);
+
+  @override
+  Widget build(BuildContext context) {
+    final failed = _order.status == OrderStatus.paymentFailed;
+    return TickingBuilder(
+      until: _order.paymentDeadline,
+      builder: (context, now) {
+        final left = _order.paymentTimeLeft(now);
+        final expired = left == Duration.zero;
+        final canPay = _order.canPay(now);
+        final countdown = formatCountdown(left);
+        final until = DateFormat('h:mm a').format(_order.paymentDeadline);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (expired)
+              const InlineBanner(
+                tone: Tone.neutral,
+                icon: Icons.timer_off_outlined,
+                title: 'Payment window closed',
+                message: 'This order wasn’t paid within 30 minutes, so it '
+                    'will be cancelled automatically and nothing will be '
+                    'charged. Pull down to refresh.',
+              )
+            else if (failed)
+              InlineBanner(
+                tone: Tone.error,
+                icon: Icons.credit_card_off_rounded,
+                title: 'Payment failed · $countdown left',
+                message: 'Your payment didn’t go through. Your items are '
+                    'reserved for 30 minutes from when you placed the '
+                    'order (until $until).',
+              )
+            else
+              InlineBanner(
+                tone: Tone.warning,
+                icon: Icons.timer_outlined,
+                title: 'Complete payment within 30 minutes',
+                message: '$countdown left · your items are reserved until '
+                    '$until. Unpaid orders are cancelled automatically.',
+              ),
+            const SizedBox(height: AppSpacing.md),
+            if (canPay) ...[
+              AppButton(
+                label: failed ? 'Retry payment' : 'Pay now',
+                icon: Icons.lock_rounded,
+                loading: _paying,
+                onPressed: _pay,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            AppButton.outline(
+              label: 'Cancel order',
+              onPressed: _paying ? null : _cancel,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Cancelled: why, by whom, when — and the refund, if it had been paid.
+class _CancelledBlock extends ConsumerWidget {
+  const _CancelledBlock({required this.order});
+
+  final Order order;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reason = order.cancelReason;
+    final by = cancelledByLabel(order.cancelledBy);
+    final when = order.cancelledAt;
+    final meta = [
+      if (by != null) by,
+      if (when != null) _shortDateTime(when),
+    ].join(' · ');
+    final refund = order.wasPaidOnline
+        ? ref.watch(cancelRefundStatusProvider)[order.id] ??
+            RefundStatus.started
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _TerminalTimeline(
+          title: 'Cancelled',
+          subtitle: [
+            if (reason != null && reason.isNotEmpty) '“$reason”',
+            if (meta.isNotEmpty) meta,
+          ].join('\n'),
+        ),
+        if (refund != null) ...[
+          const SizedBox(height: AppSpacing.lg),
+          RefundBanner(status: refund),
+        ],
+      ],
     );
   }
 }
@@ -239,7 +405,7 @@ class _Timeline extends StatelessWidget {
       children: [
         for (var i = 0; i < _flow.length; i++)
           _TimelineStep(
-            title: orderStatusLabel(_flow[i], ''),
+            title: _flowTitle[_flow[i]]!,
             subtitle: _flowCopy[_flow[i]],
             state: i < currentIndex || (deliveredAll && i == currentIndex)
                 ? _StepState.done
@@ -255,13 +421,13 @@ class _Timeline extends StatelessWidget {
 }
 
 class _TerminalTimeline extends StatelessWidget {
-  const _TerminalTimeline({required this.status});
+  const _TerminalTimeline({required this.title, required this.subtitle});
 
-  final OrderStatus status;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
-    final cancelled = status == OrderStatus.cancelled;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -273,10 +439,8 @@ class _TerminalTimeline extends StatelessWidget {
           isLast: false,
         ),
         _TimelineStep(
-          title: cancelled ? 'Cancelled' : 'Returned',
-          subtitle: cancelled
-              ? 'If any amount was debited, support will help sort it out.'
-              : 'Questions about your return? Support can help.',
+          title: title,
+          subtitle: subtitle.isEmpty ? null : subtitle,
           state: _StepState.failed,
           connectorFilled: false,
           isLast: true,
@@ -513,7 +677,7 @@ class _OrderItemRow extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Address, payment, help
+// Address, payment, actions, help
 // ---------------------------------------------------------------------------
 
 class _AddressSection extends StatelessWidget {
@@ -556,16 +720,37 @@ class _PaymentSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final itemsTotal =
-        order.items.fold<num>(0, (sum, i) => sum + i.totalPrice);
-    final discount = itemsTotal - order.amount;
+    final method = paymentMethodLabel(order.paymentMethod) ?? 'Online';
+    final paid = !order.awaitingPayment &&
+        !(order.status == OrderStatus.cancelled && !order.wasPaidOnline);
 
-    final (String label, Color color) = switch (order.status) {
-      OrderStatus.placed => ('Awaiting payment confirmation', c.warning),
-      OrderStatus.cancelled ||
-      OrderStatus.returned =>
-        ('Prepaid via Razorpay', c.textMuted),
-      _ => ('Paid via Razorpay', c.success),
+    final (IconData icon, String note, Color color) = switch (order.status) {
+      _ when order.isCod => (
+          Icons.payments_rounded,
+          'Pay on delivery',
+          c.textSecondary,
+        ),
+      OrderStatus.placed => (
+          Icons.schedule_rounded,
+          'Awaiting payment',
+          c.warning,
+        ),
+      OrderStatus.paymentFailed => (
+          Icons.error_outline_rounded,
+          'Last payment attempt failed',
+          c.error,
+        ),
+      OrderStatus.cancelled when order.wasPaidOnline => (
+          Icons.replay_rounded,
+          'Refunded to your payment method',
+          c.textSecondary,
+        ),
+      OrderStatus.cancelled => (
+          Icons.block_rounded,
+          'Not charged',
+          c.textMuted,
+        ),
+      _ => (Icons.verified_user_rounded, 'Paid', c.success),
     };
 
     return _Block(
@@ -582,11 +767,14 @@ class _PaymentSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SummaryRow(label: 'Item total', value: formatInr(itemsTotal)),
-              if (discount > 0)
+              SummaryRow(
+                label: 'Item total',
+                value: formatInr(order.itemsTotal),
+              ),
+              if (order.discount > 0)
                 SummaryRow(
-                  label: 'Discount',
-                  value: '-${formatInr(discount)}',
+                  label: 'Coupon discount',
+                  value: '-${formatInr(order.discount)}',
                   valueColor: c.success,
                 ),
               SummaryRow(label: 'Delivery', value: 'Free', valueColor: c.success),
@@ -595,29 +783,134 @@ class _PaymentSection extends StatelessWidget {
                 child: Divider(height: 1, color: c.border),
               ),
               SummaryRow(
-                label:
-                    order.status == OrderStatus.placed ? 'Total' : 'Total paid',
+                label: paid ? 'Total paid' : 'Total',
                 value: formatInr(order.amount),
                 emphasize: true,
               ),
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
-                  Icon(
-                    Icons.verified_user_rounded,
-                    size: AppIconSize.xs,
-                    color: color,
-                  ),
+                  Icon(icon, size: AppIconSize.xs, color: color),
                   const SizedBox(width: AppSpacing.xs + 2),
-                  Text(
-                    label,
-                    style: context.text.caption.copyWith(color: color),
+                  Expanded(
+                    child: Text(
+                      note,
+                      style: context.text.caption.copyWith(color: color),
+                    ),
                   ),
+                  Text(method, style: context.text.caption),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Invoice, reorder and (for a confirmed order inside 24 h) cancel — as
+/// flat rows. Unpaid orders keep their actions next to the countdown.
+class _ManageSection extends ConsumerStatefulWidget {
+  const _ManageSection({required this.order});
+
+  final Order order;
+
+  static bool _showReorder(Order o) => !o.awaitingPayment && o.items.isNotEmpty;
+  static bool _showCancel(Order o) => !o.awaitingPayment && o.canCancel();
+
+  static bool hasActions(Order o) =>
+      o.hasInvoice || _showReorder(o) || _showCancel(o);
+
+  @override
+  ConsumerState<_ManageSection> createState() => _ManageSectionState();
+}
+
+enum _Busy { invoice, reorder }
+
+class _ManageSectionState extends ConsumerState<_ManageSection> {
+  _Busy? _busy;
+
+  Order get _order => widget.order;
+
+  Future<void> _run(_Busy kind, Future<void> Function() action) async {
+    if (_busy != null) return;
+    setState(() => _busy = kind);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
+  }
+
+  Widget? _spinner(_Busy kind) => _busy == kind
+      ? Padding(
+          padding: const EdgeInsets.only(right: AppSpacing.xs),
+          child: SizedBox.square(
+            dimension: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: context.colors.primary,
+            ),
+          ),
+        )
+      : null;
+
+  @override
+  Widget build(BuildContext context) {
+    final order = _order;
+    return _Block(
+      label: 'Manage order',
+      child: SettingsGroup(
+        children: [
+          if (order.hasInvoice)
+            SettingsTile(
+              icon: Icons.receipt_long_rounded,
+              title: 'Download invoice',
+              subtitle: 'PDF — view, save or share',
+              trailing: _spinner(_Busy.invoice),
+              showChevron: _busy != _Busy.invoice,
+              onTap: () => _run(
+                _Busy.invoice,
+                () => downloadInvoiceFlow(
+                  context,
+                  ref,
+                  orderId: order.id,
+                  orderNumber: order.orderNumber,
+                ),
+              ),
+            ),
+          if (_ManageSection._showReorder(order))
+            SettingsTile(
+              icon: Icons.replay_rounded,
+              title: 'Reorder',
+              subtitle: 'Add these items to your cart again',
+              trailing: _spinner(_Busy.reorder),
+              showChevron: _busy != _Busy.reorder,
+              onTap: () => _run(
+                _Busy.reorder,
+                () => reorderFlow(
+                  context,
+                  ref,
+                  orderId: order.id,
+                  items: order.items,
+                ),
+              ),
+            ),
+          if (_ManageSection._showCancel(order))
+            SettingsTile(
+              icon: Icons.cancel_outlined,
+              title: 'Cancel order',
+              subtitle: 'Free cancellation until '
+                  '${_shortDateTime(order.createdAt.add(orderCancelWindow))}',
+              destructive: true,
+              onTap: _busy != null
+                  ? null
+                  : () => unawaited(
+                        cancelOrderFlow(context, ref, orderId: order.id),
+                      ),
+            ),
+        ],
       ),
     );
   }

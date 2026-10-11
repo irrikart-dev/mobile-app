@@ -5,22 +5,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../components/ui/ui.dart';
+import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../models/cart_state.dart';
 import '../../../models/order_data.dart';
 import '../../../route/route_constants.dart';
+import '../../order/views/order_actions.dart';
 import '../../order/views/order_ui.dart';
+import 'payment_flow.dart';
 
+/// Contract: poll `GET /orders/{id}` every 2–3 s, for up to 60 s.
 const _pollInterval = Duration(seconds: 2, milliseconds: 500);
-const _pollTimeout = Duration(seconds: 30);
+const _pollTimeout = Duration(seconds: 60);
 
-/// What the checkout screen hands this screen after the Razorpay widget
-/// closes with a result worth chasing.
+/// After the sheet was closed without paying, how long to show "checking"
+/// before offering Pay now / Cancel (polling carries on underneath, so a
+/// decline that lands later still flips the screen to "Payment failed").
+const _dismissGrace = Duration(seconds: 6);
+
+/// What hands this screen an order after the Razorpay widget closed —
+/// whichever way it closed.
 class OrderProcessingArgs {
   const OrderProcessingArgs({
     required this.orderId,
     this.providerPaymentId,
     this.signature,
+    this.sheetFailed = false,
+    this.sheetMessage,
   });
 
   final String orderId;
@@ -30,25 +41,47 @@ class OrderProcessingArgs {
   final String? providerPaymentId;
   final String? signature;
 
+  /// The SDK reported an error or the user dismissed the sheet. Not an
+  /// answer: a decline becomes `PAYMENT_FAILED` via webhook within seconds,
+  /// a dismissal leaves the order `PLACED` — so this screen polls either way.
+  final bool sheetFailed;
+  final String? sheetMessage;
+
   /// True when there's enough here to call `POST /payments/verify`
   /// immediately, instead of only polling.
   bool get canVerify => providerPaymentId != null && signature != null;
 }
 
-enum _Phase { verifying, placing }
+enum _Phase { verifying, placing, checking }
+
+enum _Stage {
+  /// Verifying / polling.
+  working,
+
+  /// `PAYMENT_FAILED` — retry or cancel.
+  failed,
+
+  /// Still `PLACED` after the sheet was closed — pay now or cancel.
+  awaiting,
+
+  /// `CANCELLED` (expired, or cancelled here).
+  cancelled,
+
+  /// Gave up waiting on a payment the SDK said succeeded, or an error.
+  stuck,
+}
 
 /// Sits between the Razorpay widget closing and knowing what actually
-/// happened. Per the checkout contract §4, the SDK's success callback only
-/// means "payment probably went through" — an order isn't truly confirmed
-/// until either:
-///  - this screen calls `POST /payments/verify` itself (the common path —
-///    resolves in about one round trip, doesn't wait on Razorpay's webhook), or
-///  - Razorpay's webhook reaches the backend first and flips the status
-///    (covers an external-wallet handoff, or verify failing on a network blip).
+/// happened. The SDK callback is never proof of payment — only the order
+/// status the API returns is:
+///  - on SDK success: `POST /payments/verify`, then poll while still
+///    `PLACED`;
+///  - on SDK error/dismissal: poll the order the same way.
 ///
-/// [_beginPolling] is the fallback for both of those cases, and gives up
-/// after 30s with a "still processing" message and a way to check again,
-/// rather than spinning forever — the order resolves eventually either way.
+/// `PAYMENT_FAILED` ends the poll with **Retry payment** (reopens the same
+/// Razorpay order via `POST /orders/{id}/pay`, here in place) and **Cancel**.
+/// The user is never sent back to checkout to retry — that would create a
+/// second order while the first keeps its stock held.
 class OrderProcessingScreen extends ConsumerStatefulWidget {
   const OrderProcessingScreen({super.key, required this.args});
 
@@ -66,13 +99,20 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
     duration: const Duration(milliseconds: 1600),
   )..repeat();
 
-  Timer? _timer;
-  Timer? _timeoutTimer;
-  bool _timedOut = false;
-  String? _error;
+  late OrderProcessingArgs _args = widget.args;
+  Order? _order;
+  RefundStatus? _refund;
+  _Stage _stage = _Stage.working;
   _Phase _phase = _Phase.verifying;
+  String? _error;
+  bool _busy = false;
 
-  bool get _stuck => _timedOut || _error != null;
+  Timer? _pollTimer;
+  Timer? _timeoutTimer;
+  Timer? _graceTimer;
+  bool _graceElapsed = false;
+
+  String get _orderId => _args.orderId;
 
   @override
   void initState() {
@@ -83,32 +123,44 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
   @override
   void dispose() {
     _spin.dispose();
-    _timer?.cancel();
-    _timeoutTimer?.cancel();
+    _stopTimers();
     super.dispose();
   }
 
+  void _stopTimers() {
+    _pollTimer?.cancel();
+    _timeoutTimer?.cancel();
+    _graceTimer?.cancel();
+  }
+
   Future<void> _start() async {
-    if (widget.args.canVerify) {
+    _stopTimers();
+    setState(() {
+      _stage = _Stage.working;
+      _error = null;
+      _phase = _args.canVerify
+          ? _Phase.verifying
+          : _args.sheetFailed
+              ? _Phase.checking
+              : _Phase.placing;
+    });
+    if (_args.canVerify) {
       try {
         final status = await ref.read(ordersRepositoryProvider).verifyPayment(
-              orderId: widget.args.orderId,
-              providerPaymentId: widget.args.providerPaymentId!,
-              signature: widget.args.signature!,
+              orderId: _orderId,
+              providerPaymentId: _args.providerPaymentId!,
+              signature: _args.signature!,
             );
-        // Anything other than "still placed" is a real answer — no need to
-        // poll for it. Still placed just means the gateway hadn't captured
-        // it at the moment of the call; fall through to polling for that.
+        // Anything but "still placed" is a real answer (CONFIRMED or
+        // PAYMENT_FAILED) — fetch the full order and show it.
         if (status != OrderStatus.placed) {
           if (mounted) setState(() => _phase = _Phase.placing);
-          await _resolveStatus(status);
+          await _fetchAndResolve();
           return;
         }
       } catch (_) {
-        // Verify itself failed (network blip, since a bad signature/order
-        // mismatch would be a real bug, not something to silently swallow —
-        // but either way the webhook is still coming, so falling back to
-        // polling recovers cleanly regardless of why this failed).
+        // A network blip, most likely — the webhook is still coming, so
+        // falling back to polling recovers either way.
       }
     }
     if (!mounted) return;
@@ -116,95 +168,180 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
   }
 
   void _beginPolling() {
+    _stopTimers();
+    _graceElapsed = !_args.sheetFailed;
     setState(() {
-      _timedOut = false;
+      if (_stage != _Stage.awaiting) _stage = _Stage.working;
       _error = null;
-      _phase = _Phase.placing;
+      if (_phase == _Phase.verifying) _phase = _Phase.placing;
     });
-    _timer?.cancel();
-    _timer = Timer.periodic(_pollInterval, (_) => _poll());
-    _timeoutTimer?.cancel();
-    _timeoutTimer = Timer(_pollTimeout, () {
-      if (mounted) setState(() => _timedOut = true);
-    });
+    _pollTimer = Timer.periodic(_pollInterval, (_) => _poll());
+    _timeoutTimer = Timer(_pollTimeout, _onTimeout);
+    if (_args.sheetFailed) {
+      _graceTimer = Timer(_dismissGrace, () {
+        _graceElapsed = true;
+        if (mounted &&
+            _stage == _Stage.working &&
+            _order?.status == OrderStatus.placed) {
+          setState(() => _stage = _Stage.awaiting);
+        }
+      });
+    }
     unawaited(_poll());
   }
 
   Future<void> _poll() async {
-    if (_timedOut) return;
     try {
-      final order = await ref
-          .read(ordersRepositoryProvider)
-          .getOrder(widget.args.orderId);
-      if (!mounted || order.status == OrderStatus.placed) return;
-      _timer?.cancel();
-      _timeoutTimer?.cancel();
-      await _showResult(order);
+      final order = await ref.read(ordersRepositoryProvider).getOrder(_orderId);
+      if (!mounted) return;
+      _order = order;
+      if (isTerminalForPaymentPoll(order.status)) {
+        _stopTimers();
+        await _resolve(order);
+      } else if (_args.sheetFailed &&
+          _graceElapsed &&
+          _stage == _Stage.working) {
+        setState(() => _stage = _Stage.awaiting);
+      }
     } catch (e) {
-      if (mounted) setState(() => _error = orderErrorMessage(e));
+      if (!mounted) return;
+      if (e is AuthRequiredException) {
+        _stopTimers();
+        unawaited(
+          Navigator.of(context, rootNavigator: true)
+              .pushNamedAndRemoveUntil(logInScreenRoute, (_) => false),
+        );
+        return;
+      }
+      // Keep polling (a later success still resolves); surface it now.
+      if (_stage == _Stage.working) {
+        setState(() {
+          _error = orderErrorMessage(e);
+          _stage = _Stage.stuck;
+        });
+      }
     }
   }
 
-  /// The verify path only gets a bare status back (see
-  /// `OrdersRepository.verifyPayment`) — fetch the full order before showing
-  /// anything, same as the polling path always has.
-  Future<void> _resolveStatus(OrderStatus status) async {
-    if (status == OrderStatus.cancelled) {
-      _showCancelled();
-      return;
-    }
+  void _onTimeout() {
+    _stopTimers();
+    if (!mounted) return;
+    setState(() {
+      _stage = _args.sheetFailed && _order?.status == OrderStatus.placed
+          ? _Stage.awaiting
+          : _Stage.stuck;
+    });
+  }
+
+  Future<void> _fetchAndResolve() async {
     try {
-      final order = await ref
-          .read(ordersRepositoryProvider)
-          .getOrder(widget.args.orderId);
-      await _showResult(order);
+      final order = await ref.read(ordersRepositoryProvider).getOrder(_orderId);
+      _order = order;
+      await _resolve(order);
     } catch (e) {
-      if (mounted) setState(() => _error = orderErrorMessage(e));
+      if (mounted) {
+        setState(() {
+          _error = orderErrorMessage(e);
+          _stage = _Stage.stuck;
+        });
+      }
     }
   }
 
-  Future<void> _showResult(Order order) async {
-    if (order.status == OrderStatus.cancelled) {
-      _showCancelled();
-      return;
+  Future<void> _resolve(Order order) async {
+    if (!mounted) return;
+    switch (order.status) {
+      case OrderStatus.paymentFailed:
+        ref.invalidate(orderHistoryProvider);
+        setState(() => _stage = _Stage.failed);
+      case OrderStatus.cancelled:
+        ref.invalidate(orderHistoryProvider);
+        setState(() => _stage = _Stage.cancelled);
+      case OrderStatus.placed:
+        setState(
+          () => _stage = _args.sheetFailed ? _Stage.awaiting : _Stage.stuck,
+        );
+      default:
+        // Confirmed (or moved straight past it) — the server cart is
+        // converted once payment is captured, so refresh it to match.
+        unawaited(ref.read(cartControllerProvider.notifier).refresh());
+        ref.invalidate(orderHistoryProvider);
+        ref.invalidate(orderDetailProvider(order.id));
+        unawaited(
+          Navigator.pushReplacementNamed(
+            context,
+            thanksForOrderScreenRoute,
+            arguments: order,
+          ),
+        );
     }
-    // Confirmed (or moved straight past it) — the cart converts server-side
-    // once payment is captured, so refresh the local cart state to match.
+  }
+
+  /// Retry payment / Pay now — reopens the same Razorpay order in place.
+  Future<void> _pay() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final sheet = await ref.read(ordersRepositoryProvider).payOrder(_orderId);
+      final result = await ref.read(paymentSheetLauncherProvider)(sheet);
+      if (!mounted) return;
+      _args = processingArgsFor(_orderId, result);
+      _busy = false;
+      await _start();
+    } on AuthRequiredException {
+      if (!mounted) return;
+      unawaited(
+        Navigator.of(context, rootNavigator: true)
+            .pushNamedAndRemoveUntil(logInScreenRoute, (_) => false),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      if (e.isConflict || e.isNotFound) {
+        // Expired, cancelled, or already paid — show it and re-read.
+        AppSnack.show(context, orderErrorMessage(e), tone: Tone.warning);
+        await _fetchAndResolve();
+      } else {
+        AppSnack.error(context, orderErrorMessage(e));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      AppSnack.error(context, orderErrorMessage(e));
+    }
+  }
+
+  Future<void> _cancel() async {
+    if (_busy) return;
+    final result = await cancelOrderFlow(context, ref, orderId: _orderId);
+    if (!mounted) return;
+    if (result != null) {
+      _stopTimers();
+      setState(() {
+        _order = result.order;
+        _refund = result.refundStatus;
+        _stage = _Stage.cancelled;
+      });
+    }
+  }
+
+  void _viewOrder() {
+    _stopTimers();
+    openOrderDetailFresh(context, ref, _orderId);
+  }
+
+  void _backToCart() {
+    _stopTimers();
     unawaited(ref.read(cartControllerProvider.notifier).refresh());
     ref.invalidate(orderHistoryProvider);
-    if (!mounted) return;
-    unawaited(
-      Navigator.pushReplacementNamed(
-        context,
-        thanksForOrderScreenRoute,
-        arguments: order,
-      ),
-    );
-  }
-
-  void _showCancelled() {
-    if (!mounted) return;
-    // Stock was released and the cart was never touched (checkout contract
-    // §3.1) — same items are still sitting in the cart, ready to retry.
-    AppSnack.show(
-      context,
-      'Payment did not go through. Your cart is unchanged — try again.',
-      tone: Tone.warning,
-    );
     resetToShellTab(context, ref, 2);
-  }
-
-  void _viewOrders() {
-    _timer?.cancel();
-    _timeoutTimer?.cancel();
-    ref.invalidate(orderHistoryProvider);
-    resetToShellTab(context, ref, 3);
   }
 
   void _contactSupport() => openWhatsAppSupport(
         context,
-        message:
-            'Hi IrriKart, my payment for order ${widget.args.orderId} is still processing. Can you help?',
+        message: 'Hi IrriKart, my payment for order '
+            '${_order == null ? _orderId : orderDisplayNumber(_order!.orderNumber)} '
+            'is still processing. Can you help?',
       );
 
   @override
@@ -213,17 +350,14 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
 
     return PopScope(
       // Leaving mid-verification would strand the user without a result;
-      // once we've given up waiting, back is fine (goes to order history).
+      // once there's an answer (or we gave up), back goes to the order.
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        if (_stuck) {
-          _viewOrders();
+        if (_stage == _Stage.working) {
+          AppSnack.show(context, 'Hang on — we’re checking your payment.');
         } else {
-          AppSnack.show(
-            context,
-            'Hang on — we’re confirming your payment.',
-          );
+          _viewOrder();
         }
       },
       child: Scaffold(
@@ -242,9 +376,13 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
                     child: AnimatedSwitcher(
                       duration: AppDurations.normal,
                       switchInCurve: AppCurves.emphasized,
-                      child: _stuck
-                          ? _buildStuck(context)
-                          : _buildWorking(context),
+                      child: switch (_stage) {
+                        _Stage.working => _buildWorking(context),
+                        _Stage.failed => _buildUnpaid(context, failed: true),
+                        _Stage.awaiting => _buildUnpaid(context, failed: false),
+                        _Stage.cancelled => _buildCancelled(context),
+                        _Stage.stuck => _buildStuck(context),
+                      },
                     ),
                   ),
                 ),
@@ -261,6 +399,7 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
     final title = switch (_phase) {
       _Phase.verifying => 'Confirming payment…',
       _Phase.placing => 'Placing your order…',
+      _Phase.checking => 'Checking your payment…',
     };
     return Column(
       key: const ValueKey('working'),
@@ -283,8 +422,10 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
           style: context.text.bodySecondary,
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: AppSpacing.xl),
-        _PhaseSteps(phase: _phase),
+        if (_phase != _Phase.checking) ...[
+          const SizedBox(height: AppSpacing.xl),
+          _PhaseSteps(phase: _phase),
+        ],
         const Spacer(flex: 4),
         Text(
           'Please keep the app open. Your payment is safe — we’ll take you '
@@ -310,21 +451,130 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
     );
   }
 
+  /// `PAYMENT_FAILED` ([failed]) or still `PLACED` after the sheet closed.
+  Widget _buildUnpaid(BuildContext context, {required bool failed}) {
+    final c = context.colors;
+    final order = _order;
+    return Column(
+      key: ValueKey(failed ? 'failed' : 'awaiting'),
+      children: [
+        const Spacer(flex: 3),
+        _OutcomeMark(
+          icon: failed
+              ? Icons.credit_card_off_rounded
+              : Icons.hourglass_top_rounded,
+          fg: failed ? c.error : c.warning,
+          bg: failed ? c.errorSoft : c.warningSoft,
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        Text(
+          failed ? 'Payment failed' : 'Payment not completed',
+          style: context.text.h1,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.smd),
+        Text(
+          failed
+              ? 'Your payment didn’t go through. Your items are reserved for '
+                  '30 minutes from when you placed the order.'
+              : 'Your order is reserved but not paid yet. Complete payment '
+                  'within 30 minutes of placing it, or it will be cancelled '
+                  'automatically.',
+          style: context.text.bodySecondary,
+          textAlign: TextAlign.center,
+        ),
+        if (order != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          _WindowPill(order: order, failed: failed),
+        ],
+        const Spacer(flex: 4),
+        if (order == null || order.canPay()) ...[
+          AppButton(
+            label: failed ? 'Retry payment' : 'Pay now',
+            icon: Icons.lock_rounded,
+            loading: _busy,
+            onPressed: _pay,
+          ),
+          const SizedBox(height: AppSpacing.smd),
+        ],
+        AppButton.outline(
+          label: 'Cancel order',
+          onPressed: _busy ? null : _cancel,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        AppButton.ghost(label: 'View order', onPressed: _viewOrder),
+        const SizedBox(height: AppSpacing.sm),
+      ],
+    );
+  }
+
+  Widget _buildCancelled(BuildContext context) {
+    final c = context.colors;
+    final order = _order;
+    final reason = order?.cancelReason;
+    // A paid order's cart was converted at capture; an unpaid one's cart
+    // was never touched, so its items are still there to re-order.
+    final paid = order?.wasPaidOnline ?? false;
+    final refund = _refund ?? (paid ? RefundStatus.started : null);
+    return Column(
+      key: const ValueKey('cancelled'),
+      children: [
+        const Spacer(flex: 3),
+        _OutcomeMark(
+          icon: Icons.cancel_rounded,
+          fg: c.textSecondary,
+          bg: c.surfaceSunken,
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        Text(
+          'Order cancelled',
+          style: context.text.h1,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.smd),
+        if (reason != null && reason.isNotEmpty) ...[
+          Text(
+            '“$reason”',
+            style: context.text.bodyStrong,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+        ],
+        Text(
+          paid
+              ? 'Nothing more to do — you’ll get the full amount back.'
+              : 'Nothing was charged. Your items are still in your cart '
+                  'whenever you want to order them again.',
+          style: context.text.bodySecondary,
+          textAlign: TextAlign.center,
+        ),
+        if (refund != null && refund != RefundStatus.none) ...[
+          const SizedBox(height: AppSpacing.lg),
+          RefundBanner(status: refund),
+        ],
+        const Spacer(flex: 4),
+        if (paid)
+          AppButton(label: 'View order', onPressed: _viewOrder)
+        else ...[
+          AppButton(label: 'Back to cart', onPressed: _backToCart),
+          const SizedBox(height: AppSpacing.xs),
+          AppButton.ghost(label: 'View order', onPressed: _viewOrder),
+        ],
+        const SizedBox(height: AppSpacing.sm),
+      ],
+    );
+  }
+
   Widget _buildStuck(BuildContext context) {
     final c = context.colors;
     return Column(
       key: const ValueKey('stuck'),
       children: [
         const Spacer(flex: 3),
-        Container(
-          width: 112,
-          height: 112,
-          decoration: BoxDecoration(color: c.warningSoft, shape: BoxShape.circle),
-          child: Icon(
-            Icons.hourglass_top_rounded,
-            size: AppIconSize.xl,
-            color: c.warning,
-          ),
+        _OutcomeMark(
+          icon: Icons.hourglass_top_rounded,
+          fg: c.warning,
+          bg: c.warningSoft,
         ),
         const SizedBox(height: AppSpacing.xl),
         Text(
@@ -361,11 +611,59 @@ class _OrderProcessingScreenState extends ConsumerState<OrderProcessingScreen>
         ),
         const SizedBox(height: AppSpacing.xs),
         AppButton.ghost(
-          label: 'View my orders',
-          onPressed: _viewOrders,
+          label: 'View order',
+          onPressed: _viewOrder,
         ),
         const SizedBox(height: AppSpacing.sm),
       ],
+    );
+  }
+}
+
+/// Large soft disc with an icon — the outcome's "hero".
+class _OutcomeMark extends StatelessWidget {
+  const _OutcomeMark({required this.icon, required this.fg, required this.bg});
+
+  final IconData icon;
+  final Color fg;
+  final Color bg;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 112,
+      height: 112,
+      decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+      child: Icon(icon, size: AppIconSize.xl, color: fg),
+    );
+  }
+}
+
+/// "18:42 left to pay" — live, from `createdAt + 30 min`.
+class _WindowPill extends StatelessWidget {
+  const _WindowPill({required this.order, required this.failed});
+
+  final Order order;
+  final bool failed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TickingBuilder(
+      until: order.paymentDeadline,
+      builder: (context, now) {
+        final left = order.paymentTimeLeft(now);
+        return StatusPill(
+          icon: Icons.timer_outlined,
+          tone: left == Duration.zero
+              ? Tone.neutral
+              : failed
+                  ? Tone.error
+                  : Tone.warning,
+          label: left == Duration.zero
+              ? 'Payment window closed'
+              : 'Complete payment within ${formatCountdown(left)}',
+        );
+      },
     );
   }
 }

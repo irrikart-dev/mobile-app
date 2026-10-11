@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -13,7 +15,9 @@ import '../../../route/route_constants.dart';
 /// the same way.
 
 Tone orderStatusTone(OrderStatus status) => switch (status) {
-      OrderStatus.placed || OrderStatus.confirmed => Tone.info,
+      OrderStatus.placed => Tone.warning,
+      OrderStatus.paymentFailed => Tone.error,
+      OrderStatus.confirmed => Tone.info,
       OrderStatus.packed || OrderStatus.shipped => Tone.primary,
       OrderStatus.delivered => Tone.success,
       OrderStatus.cancelled => Tone.error,
@@ -21,7 +25,8 @@ Tone orderStatusTone(OrderStatus status) => switch (status) {
     };
 
 IconData orderStatusIcon(OrderStatus status) => switch (status) {
-      OrderStatus.placed => Icons.receipt_long_rounded,
+      OrderStatus.placed => Icons.schedule_rounded,
+      OrderStatus.paymentFailed => Icons.credit_card_off_rounded,
       OrderStatus.confirmed => Icons.verified_rounded,
       OrderStatus.packed => Icons.inventory_2_rounded,
       OrderStatus.shipped => Icons.local_shipping_rounded,
@@ -44,6 +49,82 @@ String formatOrderDateTime(DateTime date) =>
 
 /// `1 item` / `3 items`
 String itemCountLabel(int count) => '$count ${count == 1 ? 'item' : 'items'}';
+
+/// `24:07` — minutes and seconds left in the payment window.
+String formatCountdown(Duration left) {
+  final total = left.isNegative ? 0 : left.inSeconds;
+  final m = (total ~/ 60).toString().padLeft(2, '0');
+  final s = (total % 60).toString().padLeft(2, '0');
+  return '$m:$s';
+}
+
+/// Rebuilds once a second with the current time — drives the 30-minute
+/// payment countdown. [onElapsed] fires once when [until] passes.
+class TickingBuilder extends StatefulWidget {
+  const TickingBuilder({
+    super.key,
+    required this.builder,
+    this.until,
+    this.onElapsed,
+  });
+
+  final Widget Function(BuildContext context, DateTime now) builder;
+  final DateTime? until;
+  final VoidCallback? onElapsed;
+
+  @override
+  State<TickingBuilder> createState() => _TickingBuilderState();
+}
+
+class _TickingBuilderState extends State<TickingBuilder> {
+  Timer? _timer;
+  bool _fired = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+  }
+
+  void _tick() {
+    if (!mounted) return;
+    setState(() {});
+    final until = widget.until;
+    if (!_fired && until != null && !DateTime.now().isBefore(until)) {
+      _fired = true;
+      widget.onElapsed?.call();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, DateTime.now());
+}
+
+/// Resets to the Orders tab and opens [orderId]'s detail on top, freshly
+/// fetched — the landing for "View order" after payment or cancellation.
+void openOrderDetailFresh(BuildContext context, WidgetRef ref, String orderId) {
+  final navigator = Navigator.of(context, rootNavigator: true);
+  ref.invalidate(orderHistoryProvider);
+  ref.invalidate(orderDetailProvider(orderId));
+  ref.read(entryTabIndexProvider.notifier).state = 3;
+  navigator.pushNamedAndRemoveUntil(entryPointScreenRoute, (_) => false);
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    navigator.pushNamed(orderDetailsScreenRoute, arguments: orderId);
+  });
+}
+
+/// Refetches an order (detail + list) after a `409`, so the screen matches
+/// the server again.
+void refetchOrder(WidgetRef ref, String orderId) {
+  ref.invalidate(orderDetailProvider(orderId));
+  ref.invalidate(orderHistoryProvider);
+}
 
 /// Switches the tab shell to [tab]. When the calling screen was pushed on
 /// top of the shell (e.g. Cart via `cartScreenRoute`), pops back to it first.
@@ -255,4 +336,27 @@ class RefreshableFill extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The refund outcome of a cancelled, paid order: "Refund started", or —
+/// when the gateway refused — "being processed manually".
+class RefundBanner extends StatelessWidget {
+  const RefundBanner({super.key, required this.status});
+
+  final RefundStatus status;
+
+  @override
+  Widget build(BuildContext context) => status == RefundStatus.failed
+      ? const InlineBanner(
+          tone: Tone.warning,
+          title: 'Your refund is being processed manually',
+          message: 'Our team will follow up and refund the full amount to '
+              'your original payment method.',
+        )
+      : const InlineBanner(
+          tone: Tone.success,
+          icon: Icons.replay_rounded,
+          title: 'Refund started',
+          message: 'The full amount goes back to your original payment method.',
+        );
 }

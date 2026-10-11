@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:irrikart/core/auth/auth_service.dart';
+import 'package:irrikart/core/payments/saved_payment_methods.dart';
 import 'package:irrikart/entry_point.dart';
 import 'package:irrikart/entry_point_tab.dart';
 import 'package:irrikart/models/address_data.dart';
@@ -20,6 +21,7 @@ import 'package:irrikart/screens/checkout/views/checkout_screen.dart';
 import 'package:irrikart/screens/checkout/views/order_processing_screen.dart';
 import 'package:irrikart/screens/checkout/views/thanks_for_order_screen.dart';
 import 'package:irrikart/screens/order/views/order_detail_screen.dart';
+import 'package:irrikart/screens/payment_methods/views/saved_payment_methods_screen.dart';
 
 import 'harness.dart';
 
@@ -99,6 +101,14 @@ class _FakeOrdersRepo extends OrdersRepository {
     required String signature,
   }) =>
       Completer<OrderStatus>().future;
+
+  /// Known orders resolve at once (drives the processing screen's poll);
+  /// anything else never does, so the screen stays "working".
+  @override
+  Future<Order> getOrder(String orderId) {
+    final o = _ordersById[orderId];
+    return o == null ? Completer<Order>().future : Future.value(o);
+  }
 }
 
 final _order = Order(
@@ -109,6 +119,9 @@ final _order = Order(
   amount: 4193,
   currency: 'INR',
   createdAt: DateTime(2026, 10, 4, 15, 45),
+  paymentMethod: 'ONLINE',
+  paymentStatus: 'CAPTURED',
+  accepted: true,
   items: [
     for (var i = 0; i < 3; i++)
       OrderItem(
@@ -139,7 +152,99 @@ final _order = Order(
   ),
 );
 
-OrderSummary _summary(int i, OrderStatus s, num amount, DateTime at) =>
+final _now = DateTime.now();
+
+Order _variant(
+  String id,
+  OrderStatus status, {
+  required DateTime createdAt,
+  String paymentStatus = 'CAPTURED',
+  bool accepted = true,
+  String? cancelReason,
+  String? cancelledBy,
+  DateTime? cancelledAt,
+}) =>
+    Order(
+      id: id,
+      orderNumber: 'ORD-20261011-${id.toUpperCase()}7F2',
+      status: status,
+      rawStatus: '',
+      amount: 3993,
+      currency: 'INR',
+      createdAt: createdAt,
+      items: _order.items,
+      address: _order.address,
+      paymentMethod: 'ONLINE',
+      paymentStatus: paymentStatus,
+      accepted: accepted,
+      subtotal: 4193,
+      discount: 200,
+      cancelReason: cancelReason,
+      cancelledBy: cancelledBy,
+      cancelledAt: cancelledAt,
+    );
+
+final _ordersById = <String, Order>{
+  'o1': _order,
+  'pf': _variant(
+    'pf',
+    OrderStatus.paymentFailed,
+    createdAt: _now.subtract(const Duration(minutes: 6, seconds: 13)),
+    paymentStatus: 'FAILED',
+    accepted: false,
+  ),
+  'pl': _variant(
+    'pl',
+    OrderStatus.placed,
+    createdAt: _now.subtract(const Duration(minutes: 2)),
+    paymentStatus: 'CREATED',
+    accepted: false,
+  ),
+  'cx': _variant(
+    'cx',
+    OrderStatus.cancelled,
+    createdAt: _now.subtract(const Duration(hours: 3)),
+    cancelReason: 'Found a better price',
+    cancelledBy: 'customer',
+    cancelledAt: _now.subtract(const Duration(hours: 1)),
+    accepted: false,
+  ),
+  'ex': _variant(
+    'ex',
+    OrderStatus.cancelled,
+    createdAt: _now.subtract(const Duration(minutes: 31)),
+    paymentStatus: 'FAILED',
+    cancelReason: 'Payment not completed in time',
+    cancelledBy: 'system',
+    cancelledAt: _now.subtract(const Duration(minutes: 1)),
+    accepted: false,
+  ),
+  'cf': _variant(
+    'cf',
+    OrderStatus.confirmed,
+    createdAt: _now.subtract(const Duration(hours: 2)),
+    accepted: false,
+  ),
+};
+
+const _savedMethods = [
+  SavedPaymentMethod(
+    id: 'token_1',
+    method: 'card',
+    card: SavedCard(last4: '4242', network: 'Visa', issuer: 'HDFC'),
+  ),
+  SavedPaymentMethod(id: 'token_2', method: 'upi', vpa: 'ramesh.patil@okhdfc'),
+  SavedPaymentMethod(id: 'token_3', method: 'wallet', wallet: 'paytm'),
+  SavedPaymentMethod(id: 'token_4', method: 'netbanking', bank: 'SBIN'),
+];
+
+OrderSummary _summary(
+  int i,
+  OrderStatus s,
+  num amount,
+  DateTime at, {
+  bool accepted = true,
+}) =>
     OrderSummary(
       id: 'o$i',
       orderNumber: 'IK-${10427 - i * 13}',
@@ -148,11 +253,26 @@ OrderSummary _summary(int i, OrderStatus s, num amount, DateTime at) =>
       amount: amount,
       currency: 'INR',
       createdAt: at,
+      paymentMethod: 'ONLINE',
+      accepted: accepted,
     );
 
 final _orders = [
+  _summary(
+    5,
+    OrderStatus.paymentFailed,
+    2399,
+    _now.subtract(const Duration(minutes: 6)),
+    accepted: false,
+  ),
   _summary(0, OrderStatus.shipped, 4193, DateTime(2026, 10, 4)),
-  _summary(1, OrderStatus.confirmed, 1298, DateTime(2026, 9, 28)),
+  _summary(
+    1,
+    OrderStatus.confirmed,
+    1298,
+    DateTime(2026, 9, 28),
+    accepted: false,
+  ),
   _summary(2, OrderStatus.delivered, 12450, DateTime(2026, 9, 12)),
   _summary(3, OrderStatus.delivered, 899, DateTime(2026, 8, 30)),
   _summary(4, OrderStatus.cancelled, 2199, DateTime(2026, 8, 2)),
@@ -165,7 +285,9 @@ List<Override> _base({bool short = false}) => [
       addressControllerProvider.overrideWith(_FakeAddresses.new),
       ordersRepositoryProvider.overrideWithValue(_FakeOrdersRepo()),
       orderHistoryProvider.overrideWith((ref) async => _orders),
-      orderDetailProvider.overrideWith((ref, id) async => _order),
+      orderDetailProvider
+          .overrideWith((ref, id) async => _ordersById[id] ?? _order),
+      savedPaymentMethodsProvider.overrideWith((ref) async => _savedMethods),
     ];
 
 Future<void> _precache(WidgetTester t) async {
@@ -216,6 +338,24 @@ void main() {
           await t.tap(find.text('Change'));
           await t.pump();
           await t.pump(const Duration(milliseconds: 600));
+        },
+      ),);
+
+  testWidgets('cancel sheet', (t) => shot(
+        t,
+        'cancel_sheet',
+        const Scaffold(),
+        overrides: _base(),
+        before: (t) async {
+          await _push(
+            const OrderDetailScreen(orderId: 'pf'),
+            orderDetailsScreenRoute,
+          )(t);
+          await t.tap(find.text('Cancel order'));
+          await t.pump();
+          await t.pump(const Duration(milliseconds: 600));
+          await t.tap(find.text('Other'));
+          await t.pump(const Duration(milliseconds: 300));
         },
       ),);
 
@@ -314,6 +454,80 @@ void main() {
           before: _push(
             const OrderDetailScreen(orderId: 'o1'),
             orderDetailsScreenRoute,
+          ),
+        ),);
+    for (final (id, name) in [
+      ('pf', 'order_detail_payment_failed'),
+      ('pl', 'order_detail_placed'),
+      ('cx', 'order_detail_cancelled'),
+      ('cf', 'order_detail_awaiting_seller'),
+    ]) {
+      testWidgets('$name dark=$dark', (t) => shot(
+            t,
+            name,
+            const Scaffold(),
+            dark: dark,
+            overrides: _base(),
+            before: _push(
+              OrderDetailScreen(orderId: id),
+              orderDetailsScreenRoute,
+            ),
+          ),);
+    }
+    testWidgets('order detail awaiting seller bottom dark=$dark', (t) => shot(
+          t,
+          'order_detail_awaiting_seller_bottom',
+          const Scaffold(),
+          dark: dark,
+          overrides: _base(),
+          before: _thenScroll(
+            _push(
+              const OrderDetailScreen(orderId: 'cf'),
+              orderDetailsScreenRoute,
+            ),
+          ),
+        ),);
+    testWidgets('processing failed dark=$dark', (t) => shot(
+          t,
+          'processing_failed',
+          const OrderProcessingScreen(
+            args: OrderProcessingArgs(orderId: 'pf', sheetFailed: true),
+          ),
+          dark: dark,
+          overrides: _base(),
+        ),);
+    testWidgets('processing cancelled dark=$dark', (t) => shot(
+          t,
+          'processing_cancelled',
+          const OrderProcessingScreen(
+            args: OrderProcessingArgs(orderId: 'ex', sheetFailed: true),
+          ),
+          dark: dark,
+          overrides: _base(),
+        ),);
+    testWidgets('saved payment methods dark=$dark', (t) => shot(
+          t,
+          'saved_payment_methods',
+          const Scaffold(),
+          dark: dark,
+          overrides: _base(),
+          before: _push(
+            const SavedPaymentMethodsScreen(),
+            savedPaymentMethodsScreenRoute,
+          ),
+        ),);
+    testWidgets('saved payment methods empty dark=$dark', (t) => shot(
+          t,
+          'saved_payment_methods_empty',
+          const Scaffold(),
+          dark: dark,
+          overrides: [
+            ..._base(),
+            savedPaymentMethodsProvider.overrideWith((ref) async => const []),
+          ],
+          before: _push(
+            const SavedPaymentMethodsScreen(),
+            savedPaymentMethodsScreenRoute,
           ),
         ),);
   }

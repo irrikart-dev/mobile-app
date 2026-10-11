@@ -1,12 +1,25 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/network/api_client.dart';
 import '../core/network/api_envelope.dart';
 
-/// What `POST /orders/checkout` hands back — everything needed to open the
-/// Razorpay widget. The cart is **not** cleared by this call; it stays as-is
-/// until payment actually confirms (see [Order.status]).
+/// How long an unpaid online order (`PLACED` / `PAYMENT_FAILED`) keeps its
+/// stock held before the backend cancels it (`cancelledBy: "system"`).
+const orderPaymentWindow = Duration(minutes: 30);
+
+/// How long after placing it a `CONFIRMED` order can still be cancelled by
+/// the customer (server setting `ORDER_CANCEL_WINDOW_HOURS`).
+const orderCancelWindow = Duration(hours: 24);
+
+/// What `POST /orders/checkout` (ONLINE) and `POST /orders/{id}/pay` hand
+/// back — everything needed to open the Razorpay widget. The cart is **not**
+/// cleared by either call; it stays as-is until payment actually confirms.
+///
+/// The app is prepaid only, so this is always the ONLINE shape.
 class CheckoutOrder {
   const CheckoutOrder({
     required this.orderId,
@@ -16,13 +29,15 @@ class CheckoutOrder {
     required this.providerOrderId,
     required this.provider,
     required this.keyId,
+    this.paymentMethod = 'ONLINE',
+    this.customerId,
   });
 
   /// This is `{orderId}` in the order-status endpoints below.
   final String orderId;
   final String orderNumber;
 
-  /// Whole rupees, matches what was charged.
+  /// Whole rupees, matches what will be charged.
   final num amount;
   final String currency;
 
@@ -38,6 +53,14 @@ class CheckoutOrder {
   /// Gateway's publishable key — pass straight through to the SDK.
   final String keyId;
 
+  /// Always `ONLINE` for this app.
+  final String paymentMethod;
+
+  /// Razorpay customer id. Passed to the sheet as `customer_id` so saved
+  /// methods show and new ones can be saved. `null` when Razorpay was
+  /// unreachable at checkout — payment still works, just without saving.
+  final String? customerId;
+
   factory CheckoutOrder.fromJson(Map<String, dynamic> json) {
     return CheckoutOrder(
       orderId: json['orderId'] as String,
@@ -47,17 +70,19 @@ class CheckoutOrder {
       providerOrderId: json['providerOrderId'] as String,
       provider: json['provider'] as String? ?? 'razorpay',
       keyId: json['keyId'] as String,
+      paymentMethod: json['paymentMethod'] as String? ?? 'ONLINE',
+      customerId: json['customerId'] as String?,
     );
   }
 }
 
-/// Only `placed` -> `confirmed`/`cancelled` matters for the payment flow.
-/// The rest are fulfillment states for a future order-tracking screen.
-/// [unknown] is the deliberate "don't crash" fallback for a status this
-/// build doesn't recognise yet — the order's own `rawStatus` is kept
-/// alongside it so it still displays as *something* sensible.
+/// Every order status the backend can return. [unknown] is the deliberate
+/// "don't crash" fallback for a status this build doesn't recognise yet —
+/// it is shown as "Processing" (per the API contract), with the raw string
+/// kept on the order alongside it.
 enum OrderStatus {
   placed,
+  paymentFailed,
   confirmed,
   packed,
   shipped,
@@ -67,8 +92,9 @@ enum OrderStatus {
   unknown,
 }
 
-OrderStatus _parseOrderStatus(String raw) => switch (raw) {
+OrderStatus parseOrderStatus(String? raw) => switch (raw) {
       'PLACED' => OrderStatus.placed,
+      'PAYMENT_FAILED' => OrderStatus.paymentFailed,
       'CONFIRMED' => OrderStatus.confirmed,
       'PACKED' => OrderStatus.packed,
       'SHIPPED' => OrderStatus.shipped,
@@ -78,19 +104,99 @@ OrderStatus _parseOrderStatus(String raw) => switch (raw) {
       _ => OrderStatus.unknown,
     };
 
-/// A display label for [status] — falls back to the server's own
-/// [rawStatus] string for anything this build doesn't have copy for yet.
-String orderStatusLabel(OrderStatus status, String rawStatus) =>
+/// The customer-facing label — never the raw code (API contract, "Order
+/// status reference"). [rawStatus] is accepted for call-site compatibility
+/// but no longer shown: anything unknown reads "Processing".
+String orderStatusLabel(OrderStatus status, [String rawStatus = '']) =>
     switch (status) {
-      OrderStatus.placed => 'Placed',
-      OrderStatus.confirmed => 'Confirmed',
+      OrderStatus.placed => 'Awaiting payment',
+      OrderStatus.paymentFailed => 'Payment failed',
+      OrderStatus.confirmed => 'Order confirmed',
       OrderStatus.packed => 'Packed',
       OrderStatus.shipped => 'Shipped',
       OrderStatus.delivered => 'Delivered',
       OrderStatus.cancelled => 'Cancelled',
       OrderStatus.returned => 'Returned',
-      OrderStatus.unknown => rawStatus.isEmpty ? 'Unknown' : rawStatus,
+      OrderStatus.unknown => 'Processing',
     };
+
+/// Statuses that end the payment poll: anything that isn't still `PLACED`.
+/// (`PAYMENT_FAILED` is terminal for the poll, not for the order — the order
+/// can still be paid again via `POST /orders/{id}/pay`.)
+bool isTerminalForPaymentPoll(OrderStatus status) =>
+    status != OrderStatus.placed;
+
+/// "Online" / "Cash on delivery" for the backend's `paymentMethod`. The app
+/// only ever places ONLINE orders, but orders placed elsewhere may be COD.
+String? paymentMethodLabel(String? method) => switch (method) {
+      'ONLINE' => 'Online',
+      'COD' => 'Cash on delivery',
+      null || '' => null,
+      _ => 'Online',
+    };
+
+/// Rules shared by [OrderSummary] and [Order] — what the customer can do
+/// with an order right now. Each one mirrors a server-side check so the app
+/// can hide an action the API would refuse; the API's `409` is still
+/// handled at every call site for the races this can't see.
+mixin OrderRules {
+  OrderStatus get status;
+  DateTime get createdAt;
+  String? get paymentMethod;
+  bool get accepted;
+
+  bool get isCod => paymentMethod == 'COD';
+
+  /// `PLACED` or `PAYMENT_FAILED`: stock held, waiting on payment.
+  bool get awaitingPayment =>
+      status == OrderStatus.placed || status == OrderStatus.paymentFailed;
+
+  /// When the 30-minute payment window closes and the backend auto-cancels.
+  DateTime get paymentDeadline => createdAt.add(orderPaymentWindow);
+
+  /// Time left to pay, clamped at zero. Only meaningful while
+  /// [awaitingPayment].
+  Duration paymentTimeLeft([DateTime? now]) {
+    final left = paymentDeadline.difference(now ?? DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  /// `POST /orders/{id}/pay` is allowed: an unpaid ONLINE order whose
+  /// window hasn't closed yet.
+  bool canPay([DateTime? now]) =>
+      awaitingPayment &&
+      !isCod &&
+      paymentTimeLeft(now) > Duration.zero;
+
+  /// `POST /orders/{id}/cancel` is allowed: `PLACED` / `PAYMENT_FAILED`, or
+  /// `CONFIRMED` within 24 hours of placing it. Never once `PACKED`.
+  bool canCancel([DateTime? now]) {
+    if (awaitingPayment) return true;
+    if (status != OrderStatus.confirmed) return false;
+    return (now ?? DateTime.now()).isBefore(createdAt.add(orderCancelWindow));
+  }
+
+  /// `GET /orders/{id}/invoice` returns a PDF only for these.
+  bool get hasInvoice => switch (status) {
+        OrderStatus.confirmed ||
+        OrderStatus.packed ||
+        OrderStatus.shipped ||
+        OrderStatus.delivered ||
+        OrderStatus.returned =>
+          true,
+        _ => false,
+      };
+
+  /// Paid and confirmed, but the seller hasn't accepted it yet.
+  bool get awaitingSellerAcceptance =>
+      status == OrderStatus.confirmed && !accepted;
+}
+
+DateTime _parseDate(Object? raw) =>
+    DateTime.tryParse(raw as String? ?? '')?.toLocal() ?? DateTime.now();
+
+DateTime? _parseDateOrNull(Object? raw) =>
+    raw is String ? DateTime.tryParse(raw)?.toLocal() : null;
 
 /// One line item on a placed order, from `GET /orders/{id}`.
 ///
@@ -109,6 +215,7 @@ class OrderItem {
     required this.quantity,
     required this.unitPrice,
     required this.totalPrice,
+    this.unit,
   });
 
   /// This order item's own id — distinct from [variantId]/[productId]. Use
@@ -124,6 +231,7 @@ class OrderItem {
   final String? image;
 
   final String sku;
+  final String? unit;
   final int quantity;
   final num unitPrice;
   final num totalPrice;
@@ -139,6 +247,7 @@ class OrderItem {
       slug: json['slug'] as String,
       image: json['image'] as String?,
       sku: json['sku'] as String? ?? '',
+      unit: json['unit'] as String?,
       quantity: (json['quantity'] as num).toInt(),
       unitPrice: (json['unitPrice'] as num?) ?? 0,
       totalPrice: (json['totalPrice'] as num?) ?? 0,
@@ -149,7 +258,7 @@ class OrderItem {
 /// A row from `GET /orders` — deliberately lighter than [Order] (no line
 /// items), so the order history list doesn't pay for every order's items and
 /// images up front. Fetch [Order] for one when the user taps into it.
-class OrderSummary {
+class OrderSummary with OrderRules {
   const OrderSummary({
     required this.id,
     required this.orderNumber,
@@ -158,28 +267,45 @@ class OrderSummary {
     required this.amount,
     required this.currency,
     required this.createdAt,
+    this.paymentMethod,
+    this.paymentStatus,
+    this.accepted = false,
   });
 
   final String id;
   final String orderNumber;
+  @override
   final OrderStatus status;
   final String rawStatus;
   final num amount;
   final String currency;
+  @override
   final DateTime createdAt;
+
+  /// `ONLINE` / `COD`.
+  @override
+  final String? paymentMethod;
+
+  /// Latest gateway attempt: `CREATED` / `CAPTURED` / `FAILED`; null for COD.
+  final String? paymentStatus;
+
+  /// The seller has accepted the order.
+  @override
+  final bool accepted;
 
   factory OrderSummary.fromJson(Map<String, dynamic> json) {
     final raw = json['status'] as String? ?? '';
     return OrderSummary(
       id: json['id'] as String,
       orderNumber: json['orderNumber'] as String,
-      status: _parseOrderStatus(raw),
+      status: parseOrderStatus(raw),
       rawStatus: raw,
       amount: (json['amount'] as num?) ?? 0,
       currency: json['currency'] as String? ?? 'INR',
-      createdAt:
-          DateTime.tryParse(json['createdAt'] as String? ?? '')?.toLocal() ??
-              DateTime.now(),
+      createdAt: _parseDate(json['createdAt']),
+      paymentMethod: json['paymentMethod'] as String?,
+      paymentStatus: json['paymentStatus'] as String?,
+      accepted: json['accepted'] as bool? ?? false,
     );
   }
 }
@@ -220,8 +346,9 @@ class OrderAddress {
   }
 }
 
-/// Full order detail from `GET /orders/{id}`.
-class Order {
+/// Full order detail from `GET /orders/{id}`. `vendorAmount` /
+/// `platformAmount` are the internal split and deliberately not parsed.
+class Order with OrderRules {
   const Order({
     required this.id,
     required this.orderNumber,
@@ -232,55 +359,186 @@ class Order {
     required this.createdAt,
     required this.items,
     required this.address,
+    this.paymentMethod,
+    this.paymentStatus,
+    this.accepted = false,
+    this.subtotal,
+    this.discount = 0,
+    this.acceptedAt,
+    this.cancelledAt,
+    this.cancelledBy,
+    this.cancelReason,
   });
 
   final String id;
   final String orderNumber;
+  @override
   final OrderStatus status;
   final String rawStatus;
+
+  /// What's payable: `subtotal − discount`.
   final num amount;
   final String currency;
+  @override
   final DateTime createdAt;
   final List<OrderItem> items;
 
   /// `null` only for orders placed before addresses existed.
   final OrderAddress? address;
 
+  @override
+  final String? paymentMethod;
+  final String? paymentStatus;
+  @override
+  final bool accepted;
+
+  /// Sum of line totals. Null on responses that predate the field — use
+  /// [itemsTotal] to read it.
+  final num? subtotal;
+
+  /// Coupon saving.
+  final num discount;
+
+  final DateTime? acceptedAt;
+  final DateTime? cancelledAt;
+
+  /// `customer` / `vendor` / `admin` / `system`.
+  final String? cancelledBy;
+  final String? cancelReason;
+
+  num get itemsTotal =>
+      subtotal ?? items.fold<num>(0, (sum, i) => sum + i.totalPrice);
+
+  /// An online payment was captured — so a cancelled order was refunded.
+  bool get wasPaidOnline => !isCod && paymentStatus == 'CAPTURED';
+
   factory Order.fromJson(Map<String, dynamic> json) {
     final raw = json['status'] as String? ?? '';
     return Order(
       id: json['id'] as String,
       orderNumber: json['orderNumber'] as String,
-      status: _parseOrderStatus(raw),
+      status: parseOrderStatus(raw),
       rawStatus: raw,
       amount: (json['amount'] as num?) ?? 0,
       currency: json['currency'] as String? ?? 'INR',
-      createdAt:
-          DateTime.tryParse(json['createdAt'] as String? ?? '')?.toLocal() ??
-              DateTime.now(),
+      createdAt: _parseDate(json['createdAt']),
       items: ((json['items'] as List?) ?? const [])
           .map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
           .toList(),
       address: json['address'] == null
           ? null
           : OrderAddress.fromJson(json['address'] as Map<String, dynamic>),
+      paymentMethod: json['paymentMethod'] as String?,
+      paymentStatus: json['paymentStatus'] as String?,
+      accepted: json['accepted'] as bool? ?? false,
+      subtotal: json['subtotal'] as num?,
+      discount: (json['discount'] as num?) ?? 0,
+      acceptedAt: _parseDateOrNull(json['acceptedAt']),
+      cancelledAt: _parseDateOrNull(json['cancelledAt']),
+      cancelledBy: json['cancelledBy'] as String?,
+      cancelReason: json['cancelReason'] as String?,
     );
   }
 }
 
+/// Who cancelled, in words: "You cancelled this order", etc.
+String? cancelledByLabel(String? by) => switch (by) {
+      'customer' => 'Cancelled by you',
+      'vendor' => 'Cancelled by the seller',
+      'admin' => 'Cancelled by IrriKart',
+      'system' => 'Cancelled automatically',
+      _ => null,
+    };
+
+/// `refundStatus` from `POST /orders/{id}/cancel`.
+enum RefundStatus {
+  /// Nothing was charged (unpaid order, or COD).
+  none,
+
+  /// `pending` / `processed` — the refund has started.
+  started,
+
+  /// The gateway refused; the team follows up from the admin dashboard.
+  failed,
+}
+
+RefundStatus parseRefundStatus(String? raw) => switch (raw) {
+      null || '' => RefundStatus.none,
+      'failed' => RefundStatus.failed,
+      _ => RefundStatus.started,
+    };
+
+/// The message to show after a successful cancel.
+String cancelOutcomeMessage(RefundStatus refund) => switch (refund) {
+      RefundStatus.none => 'Order cancelled',
+      RefundStatus.started =>
+        'Order cancelled. Refund started to your original payment method.',
+      RefundStatus.failed =>
+        'Order cancelled. Your refund is being processed manually.',
+    };
+
+/// `POST /orders/{id}/cancel` → the cancelled order plus how the refund went.
+class CancelResult {
+  const CancelResult({required this.order, required this.refundStatus});
+
+  final Order order;
+  final RefundStatus refundStatus;
+
+  factory CancelResult.fromJson(Map<String, dynamic> json) => CancelResult(
+        order: Order.fromJson(json),
+        refundStatus: parseRefundStatus(json['refundStatus'] as String?),
+      );
+}
+
+/// A line `POST /orders/{id}/reorder` couldn't put back in the cart (same
+/// shape as cart merge's `skipped`). [reason] is user-facing.
+class SkippedLine {
+  const SkippedLine({
+    required this.variantId,
+    required this.quantity,
+    required this.reason,
+  });
+
+  final String variantId;
+  final int quantity;
+  final String reason;
+
+  factory SkippedLine.fromJson(Map<String, dynamic> json) => SkippedLine(
+        variantId: json['variantId'] as String? ?? '',
+        quantity: (json['quantity'] as num?)?.toInt() ?? 0,
+        reason: json['reason'] as String? ?? 'Couldn’t be added',
+      );
+}
+
+/// `POST /orders/{id}/reorder` → `{cart, skipped}`. The cart itself is
+/// re-read through `cartControllerProvider.refresh()`, so only [skipped] is
+/// kept here.
+class ReorderResult {
+  const ReorderResult({required this.skipped});
+
+  final List<SkippedLine> skipped;
+
+  factory ReorderResult.fromJson(Map<String, dynamic> json) => ReorderResult(
+        skipped: ((json['skipped'] as List?) ?? const [])
+            .map((e) => SkippedLine.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
 /// Checkout and order history — one repository, since the contract puts all
-/// three endpoints under the same `/orders` resource. User-scoped and
-/// auth-only, same as the cart.
+/// of these under the same `/orders` resource. User-scoped and auth-only,
+/// same as the cart.
 class OrdersRepository {
   OrdersRepository(this._dio);
 
   final Dio _dio;
 
   /// Places the order from the caller's **current cart** — there is no
-  /// separate "build an order" step, and no body fields beyond an optional
-  /// coupon. This has side effects even before payment (re-validates
-  /// stock/price live and **reserves stock**), so only call it on the user's
-  /// explicit "place order" tap, never speculatively.
+  /// separate "build an order" step. This has side effects even before
+  /// payment (re-validates stock/price live and **reserves stock**), so only
+  /// call it on the user's explicit "place order" tap, never speculatively.
+  ///
+  /// The app is prepaid only: `paymentMethod` is always sent as `ONLINE`.
   Future<CheckoutOrder> checkout({
     required String addressId,
     String? couponCode,
@@ -290,6 +548,7 @@ class OrdersRepository {
           '/orders/checkout',
           data: {
             'addressId': addressId,
+            'paymentMethod': 'ONLINE',
             if (couponCode != null && couponCode.isNotEmpty)
               'couponCode': couponCode,
           },
@@ -297,19 +556,22 @@ class OrdersRepository {
         (data) => CheckoutOrder.fromJson(data as Map<String, dynamic>),
       );
 
-  /// Confirms a payment the moment the checkout SDK reports success, instead
-  /// of waiting on Razorpay's webhook to reach the backend — call this first,
-  /// right after [RazorpayCheckoutResult.canVerify] is true, and only fall
-  /// back to polling [getOrder] if it isn't (an external-wallet handoff has
-  /// no payment id yet) or this itself fails (network blip — the webhook is
-  /// still coming regardless).
+  /// Reopens payment for a `PLACED` / `PAYMENT_FAILED` order — the same
+  /// Razorpay order as the original checkout, so never send the user back
+  /// through [checkout] to retry (that would create a second order).
   ///
-  /// Returns just the resulting status, not a full [Order] — the backend's
-  /// response here is intentionally light (`{orderId, status}`). Once this
-  /// comes back anything other than [OrderStatus.placed], call [getOrder] for
-  /// the full order to actually show. [OrderStatus.placed] here still means
-  /// "not settled yet," not "verify failed" — the gateway hadn't captured the
-  /// payment at the moment of the call, and the webhook will finish it.
+  /// `409` when the order was cancelled/expired or is already paid.
+  Future<CheckoutOrder> payOrder(String orderId) => _call(
+        () => _dio.post<dynamic>('/orders/$orderId/pay'),
+        (data) => CheckoutOrder.fromJson(data as Map<String, dynamic>),
+      );
+
+  /// Confirms a payment the moment the checkout SDK reports success, instead
+  /// of waiting on Razorpay's webhook to reach the backend.
+  ///
+  /// Returns just the resulting status (`CONFIRMED`, `PAYMENT_FAILED`, or
+  /// still `PLACED` if the gateway hasn't settled it yet — poll [getOrder]
+  /// then).
   Future<OrderStatus> verifyPayment({
     required String orderId,
     required String providerPaymentId,
@@ -324,15 +586,13 @@ class OrdersRepository {
             'signature': signature,
           },
         ),
-        (data) => _parseOrderStatus(
-          (data as Map<String, dynamic>)['status'] as String,
+        (data) => parseOrderStatus(
+          (data as Map<String, dynamic>)['status'] as String?,
         ),
       );
 
-  /// Poll this after the payment SDK's callback fires (every 2-3s is
-  /// reasonable) until [Order.status] leaves [OrderStatus.placed] — the SDK
-  /// callback only means Razorpay accepted the payment client-side, not that
-  /// the order is confirmed. See the checkout contract §4.
+  /// Poll this after the payment SDK closes (every 2–3s, up to 60s) until
+  /// [Order.status] leaves [OrderStatus.placed].
   Future<Order> getOrder(String orderId) => _call(
         () => _dio.get<dynamic>('/orders/$orderId'),
         (data) => Order.fromJson(data as Map<String, dynamic>),
@@ -346,6 +606,50 @@ class OrdersRepository {
             .toList(),
       );
 
+  /// [reason] must be 3–500 characters (trimmed).
+  Future<CancelResult> cancelOrder(String orderId, String reason) => _call(
+        () => _dio.post<dynamic>(
+          '/orders/$orderId/cancel',
+          data: {'reason': reason.trim()},
+        ),
+        (data) => CancelResult.fromJson(data as Map<String, dynamic>),
+      );
+
+  Future<ReorderResult> reorder(String orderId) => _call(
+        () => _dio.post<dynamic>('/orders/$orderId/reorder'),
+        (data) => ReorderResult.fromJson(data as Map<String, dynamic>),
+      );
+
+  /// The invoice PDF's bytes. `409` until the order is confirmed (and for
+  /// cancelled orders). The error body is still the JSON envelope, so it's
+  /// decoded by hand from the raw bytes.
+  Future<Uint8List> downloadInvoice(String orderId) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        '/orders/$orderId/invoice',
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: const {'Accept': 'application/pdf'},
+        ),
+      );
+      return Uint8List.fromList(response.data ?? const []);
+    } on DioException catch (e) {
+      final response = e.response;
+      if (response == null) {
+        throw const ApiException(
+          null,
+          'No internet connection. Check your network and try again.',
+        );
+      }
+      if (response.statusCode == 401) throw const AuthRequiredException();
+      throw ApiException(
+        response.statusCode,
+        _messageFromBytes(response.data) ??
+            'Something went wrong. Please try again.',
+      );
+    }
+  }
+
   Future<T> _call<T>(
     Future<Response<dynamic>> Function() request,
     T Function(dynamic data) parse,
@@ -356,6 +660,21 @@ class OrdersRepository {
       if (e.isUnauthorized) throw const AuthRequiredException();
       rethrow;
     }
+  }
+}
+
+String? _messageFromBytes(Object? data) {
+  try {
+    final text = switch (data) {
+      final List<int> bytes => utf8.decode(bytes),
+      final String s => s,
+      _ => null,
+    };
+    if (text == null) return null;
+    final body = jsonDecode(text);
+    return body is Map ? body['message'] as String? : null;
+  } catch (_) {
+    return null;
   }
 }
 
@@ -371,15 +690,24 @@ final orderDetailProvider = FutureProvider.family<Order, String>(
   (ref, orderId) => ref.watch(ordersRepositoryProvider).getOrder(orderId),
 );
 
+/// The `refundStatus` of orders cancelled in this session, by order id —
+/// `GET /orders/{id}` doesn't carry it, so the detail screen reads it here
+/// to keep showing "being processed manually" after a failed refund.
+final cancelRefundStatusProvider =
+    StateProvider<Map<String, RefundStatus>>((ref) => const {});
+
 /// A message safe to show a user for any error an order call can throw.
+/// Branches on the HTTP status, never on the message text.
 String orderErrorMessage(Object error) {
   if (error is AuthRequiredException) {
     return 'Your session has expired. Please sign in again.';
   }
   if (error is ApiException) {
-    // The backend's own message already names the specific problem — an
-    // empty cart, an invalid coupon, insufficient stock, or "not your
-    // order" — so there is nothing more specific to add generically here.
+    if (error.isServerError) return 'Something went wrong. Please try again.';
+    if (error.statusCode == 429) {
+      return 'Too many requests right now. Please wait a moment and try again.';
+    }
+    // 400/404/409: the backend's message is written for end users.
     return error.message;
   }
   return 'Something went wrong. Please try again.';

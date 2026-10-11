@@ -4,22 +4,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../components/ui/ui.dart';
-import '../../../core/payments/razorpay_checkout.dart';
+import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/address_data.dart';
 import '../../../models/cart_state.dart';
 import '../../../models/order_data.dart';
 import '../../../route/route_constants.dart';
 import '../../order/views/order_ui.dart';
-import 'order_processing_screen.dart';
+import 'payment_flow.dart';
 
 /// Returned by the address sheet when the user taps "Add new address".
 const _addNewAddress = Object();
 
 /// Single-page checkout: delivery address, order items, payment, coupon,
 /// price summary, pay. The payment method itself (UPI/card/netbanking) is
-/// chosen inside the Razorpay widget, not here — there is no COD; the
-/// checkout contract only ever returns a Razorpay order.
+/// chosen inside the Razorpay widget, not here. The app is prepaid only (a
+/// product decision — the API also offers COD), so checkout always sends
+/// `paymentMethod: ONLINE`.
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
 
@@ -165,39 +166,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             couponCode: _appliedCoupon,
           );
 
-      final result = await openRazorpayCheckout(
-        keyId: checkoutOrder.keyId,
-        providerOrderId: checkoutOrder.providerOrderId,
-        amountRupees: checkoutOrder.amount,
-        currency: checkoutOrder.currency,
+      final result = await ref.read(paymentSheetLauncherProvider)(
+        checkoutOrder,
       );
 
       if (!mounted) return;
 
-      switch (result.outcome) {
-        case RazorpayOutcome.failure:
-          // The order this checkout call created resolves to CANCELLED on
-          // its own via the webhook; the cart is untouched, so staying here
-          // and letting the user retry is safe.
-          setState(() => _error = result.message);
-        case RazorpayOutcome.success:
-        case RazorpayOutcome.externalWallet:
-          // Neither means the order is actually confirmed yet — the
-          // processing screen verifies it immediately (falling back to
-          // polling for the external-wallet case, which has no payment id
-          // yet), per the checkout contract §4.
-          unawaited(
-            Navigator.pushReplacementNamed(
-              context,
-              orderProcessingScreenRoute,
-              arguments: OrderProcessingArgs(
-                orderId: checkoutOrder.orderId,
-                providerPaymentId: result.paymentId,
-                signature: result.signature,
-              ),
-            ),
-          );
-      }
+      // Whatever the sheet reported, the order now exists — go to it and
+      // let the processing screen verify (SDK success) or poll (error or
+      // dismissal). A failed attempt is retried there via
+      // `POST /orders/{id}/pay`, never by checking out again (that would
+      // create a second order while this one keeps its stock held).
+      unawaited(
+        Navigator.pushReplacementNamed(
+          context,
+          orderProcessingScreenRoute,
+          arguments: processingArgsFor(checkoutOrder.orderId, result),
+        ),
+      );
     } on AuthRequiredException {
       if (!mounted) return;
       unawaited(
@@ -205,7 +191,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             .pushNamedAndRemoveUntil(logInScreenRoute, (_) => false),
       );
     } catch (e) {
-      if (mounted) setState(() => _error = orderErrorMessage(e));
+      if (!mounted) return;
+      setState(() => _error = orderErrorMessage(e));
+      // 409 = stock/coupon/seller conflict: re-read the cart so the screen
+      // matches the server.
+      if (e is ApiException && e.isConflict) {
+        unawaited(ref.read(cartControllerProvider.notifier).refresh());
+      }
     } finally {
       if (mounted) setState(() => _paying = false);
     }

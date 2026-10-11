@@ -21,6 +21,7 @@ enum _OrderFilter {
         _OrderFilter.all => true,
         _OrderFilter.active => switch (s) {
             OrderStatus.placed ||
+            OrderStatus.paymentFailed ||
             OrderStatus.confirmed ||
             OrderStatus.packed ||
             OrderStatus.shipped ||
@@ -223,6 +224,18 @@ class _OrderRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (order.awaitingPayment) ...[
+                    const SizedBox(height: AppSpacing.xxs),
+                    _PayWithinNote(order: order),
+                  ] else if (order.awaitingSellerAcceptance) ...[
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      'Waiting for seller to accept',
+                      style: context.text.caption.copyWith(color: c.info),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -233,7 +246,7 @@ class _OrderRow extends StatelessWidget {
                 PriceText(order.amount),
                 const SizedBox(height: AppSpacing.xs + 2),
                 StatusPill(
-                  label: orderStatusLabel(order.status, order.rawStatus),
+                  label: orderStatusLabel(order.status),
                   tone: tone,
                   dot: true,
                 ),
@@ -242,6 +255,38 @@ class _OrderRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// "Pay within 24:13" under an unpaid order — live.
+class _PayWithinNote extends StatelessWidget {
+  const _PayWithinNote({required this.order});
+
+  final OrderSummary order;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return TickingBuilder(
+      until: order.paymentDeadline,
+      builder: (context, now) {
+        final left = order.paymentTimeLeft(now);
+        final expired = left == Duration.zero;
+        return Text(
+          expired
+              ? 'Payment window closed'
+              : 'Pay within ${formatCountdown(left)}',
+          style: context.text.caption.copyWith(
+            color: expired
+                ? c.textMuted
+                : order.status == OrderStatus.paymentFailed
+                    ? c.error
+                    : c.warning,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        );
+      },
     );
   }
 }

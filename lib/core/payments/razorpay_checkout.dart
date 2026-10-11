@@ -14,10 +14,11 @@ enum RazorpayOutcome {
   /// back before it knows the outcome. Also needs polling.
   externalWallet,
 
-  /// The SDK's own failure callback fired (cancelled, card declined,
-  /// timed out). The order the checkout call created will resolve to
-  /// `CANCELLED` on its own via the webhook; the cart is untouched, so
-  /// retrying checkout immediately is safe.
+  /// The SDK's own failure callback fired (sheet dismissed, card declined,
+  /// timed out). Not a final answer either: a declined payment moves the
+  /// order to `PAYMENT_FAILED` within seconds (via webhook), a dismissed
+  /// sheet leaves it `PLACED`. Go to the order and poll — and retry with
+  /// `POST /orders/{id}/pay`, never a second checkout.
   failure,
 }
 
@@ -27,6 +28,7 @@ class RazorpayCheckoutResult {
     this.message,
     this.paymentId,
     this.signature,
+    this.errorCode,
   });
 
   final RazorpayOutcome outcome;
@@ -43,12 +45,20 @@ class RazorpayCheckoutResult {
   final String? paymentId;
   final String? signature;
 
+  /// Razorpay's error code on [RazorpayOutcome.failure] —
+  /// [Razorpay.PAYMENT_CANCELLED] when the user closed the sheet.
+  final int? errorCode;
+
+  /// The user closed the sheet themselves (possibly after a failed attempt
+  /// inside it — the SDK reports both the same way).
+  bool get dismissed => errorCode == Razorpay.PAYMENT_CANCELLED;
+
   /// True when there is enough here to call verify. An external-wallet
   /// handoff returns no payment id, so that case still falls back to polling.
   bool get canVerify => paymentId != null && signature != null;
 }
 
-/// Opens the Razorpay payment widget for one [CheckoutOrder] and resolves
+/// Opens the Razorpay payment widget for one checkout/pay sheet and resolves
 /// once the user has finished with it one way or another.
 ///
 /// `razorpay_flutter`'s API is callback-based (`Razorpay.on(...)`), not
@@ -59,6 +69,7 @@ Future<RazorpayCheckoutResult> openRazorpayCheckout({
   required String providerOrderId,
   required num amountRupees,
   required String currency,
+  String? customerId,
   String name = 'IrriKart',
 }) {
   final razorpay = Razorpay();
@@ -85,6 +96,7 @@ Future<RazorpayCheckoutResult> openRazorpayCheckout({
       RazorpayCheckoutResult(
         RazorpayOutcome.failure,
         message: response.message ?? 'Payment failed. Please try again.',
+        errorCode: response.code,
       ),
     );
   });
@@ -106,6 +118,10 @@ Future<RazorpayCheckoutResult> openRazorpayCheckout({
     'amount': (amountRupees * 100).round(),
     'currency': currency,
     'name': name,
+    // Lets the sheet offer this customer's saved cards/UPI IDs and save new
+    // ones. Null when Razorpay was unreachable at checkout — paying still
+    // works, the sheet just won't offer saving.
+    if (customerId != null && customerId.isNotEmpty) 'customer_id': customerId,
   });
 
   return completer.future;

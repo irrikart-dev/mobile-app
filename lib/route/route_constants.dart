@@ -16,6 +16,7 @@ const String userInfoScreenRoute = 'user_info';
 const String preferencesScreenRoute = 'preferences';
 const String addressesScreenRoute = 'addresses';
 const String addNewAddressesScreenRoute = 'add_new_addresses';
+const String savedPaymentMethodsScreenRoute = 'saved_payment_methods';
 
 const String cartScreenRoute = 'cart';
 const String checkoutScreenRoute = 'checkout';

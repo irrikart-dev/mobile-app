@@ -4,9 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../components/ui/ui.dart';
 import '../../../core/utils/formatters.dart';
-import '../../../entry_point_tab.dart';
 import '../../../models/order_data.dart';
-import '../../../route/route_constants.dart';
 import '../../order/views/order_ui.dart';
 
 /// Order confirmation, shown once [OrderProcessingScreen] has actually seen
@@ -57,16 +55,7 @@ class _ThanksForOrderScreenState extends ConsumerState<ThanksForOrderScreen>
 
   void _continueShopping() => resetToShellTab(context, ref, 0);
 
-  void _viewOrder() {
-    final navigator = Navigator.of(context, rootNavigator: true);
-    final orderId = _order.id;
-    ref.invalidate(orderHistoryProvider);
-    ref.read(entryTabIndexProvider.notifier).state = 3;
-    navigator.pushNamedAndRemoveUntil(entryPointScreenRoute, (_) => false);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      navigator.pushNamed(orderDetailsScreenRoute, arguments: orderId);
-    });
-  }
+  void _viewOrder() => openOrderDetailFresh(context, ref, _order.id);
 
   Future<void> _copyNumber() async {
     await Clipboard.setData(ClipboardData(text: _order.orderNumber));
@@ -79,8 +68,7 @@ class _ThanksForOrderScreenState extends ConsumerState<ThanksForOrderScreen>
     final order = _order;
     final address = order.address;
     final itemCount = order.items.fold<int>(0, (sum, i) => sum + i.quantity);
-    final statusLabel =
-        orderStatusLabel(order.status, order.rawStatus).toLowerCase();
+    final statusLabel = orderStatusLabel(order.status);
 
     return PopScope(
       canPop: false,
@@ -111,7 +99,7 @@ class _ThanksForOrderScreenState extends ConsumerState<ThanksForOrderScreen>
                 child: Column(
                   children: [
                     Text(
-                      _confirmed ? 'Order placed!' : 'Order $statusLabel',
+                      _confirmed ? 'Order placed!' : statusLabel,
                       style: context.text.display,
                       textAlign: TextAlign.center,
                     ),
@@ -121,9 +109,11 @@ class _ThanksForOrderScreenState extends ConsumerState<ThanksForOrderScreen>
                         horizontal: AppSpacing.md,
                       ),
                       child: Text(
-                        _confirmed
-                            ? 'Thank you! Your payment is confirmed. We’ll let you know as soon as it’s packed and on its way.'
-                            : 'Your order is now $statusLabel. Check your orders for the latest status.',
+                        !_confirmed
+                            ? 'Check your orders for the latest status of this order.'
+                            : order.awaitingSellerAcceptance
+                                ? 'Thank you! Your payment is confirmed. The seller will accept your order shortly — we’ll let you know when it’s on its way.'
+                                : 'Thank you! Your payment is confirmed. We’ll let you know as soon as it’s packed and on its way.',
                         style: context.text.bodySecondary,
                         textAlign: TextAlign.center,
                       ),
@@ -260,8 +250,9 @@ class _ThanksForOrderScreenState extends ConsumerState<ThanksForOrderScreen>
                               const SizedBox(width: AppSpacing.xs + 2),
                               Text(
                                 _confirmed
-                                    ? 'Paid via Razorpay'
-                                    : 'Prepaid · Razorpay',
+                                    ? 'Paid ${(paymentMethodLabel(order.paymentMethod) ?? 'Online').toLowerCase()}'
+                                    : paymentMethodLabel(order.paymentMethod) ??
+                                        'Online',
                                 style: context.text.caption,
                               ),
                             ],
