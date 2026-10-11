@@ -89,9 +89,11 @@ class CatalogProductCard extends ConsumerWidget {
                       right: 10,
                       child: WishlistHeart(
                         active: isWishlisted,
-                        onTap: () => ref
-                            .read(wishlistControllerProvider.notifier)
-                            .toggle(product.slug),
+                        onTap: () => toggleWishlistWithFeedback(
+                          context,
+                          ref,
+                          product.slug,
+                        ),
                       ),
                     ),
                     if (!product.buyable)
@@ -168,6 +170,19 @@ class CatalogProductCard extends ConsumerWidget {
   }
 }
 
+/// Toggles [slug] on the wishlist and, if the server refused (signed in),
+/// tells the user once the heart has rolled back.
+Future<void> toggleWishlistWithFeedback(
+  BuildContext context,
+  WidgetRef ref,
+  String slug,
+) async {
+  final ok = await ref.read(wishlistControllerProvider.notifier).toggle(slug);
+  if (!ok && context.mounted) {
+    AppSnack.error(context, WishlistController.errorMessage);
+  }
+}
+
 /// Round heart button over product media.
 class WishlistHeart extends StatelessWidget {
   const WishlistHeart({
@@ -239,16 +254,9 @@ class _CartActionState extends ConsumerState<_CartAction> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
+      // Signed out this lands in the device's guest cart — no sign-in
+      // needed until checkout.
       await action();
-    } on AuthRequiredException {
-      if (mounted) {
-        AppSnack.show(
-          context,
-          'Sign in to add items to your cart.',
-          actionLabel: 'Sign in',
-          onAction: () => Navigator.pushNamed(context, logInScreenRoute),
-        );
-      }
     } catch (e) {
       if (mounted) AppSnack.error(context, cartErrorMessage(e));
     } finally {

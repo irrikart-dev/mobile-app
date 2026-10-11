@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../components/product/catalog_grid_skeleton.dart';
 import '../../../components/product/catalog_product_card.dart';
 import '../../../components/ui/ui.dart';
+import '../../../core/auth/auth_service.dart';
 import '../../../entry_point_tab.dart';
 import '../../../models/catalog_category.dart';
 import '../../../models/catalog_data.dart';
@@ -39,11 +40,33 @@ List<_Rail> _topCategoryRails(CatalogData data, {int count = 2}) {
   return rails.take(count).toList();
 }
 
+/// Signed in: the account's list from `GET /catalog/recently-viewed`
+/// (falling back to this device's list while it loads or if it fails).
+/// Signed out: this device's list. Catalogue copies are preferred so cards
+/// match the rest of Home.
+List<CatalogProduct> _recentlyViewed(WidgetRef ref, CatalogData data) {
+  final local = ref.watch(recentlyViewedProvider);
+  final server = ref.watch(isSignedInProvider)
+      ? ref.watch(serverRecentlyViewedProvider).valueOrNull
+      : null;
+  if (server != null && server.isNotEmpty) {
+    return [
+      for (final p in server.take(12)) data.productBySlug(p.slug) ?? p,
+    ];
+  }
+  return [
+    for (final slug in local)
+      if (data.productBySlug(slug) case final p?) p,
+  ];
+}
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   Future<void> _refresh(WidgetRef ref) async {
-    ref.invalidate(catalogDataProvider);
+    ref
+      ..invalidate(catalogDataProvider)
+      ..invalidate(serverRecentlyViewedProvider);
     try {
       await ref.read(catalogDataProvider.future);
     } catch (_) {
@@ -123,10 +146,7 @@ class HomeScreen extends ConsumerWidget {
         ref.read(entryTabIndexProvider.notifier).state = 1;
 
     final rails = _topCategoryRails(data);
-    final recent = [
-      for (final slug in ref.watch(recentlyViewedProvider))
-        if (data.productBySlug(slug) case final p?) p,
-    ];
+    final recent = _recentlyViewed(ref, data);
 
     Widget railSection(_Rail rail) => SliverToBoxAdapter(
           child: Column(

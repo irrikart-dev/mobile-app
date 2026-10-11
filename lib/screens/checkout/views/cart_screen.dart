@@ -7,14 +7,29 @@ import '../../../components/product/catalog_grid_skeleton.dart';
 import '../../../components/ui/ui.dart';
 import '../../../core/auth/auth_service.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../entry_point_tab.dart';
 import '../../../models/cart_state.dart';
 import '../../../route/route_constants.dart';
 import '../../order/views/order_ui.dart';
 
+/// Shell tab index of the cart (see `EntryPoint._pages`).
+const _cartTab = 2;
+
 /// Cart. A tab root inside the shell, and also pushable via
 /// `cartScreenRoute` — [AppTopBar] adds a back button only in that case.
-class CartScreen extends ConsumerWidget {
+///
+/// Works signed out too (a device-only guest cart, see [CartController]);
+/// only checkout needs an account. After sign-in merges the guest cart, any
+/// lines the server refused are explained once in a bottom sheet.
+class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  ConsumerState<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends ConsumerState<CartScreen> {
+  bool _skippedSheetScheduled = false;
 
   /// True when pushed on its own route rather than shown as a shell tab —
   /// decides whether the checkout bar has to clear the floating nav.
@@ -25,63 +40,79 @@ class CartScreen extends ConsumerWidget {
     return (route?.canPop ?? false) && name != entryPointScreenRoute;
   }
 
+  /// Shows the merge's skipped lines once — only while this cart is what
+  /// the user is actually looking at (the shell keeps every tab built
+  /// offstage, and a pushed cart can sit over the shell's own).
+  void _maybeShowSkipped(List<CartMergeSkip> skipped, bool standalone) {
+    if (skipped.isEmpty || _skippedSheetScheduled) return;
+    final visible = (ModalRoute.of(context)?.isCurrent ?? true) &&
+        (standalone || ref.read(entryTabIndexProvider) == _cartTab);
+    if (!visible) return;
+    _skippedSheetScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      ref.read(cartMergeSkippedProvider.notifier).state = const [];
+      await showAppSheet<void>(
+        context,
+        title: skipped.length == 1
+            ? 'An item wasn’t added'
+            : '${skipped.length} items weren’t added',
+        builder: (_) => _MergeSkippedSheet(skipped: skipped),
+      );
+      _skippedSheetScheduled = false;
+    });
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final signedIn = ref.watch(isSignedInProvider);
+  Widget build(BuildContext context) {
     final cartAsync = ref.watch(cartControllerProvider);
     final count = cartAsync.valueOrNull?.itemCount ?? 0;
     final standalone = _isStandalone(context);
+    // Watched so switching to the cart tab re-checks for skipped lines.
+    ref.watch(entryTabIndexProvider);
+    _maybeShowSkipped(ref.watch(cartMergeSkippedProvider), standalone);
 
     return Scaffold(
       backgroundColor: context.colors.background,
       appBar: AppTopBar(
         large: true,
         title: 'Cart',
-        subtitle: signedIn && count > 0 ? itemCountLabel(count) : null,
+        subtitle: count > 0 ? itemCountLabel(count) : null,
       ),
       // A plain Column, deliberately not Scaffold's bottomNavigationBar slot:
       // CartScreen lives in entry_point.dart's IndexedStack, which keeps
       // every tab's tree alive and rebuilding while offstage. A bottom bar
       // that is just another child in the body's layout avoids the special
       // measurement path Scaffold uses for its bottom slot.
-      body: !signedIn
-          ? EmptyState(
-              icon: Icons.lock_rounded,
-              title: 'Sign in to see your cart',
-              message:
-                  'Your cart is saved to your account so it follows you across devices.',
-              actionLabel: 'Sign in',
-              onAction: () => Navigator.pushNamed(context, logInScreenRoute),
-            )
-          : Column(
-              children: [
-                Expanded(
-                  child: cartAsync.when(
-                    skipLoadingOnRefresh: true,
-                    loading: () => const CartLinesSkeleton(),
-                    error: (err, _) => _CartError(error: err),
-                    data: (cart) => cart.isEmpty
-                        ? RefreshableFill(
-                            onRefresh: () => _pullRefresh(ref),
-                            child: EmptyState(
-                              icon: Icons.shopping_bag_rounded,
-                              title: 'Your cart is empty',
-                              message:
-                                  'Add drip kits, sprinklers, pumps or filters to get started.',
-                              actionLabel: 'Start shopping',
-                              onAction: () => goToShellTab(context, ref, 0),
-                            ),
-                          )
-                        : _CartList(
-                            cart: cart,
-                            snackContext: context,
-                            onRefresh: () => _pullRefresh(ref),
-                          ),
-                  ),
-                ),
-                _CartBottomBar(standalone: standalone),
-              ],
+      body: Column(
+        children: [
+          Expanded(
+            child: cartAsync.when(
+              skipLoadingOnRefresh: true,
+              loading: () => const CartLinesSkeleton(),
+              error: (err, _) => _CartError(error: err),
+              data: (cart) => cart.isEmpty
+                  ? RefreshableFill(
+                      onRefresh: () => _pullRefresh(ref),
+                      child: EmptyState(
+                        icon: Icons.shopping_bag_rounded,
+                        title: 'Your cart is empty',
+                        message:
+                            'Add drip kits, sprinklers, pumps or filters to get started.',
+                        actionLabel: 'Start shopping',
+                        onAction: () => goToShellTab(context, ref, 0),
+                      ),
+                    )
+                  : _CartList(
+                      cart: cart,
+                      snackContext: context,
+                      onRefresh: () => _pullRefresh(ref),
+                    ),
             ),
+          ),
+          _CartBottomBar(standalone: standalone),
+        ],
+      ),
     );
   }
 
@@ -172,7 +203,11 @@ class _CartList extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.lock_rounded, size: AppIconSize.xs, color: c.textMuted),
+              Icon(
+                Icons.lock_rounded,
+                size: AppIconSize.xs,
+                color: c.textMuted,
+              ),
               const SizedBox(width: AppSpacing.xs),
               Flexible(
                 child: Text(
@@ -378,6 +413,7 @@ class _CartBottomBar extends ConsumerWidget {
     if (cart.isEmpty) return const SizedBox.shrink();
 
     final c = context.colors;
+    final signedIn = ref.watch(isSignedInProvider);
     final short = cart.items.any((l) => l.quantity > l.available);
     // Inside the shell, Scaffold.extendBody already folds the floating nav
     // into MediaQuery.padding (and the system inset may be consumed from
@@ -420,6 +456,24 @@ class _CartBottomBar extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.smd),
+            ] else if (!signedIn) ...[
+              Row(
+                children: [
+                  Icon(
+                    Icons.lock_outline_rounded,
+                    size: AppIconSize.xs + 2,
+                    color: c.textMuted,
+                  ),
+                  const SizedBox(width: AppSpacing.xs + 2),
+                  Expanded(
+                    child: Text(
+                      'Sign in to check out — your cart stays as it is.',
+                      style: context.text.captionMuted,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.smd),
             ],
             Row(
               children: [
@@ -441,7 +495,9 @@ class _CartBottomBar extends ConsumerWidget {
                         ? null
                         : () => Navigator.pushNamed(
                               context,
-                              checkoutScreenRoute,
+                              // The guest cart is kept and merged into the
+                              // account on sign-in.
+                              signedIn ? checkoutScreenRoute : logInScreenRoute,
                             ),
                   ),
                 ),
@@ -450,6 +506,67 @@ class _CartBottomBar extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Lines `POST /cart/merge` couldn't add after sign-in, each with the
+/// server's own reason.
+class _MergeSkippedSheet extends StatelessWidget {
+  const _MergeSkippedSheet({required this.skipped});
+
+  final List<CartMergeSkip> skipped;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Your cart moved to your account, but '
+          '${skipped.length == 1 ? 'this item' : 'these items'} '
+          'couldn’t come along:',
+          style: context.text.bodySecondary,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        for (var i = 0; i < skipped.length; i++) ...[
+          if (i > 0) const Hairline(),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.smd),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ProductTile(image: skipped[i].image, size: 52),
+                const SizedBox(width: AppSpacing.smd),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        skipped[i].name ?? 'An item',
+                        style: context.text.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        'Qty ${skipped[i].quantity} · ${skipped[i].reason}',
+                        style: context.text.captionMuted,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        AppButton(
+          label: 'Got it',
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ],
     );
   }
 }

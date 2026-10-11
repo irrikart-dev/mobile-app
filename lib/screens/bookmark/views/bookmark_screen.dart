@@ -30,7 +30,8 @@ class BookmarkScreen extends ConsumerWidget {
     final slugs = ref.watch(wishlistControllerProvider);
     final catalog = ref.watch(catalogDataProvider);
 
-    // Most recently added last in the Set → show newest first.
+    // Most recently added last in the Set → show newest first. Signed in,
+    // the set mirrors the server wishlist (see WishlistController).
     final data = catalog.valueOrNull;
     final products = data == null
         ? null
@@ -63,7 +64,10 @@ class BookmarkScreen extends ConsumerWidget {
                 onAction: () => _explore(context, ref),
               )
             : RefreshIndicator(
-                onRefresh: () => ref.refresh(catalogDataProvider.future),
+                onRefresh: () => Future.wait([
+                  ref.refresh(catalogDataProvider.future),
+                  ref.read(wishlistControllerProvider.notifier).refresh(),
+                ]),
                 child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [

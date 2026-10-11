@@ -420,9 +420,8 @@ class _ProductDetailsBody extends ConsumerWidget {
                   title: product.name,
                   onBack: () => Navigator.maybePop(context),
                   wishlisted: isWishlisted,
-                  onWishlist: () => ref
-                      .read(wishlistControllerProvider.notifier)
-                      .toggle(product.slug),
+                  onWishlist: () =>
+                      toggleWishlistWithFeedback(context, ref, product.slug),
                   cartCount: cartCount,
                   onCart: onGoToCart,
                 );

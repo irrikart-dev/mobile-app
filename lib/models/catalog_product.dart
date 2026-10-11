@@ -83,6 +83,8 @@ class CatalogProduct {
     required this.name,
     required this.category,
     required this.categoryName,
+    this.brandId,
+    this.brandName,
     required this.image,
     required this.imageUrl,
     this.images = const [],
@@ -127,6 +129,13 @@ class CatalogProduct {
 
   /// Denormalised category name, for list rendering with no second call.
   final String categoryName;
+
+  /// `GET /catalog/brands` id, or null for an unbranded product. Always null
+  /// on the bundled offline fixtures (they predate brands).
+  final String? brandId;
+
+  /// Denormalised brand name, null exactly when [brandId] is.
+  final String? brandName;
 
   /// Bundled asset path, e.g. `assets/mock/products/img012-….webp`. Set only
   /// on the bundled offline fixtures — the live API never returns this, only
@@ -196,6 +205,8 @@ class CatalogProduct {
       name: json['name'] as String,
       category: json['category'] as String,
       categoryName: json['categoryName'] as String? ?? '',
+      brandId: json['brandId'] as String?,
+      brandName: json['brandName'] as String?,
       image: (image != null && image.isNotEmpty) ? image : null,
       imageUrl: json['imageUrl'] as String?,
       images: ((json['images'] as List?) ?? const []).cast<String>(),
