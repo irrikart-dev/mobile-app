@@ -13,6 +13,9 @@ analyzer:
     - "**/*.freezed.dart"
     - "**/generated_plugin_registrant.dart"
     - "lib/l10n/generated/**"
+    - build/**
+    - android/**
+    - ios/**
 
   errors:
     # freezed emits @JsonKey on constructor params, which the analyzer flags.
