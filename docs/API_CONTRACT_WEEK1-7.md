@@ -1,5 +1,8 @@
 
 # IrriKart App API Contract — Week 1–7 Backend Changes
+
+> **Superseded.** Use [API_CONTRACT.md](API_CONTRACT.md) — the full contract, covering every customer endpoint including returns, notifications and offers. This file is kept for the Week 1–7 change history only.
+
 2026-10-07 · @Devfoundry
 ## Overview
 The backend now supports COD, saved payment methods, payment retry, order cancellation, reorder, invoices, catalogue filters, brands, wishlist, recently viewed and guest-cart merge. The app must wire these up. This doc is the contract: every endpoint, request, response and status the app depends on.
