@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../../../components/ui/ui.dart';
-import '../../../../core/utils/whatsapp_launcher.dart';
+import '../../../rfq/views/quote_requests_screen.dart';
 
-/// "Buying in bulk?" dealer-inquiry block — one sage tint panel that hands
-/// off to WhatsApp with a message pre-filled for this product, rather than a
-/// quote-request backend this app doesn't have yet.
+/// "Buying in bulk?" dealer-inquiry block — one sage tint panel that opens
+/// the bulk quote form (`POST /rfq`) prefilled with this product.
 class BulkOrderCard extends StatelessWidget {
   const BulkOrderCard({
     super.key,
+    required this.productId,
     required this.productName,
-    required this.sku,
   });
 
+  final String productId;
   final String productName;
-  final String sku;
 
   @override
   Widget build(BuildContext context) {
@@ -39,21 +38,20 @@ class BulkOrderCard extends StatelessWidget {
             Text('Buying in bulk?', style: context.text.h2),
             const SizedBox(height: AppSpacing.xs + 2),
             Text(
-              'Get dealer pricing on larger quantities — chat with our '
-              'team on WhatsApp.',
+              'Get dealer pricing on larger quantities — tell us what you '
+              'need and our team will get back to you.',
               style: context.text.bodySecondary,
             ),
             const SizedBox(height: AppSpacing.md + 2),
             AppButton(
-              label: 'Get a bulk quote',
-              icon: Icons.chat_rounded,
+              label: 'Request a bulk quote',
+              icon: Icons.request_quote_rounded,
               size: AppButtonSize.md,
               expand: false,
-              onPressed: () => openWhatsAppSupport(
+              onPressed: () => showQuoteRequestSheet(
                 context,
-                message: 'Hi IrriKart, I would like a bulk/wholesale quote for '
-                    '"$productName" (SKU: $sku). Please share pricing for '
-                    'larger quantities.',
+                productId: productId,
+                productName: productName,
               ),
             ),
           ],

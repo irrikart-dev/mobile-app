@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:irrikart/components/whatsapp_support_fab.dart';
 import 'package:irrikart/core/auth/auth_service.dart';
+import 'package:irrikart/core/push/push_service.dart';
 import 'package:irrikart/core/startup/app_bootstrap.dart';
 import 'package:irrikart/core/storage/local_store.dart';
 import 'package:irrikart/core/theme/app_theme.dart';
@@ -61,6 +62,10 @@ class _IrriKartAppState extends ConsumerState<IrriKartApp>
   void _onAuthChanged(AsyncValue<User?>? previous, AsyncValue<User?> next) {
     final wasSignedIn = previous?.valueOrNull != null;
     final isSignedIn = next.valueOrNull != null;
+    final uid = next.valueOrNull?.uid;
+    if (uid != null && uid != previous?.valueOrNull?.uid) {
+      ref.read(pushServiceProvider).start();
+    }
     if (!wasSignedIn || isSignedIn) return;
 
     if (AuthService.explicitSignOutPending) {

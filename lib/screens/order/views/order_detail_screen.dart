@@ -10,6 +10,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../models/cart_state.dart' show AuthRequiredException;
 import '../../../models/order_data.dart';
+import '../../../models/returns_data.dart';
 import '../../../route/route_constants.dart';
 import '../../checkout/views/payment_flow.dart';
 import '../../reviews/view/write_review_sheet.dart';
@@ -96,6 +97,14 @@ class OrderDetailScreen extends ConsumerWidget {
             ),
             children: [
               _StatusHeader(order: order),
+              if (order.returns.isNotEmpty) ...[
+                const SectionDivider(thin: true),
+                _ReturnSection(request: order.returns.first),
+              ],
+              if (order.shipment case final shipment?) ...[
+                const SectionDivider(thin: true),
+                _ShipmentSection(shipment: shipment),
+              ],
               const SectionDivider(thin: true),
               _ItemsSection(order: order),
               if (order.address != null) ...[
@@ -820,7 +829,7 @@ class _ManageSection extends ConsumerStatefulWidget {
   static bool _showCancel(Order o) => !o.awaitingPayment && o.canCancel();
 
   static bool hasActions(Order o) =>
-      o.hasInvoice || _showReorder(o) || _showCancel(o);
+      o.hasInvoice || _showReorder(o) || _showCancel(o) || o.canReturn();
 
   @override
   ConsumerState<_ManageSection> createState() => _ManageSectionState();
@@ -841,6 +850,17 @@ class _ManageSectionState extends ConsumerState<_ManageSection> {
     } finally {
       if (mounted) setState(() => _busy = null);
     }
+  }
+
+  Future<void> _requestReturn() async {
+    final sent = await Navigator.pushNamed<bool>(
+      context,
+      returnRequestScreenRoute,
+      arguments: _order,
+    );
+    if (sent != true || !mounted) return;
+    refetchOrder(ref, _order.id);
+    AppSnack.success(context, 'Return requested. We’ll update you here.');
   }
 
   Widget? _spinner(_Busy kind) => _busy == kind
@@ -897,6 +917,14 @@ class _ManageSectionState extends ConsumerState<_ManageSection> {
                 ),
               ),
             ),
+          if (order.canReturn())
+            SettingsTile(
+              icon: Icons.assignment_return_rounded,
+              title: 'Return items',
+              subtitle: 'Return or replace until '
+                  '${_shortDateTime(order.returnableUntil!)}',
+              onTap: _busy != null ? null : _requestReturn,
+            ),
           if (_ManageSection._showCancel(order))
             SettingsTile(
               icon: Icons.cancel_outlined,
@@ -910,6 +938,132 @@ class _ManageSectionState extends ConsumerState<_ManageSection> {
                         cancelOrderFlow(context, ref, orderId: order.id),
                       ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The latest return request: status, what's in it, and staff's note.
+class _ReturnSection extends StatelessWidget {
+  const _ReturnSection({required this.request});
+
+  final ReturnRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = request;
+    final tone = switch (r.status) {
+      ReturnStatus.completed => Tone.success,
+      ReturnStatus.rejected => Tone.error,
+      ReturnStatus.approved => Tone.info,
+      _ => Tone.warning,
+    };
+    final message = switch (r.status) {
+      ReturnStatus.requested => 'Our team is reviewing your request.',
+      ReturnStatus.approved => 'Approved. Our team will arrange the pickup.',
+      ReturnStatus.completed => r.isReplacement
+          ? 'Return complete — our team will contact you about the '
+              'replacement.'
+          : 'Return complete — our team will contact you about the refund.',
+      ReturnStatus.rejected => 'Your request was declined.',
+      ReturnStatus.unknown => 'We’ll update you here.',
+    };
+    final units = r.items.fold<int>(0, (s, i) => s + i.quantity);
+    return _Block(
+      label: r.isReplacement ? 'Replacement' : 'Return',
+      trailing: StatusPill(
+        label: returnStatusLabel(r.status),
+        tone: tone,
+        dot: true,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: AppSpacing.xs),
+          Text(message, style: context.text.body),
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            '${itemCountLabel(units)} · “${r.reason}” · '
+            '${_shortDateTime(r.createdAt)}',
+            style: context.text.captionMuted,
+          ),
+          if (r.adminNote case final note? when note.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.smd),
+            InlineBanner(
+              tone: r.status == ReturnStatus.rejected ? Tone.error : Tone.info,
+              icon: Icons.support_agent_rounded,
+              title: 'Note from IrriKart',
+              message: note,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Courier tracking. Its status is the courier's, independent of the
+/// order's (staff mark the order delivered).
+class _ShipmentSection extends StatelessWidget {
+  const _ShipmentSection({required this.shipment});
+
+  final Shipment shipment;
+
+  Future<void> _copyAwb(BuildContext context, String awb) async {
+    await Clipboard.setData(ClipboardData(text: awb));
+    if (context.mounted) AppSnack.success(context, 'Tracking number copied');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final awb = shipment.awbNumber;
+    final label = switch (shipment.status) {
+      'CREATED' => 'Booked',
+      'IN_TRANSIT' => 'In transit',
+      'DELIVERED' => 'Delivered',
+      'RTO' => 'Returning to seller',
+      'FAILED' => 'Delivery failed',
+      _ => 'Processing',
+    };
+    return _Block(
+      label: 'Shipment',
+      trailing: Text(label, style: context.text.captionMuted),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (awb != null && awb.isNotEmpty)
+            InkWell(
+              onTap: () => _copyAwb(context, awb),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                child: Row(
+                  children: [
+                    Text('Tracking no. $awb', style: context.text.bodyStrong),
+                    const SizedBox(width: AppSpacing.xs + 2),
+                    Icon(
+                      Icons.copy_rounded,
+                      size: AppIconSize.xs,
+                      color: context.colors.textMuted,
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Text(
+              'Tracking number not assigned yet.',
+              style: context.text.bodySecondary,
+            ),
+          // Newest first reads better on a phone.
+          for (final e in shipment.events.reversed) ...[
+            const SizedBox(height: AppSpacing.smd),
+            Text(e.description ?? e.status, style: context.text.body),
+            Text(
+              '${e.status} · ${_shortDateTime(e.occurredAt)}',
+              style: context.text.captionMuted,
+            ),
+          ],
         ],
       ),
     );

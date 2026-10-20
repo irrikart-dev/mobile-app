@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../components/ui/ui.dart';
 import '../../../core/network/api_envelope.dart';
@@ -136,6 +137,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (code.isEmpty) return;
     FocusScope.of(context).unfocus();
     setState(() => _appliedCoupon = code.toUpperCase());
+  }
+
+  Future<void> _viewOffers() async {
+    final code = await showAppSheet<String>(
+      context,
+      title: 'Offers for you',
+      builder: (_) => const _OffersSheet(),
+    );
+    if (code == null || !mounted) return;
+    _couponController.text = code;
+    _applyCoupon();
   }
 
   void _removeCoupon() {
@@ -295,6 +307,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 enabled: !_paying,
                 onApply: _applyCoupon,
                 onRemove: _removeCoupon,
+                onViewOffers: _viewOffers,
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(
@@ -781,6 +794,7 @@ class _CouponSection extends StatelessWidget {
     required this.enabled,
     required this.onApply,
     required this.onRemove,
+    required this.onViewOffers,
   });
 
   final TextEditingController controller;
@@ -788,6 +802,7 @@ class _CouponSection extends StatelessWidget {
   final bool enabled;
   final VoidCallback onApply;
   final VoidCallback onRemove;
+  final VoidCallback onViewOffers;
 
   @override
   Widget build(BuildContext context) {
@@ -829,58 +844,155 @@ class _CouponSection extends StatelessWidget {
                   ),
                 ],
               )
-            : Row(
+            : Column(
                 key: const ValueKey('entry'),
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: AppButtonSize.md.height,
-                      child: TextField(
-                        controller: controller,
-                        enabled: enabled,
-                        textCapitalization: TextCapitalization.characters,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => onApply(),
-                        style: context.text.bodyStrong,
-                        decoration: InputDecoration(
-                          hintText: 'Enter coupon code',
-                          isDense: true,
-                          filled: true,
-                          fillColor: c.tint,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.mdPlus,
-                            vertical: AppSpacing.smd + 1,
-                          ),
-                          prefixIcon: Icon(
-                            Icons.local_offer_rounded,
-                            size: AppIconSize.sm,
-                            color: c.textMuted,
-                          ),
-                          border: pill,
-                          enabledBorder: pill,
-                          disabledBorder: pill,
-                          focusedBorder: pill.copyWith(
-                            borderSide:
-                                BorderSide(color: c.primary, width: 1.4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: AppButtonSize.md.height,
+                          child: TextField(
+                            controller: controller,
+                            enabled: enabled,
+                            textCapitalization: TextCapitalization.characters,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) => onApply(),
+                            style: context.text.bodyStrong,
+                            decoration: InputDecoration(
+                              hintText: 'Enter coupon code',
+                              isDense: true,
+                              filled: true,
+                              fillColor: c.tint,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.mdPlus,
+                                vertical: AppSpacing.smd + 1,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.local_offer_rounded,
+                                size: AppIconSize.sm,
+                                color: c.textMuted,
+                              ),
+                              border: pill,
+                              enabledBorder: pill,
+                              disabledBorder: pill,
+                              focusedBorder: pill.copyWith(
+                                borderSide:
+                                    BorderSide(color: c.primary, width: 1.4),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: AppSpacing.sm),
+                      ListenableBuilder(
+                        listenable: controller,
+                        builder: (context, _) => AppButton(
+                          label: 'Apply',
+                          size: AppButtonSize.md,
+                          expand: false,
+                          onPressed:
+                              enabled && controller.text.trim().isNotEmpty
+                                  ? onApply
+                                  : null,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  ListenableBuilder(
-                    listenable: controller,
-                    builder: (context, _) => AppButton(
-                      label: 'Apply',
-                      size: AppButtonSize.md,
-                      expand: false,
-                      onPressed: enabled && controller.text.trim().isNotEmpty
-                          ? onApply
-                          : null,
+                  Transform.translate(
+                    offset: const Offset(-AppSpacing.sm, 0),
+                    child: TextAction(
+                      label: 'View offers',
+                      icon: Icons.chevron_right_rounded,
+                      onTap: enabled ? onViewOffers : null,
                     ),
                   ),
                 ],
               ),
+      ),
+    );
+  }
+}
+
+/// `GET /discounts/offers` — coupons this customer can apply now. Pops the
+/// chosen code.
+class _OffersSheet extends ConsumerWidget {
+  const _OffersSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(couponOffersProvider).when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(AppSpacing.xl),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (err, _) => ErrorState(
+            compact: true,
+            error: err,
+            message: orderErrorMessage(err),
+            onRetry: () => ref.invalidate(couponOffersProvider),
+          ),
+          data: (offers) => offers.isEmpty
+              ? const EmptyState(
+                  compact: true,
+                  icon: Icons.local_offer_outlined,
+                  title: 'No offers right now',
+                  message: 'Have a code? Enter it in the coupon field.',
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < offers.length; i++) ...[
+                      if (i > 0) const Hairline(),
+                      _OfferRow(offer: offers[i]),
+                    ],
+                  ],
+                ),
+        );
+  }
+}
+
+class _OfferRow extends StatelessWidget {
+  const _OfferRow({required this.offer});
+
+  final CouponOffer offer;
+
+  @override
+  Widget build(BuildContext context) {
+    final o = offer;
+    final terms = [
+      if (o.minCartValue != null)
+        'On orders above ${formatInr(o.minCartValue!)}',
+      if (o.firstOrderOnly) 'First order only',
+      if (o.personal) 'Just for you',
+      if (o.expiresAt != null)
+        'Valid till ${DateFormat('d MMM').format(o.expiresAt!)}',
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.smd),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${o.code} · ${o.headline}', style: context.text.title),
+                if (o.description case final d? when d.isNotEmpty)
+                  Text(d, style: context.text.bodySecondary),
+                if (terms.isNotEmpty)
+                  Text(terms, style: context.text.captionMuted),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          AppButton.outline(
+            label: 'Apply',
+            size: AppButtonSize.sm,
+            expand: false,
+            onPressed: () => Navigator.pop(context, o.code),
+          ),
+        ],
       ),
     );
   }

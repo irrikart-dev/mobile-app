@@ -5,12 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../components/ui/ui.dart';
-import '../../../../core/utils/whatsapp_launcher.dart';
 import '../../../../entry_point_tab.dart';
 import '../../../../models/catalog_category.dart';
 import '../../../../models/catalog_data.dart';
 import '../../../../models/catalog_product.dart';
+import '../../../../route/app_links.dart';
 import '../../../../route/route_constants.dart';
+import '../../../rfq/views/quote_requests_screen.dart';
 
 /// What tapping a slide does. [categoryHint] is matched against the live
 /// category list (id, slug or name) so the slide keeps working when the
@@ -28,6 +29,12 @@ class _BulkQuote extends _SlideAction {
   const _BulkQuote();
 }
 
+/// An admin banner's app route (see `openAppLink`). Empty does nothing.
+class _OpenLink extends _SlideAction {
+  const _OpenLink(this.link);
+  final String link;
+}
+
 class _Slide {
   const _Slide({
     required this.eyebrow,
@@ -37,7 +44,18 @@ class _Slide {
     required this.icon,
     required this.action,
     this.deep = false,
-  });
+  }) : imageUrl = null;
+
+  /// From `GET /catalog/banners`. Every admin banner alternates shade.
+  _Slide.fromBanner(PromoBanner b, int index)
+      : eyebrow = b.eyebrow,
+        title = b.title,
+        subtitle = b.subtitle,
+        cta = b.ctaLabel.isEmpty ? 'Explore' : b.ctaLabel,
+        icon = Icons.local_offer_rounded,
+        action = _OpenLink(b.link ?? ''),
+        deep = index.isOdd,
+        imageUrl = b.imageUrl;
 
   final String eyebrow;
   final String title;
@@ -50,6 +68,9 @@ class _Slide {
 
   /// A darker forest, for variety between neighbouring slides.
   final bool deep;
+
+  /// An admin banner's own art, shown instead of a category photo.
+  final String? imageUrl;
 }
 
 const _slides = [
@@ -73,7 +94,7 @@ const _slides = [
   _Slide(
     eyebrow: 'FOR FARMS & FPOs',
     title: 'Bulk pricing\nfor big orders',
-    subtitle: 'Quotes on WhatsApp',
+    subtitle: 'Dealer pricing on request',
     cta: 'Get a quote',
     icon: Icons.request_quote_rounded,
     action: _BulkQuote(),
@@ -90,9 +111,10 @@ const _slides = [
 ];
 
 /// Home hero carousel: auto-advancing promo slides with a pill page
-/// indicator. Each slide shows a real product photo from its category when
-/// the catalogue has one. Every CTA does something real — opens a
-/// category's product list or starts a WhatsApp bulk-quote chat.
+/// indicator. Slides come from the admin dashboard (`GET /catalog/banners`)
+/// when there are any, else the built-in set below, which shows a real
+/// product photo from each slide's category. Every CTA does something real —
+/// opens a category, a product or the bulk-quote form.
 class HomeBanner extends ConsumerStatefulWidget {
   const HomeBanner({super.key, required this.data});
 
@@ -107,6 +129,7 @@ class _HomeBannerState extends ConsumerState<HomeBanner> {
 
   final _controller = PageController();
   int _page = 0;
+  int _count = _slides.length;
   Timer? _timer;
 
   @override
@@ -120,7 +143,7 @@ class _HomeBannerState extends ConsumerState<HomeBanner> {
     _timer = Timer.periodic(_interval, (_) {
       if (!mounted || !_controller.hasClients) return;
       _controller.animateToPage(
-        (_page + 1) % _slides.length,
+        (_page + 1) % _count,
         duration: AppDurations.slow,
         curve: AppCurves.emphasized,
       );
@@ -149,6 +172,7 @@ class _HomeBannerState extends ConsumerState<HomeBanner> {
   /// A real product photo for the slide's category, preferring something in
   /// stock. Null for the bulk slide, or when nothing there has an image.
   CatalogProduct? _heroProduct(_Slide slide) {
+    if (slide.imageUrl != null) return null;
     if (slide.action case _OpenCategory(:final categoryHint)) {
       final category = _resolve(categoryHint);
       if (category == null) return null;
@@ -178,16 +202,24 @@ class _HomeBannerState extends ConsumerState<HomeBanner> {
           ref.read(entryTabIndexProvider.notifier).state = 1;
         }
       case _BulkQuote():
-        openWhatsAppSupport(
-          context,
-          message: 'Hi IrriKart, I would like a quote for a bulk order.',
-        );
+        showQuoteRequestSheet(context);
+      case _OpenLink(:final link):
+        if (link.isNotEmpty) openAppLink(context, link);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final banners = ref.watch(promoBannersProvider).valueOrNull ?? const [];
+    final slides = banners.isEmpty
+        ? _slides
+        : [
+            for (var i = 0; i < banners.length; i++)
+              _Slide.fromBanner(banners[i], i),
+          ];
+    _count = slides.length;
+    if (_page >= _count) _page = 0;
     return Column(
       children: [
         SizedBox(
@@ -200,16 +232,16 @@ class _HomeBannerState extends ConsumerState<HomeBanner> {
             },
             child: PageView.builder(
               controller: _controller,
-              itemCount: _slides.length,
+              itemCount: slides.length,
               onPageChanged: (i) => setState(() => _page = i),
               itemBuilder: (context, i) => Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.gutter,
                 ),
                 child: _SlideCard(
-                  slide: _slides[i],
-                  product: _heroProduct(_slides[i]),
-                  onTap: () => _onTap(_slides[i]),
+                  slide: slides[i],
+                  product: _heroProduct(slides[i]),
+                  onTap: () => _onTap(slides[i]),
                 ),
               ),
             ),
@@ -219,7 +251,7 @@ class _HomeBannerState extends ConsumerState<HomeBanner> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            for (var i = 0; i < _slides.length; i++)
+            for (var i = 0; i < slides.length; i++)
               AnimatedContainer(
                 duration: AppDurations.normal,
                 curve: AppCurves.standard,
@@ -296,6 +328,7 @@ class _SlideCard extends StatelessWidget {
                 child: _SlideArt(
                   size: _art,
                   product: product,
+                  imageUrl: slide.imageUrl,
                   icon: slide.icon,
                   disc: fg,
                   shade: deeper,
@@ -382,10 +415,12 @@ class _SlideArt extends StatelessWidget {
     required this.icon,
     required this.disc,
     required this.shade,
+    this.imageUrl,
   });
 
   final double size;
   final CatalogProduct? product;
+  final String? imageUrl;
   final IconData icon;
   final Color disc;
   final Color shade;
@@ -399,7 +434,14 @@ class _SlideArt extends StatelessWidget {
     final src = p?.displayImage;
 
     Widget content = glyph;
-    if (p != null && src != null) {
+    if (imageUrl case final url?) {
+      content = CachedNetworkImage(
+        imageUrl: url,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => glyph,
+        errorWidget: (_, __, ___) => glyph,
+      );
+    } else if (p != null && src != null) {
       final image = p.hasRemoteImage
           ? CachedNetworkImage(
               imageUrl: src,

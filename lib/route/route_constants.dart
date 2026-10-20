@@ -24,3 +24,7 @@ const String orderProcessingScreenRoute = 'order_processing';
 const String thanksForOrderScreenRoute = 'thanks_order';
 const String ordersScreenRoute = 'orders';
 const String orderDetailsScreenRoute = 'order_details';
+const String returnRequestScreenRoute = 'return_request';
+
+const String notificationsScreenRoute = 'notifications';
+const String quoteRequestsScreenRoute = 'quote_requests';

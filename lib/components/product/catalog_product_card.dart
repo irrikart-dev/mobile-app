@@ -16,6 +16,7 @@ import '../ui/pressable.dart';
 import '../ui/price.dart';
 import '../ui/quantity_stepper.dart';
 import '../ui/rating.dart';
+import 'add_to_cart.dart';
 
 /// Height of everything below the square image tile. Fixed — every line has
 /// a fixed height and text scaling is clamped inside the card — so grids can
@@ -300,7 +301,7 @@ class _CartActionState extends ConsumerState<_CartAction> {
                     ? null
                     : () {
                         HapticFeedback.lightImpact();
-                        _run(() => notifier.add(product.variantId));
+                        _run(() => addToCart(context, ref, product.variantId));
                       },
                 child: SizedBox.square(
                   dimension: 36,

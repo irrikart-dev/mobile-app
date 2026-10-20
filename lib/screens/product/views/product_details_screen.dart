@@ -341,8 +341,8 @@ class _ProductDetailsBody extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(_pad, AppSpacing.sm, _pad, 0),
             child: BulkOrderCard(
+              productId: product.id,
               productName: product.name,
-              sku: variant.sku.isNotEmpty ? variant.sku : product.sku,
             ),
           ),
           if (related.isNotEmpty) ...[

@@ -72,6 +72,14 @@ Route<dynamic> generateRoute(RouteSettings settings) {
       return page(
         (_) => OrderDetailScreen(orderId: settings.arguments as String),
       );
+    case returnRequestScreenRoute:
+      return page(
+        (_) => ReturnRequestScreen(order: settings.arguments as Order),
+      );
+    case notificationsScreenRoute:
+      return page((_) => const NotificationsScreen());
+    case quoteRequestsScreenRoute:
+      return page((_) => const QuoteRequestsScreen());
     default:
       // Unknown route name — land somewhere safe rather than crash.
       return page((_) => const EntryPoint());

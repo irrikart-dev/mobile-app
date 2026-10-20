@@ -9,6 +9,7 @@ import '../../../entry_point_tab.dart';
 import '../../../models/catalog_category.dart';
 import '../../../models/catalog_data.dart';
 import '../../../models/catalog_product.dart';
+import '../../../models/notification_data.dart';
 import '../../../models/wishlist_state.dart';
 import '../../../route/route_constants.dart';
 import 'components/home_banner.dart';
@@ -66,6 +67,8 @@ class HomeScreen extends ConsumerWidget {
   Future<void> _refresh(WidgetRef ref) async {
     ref
       ..invalidate(catalogDataProvider)
+      ..invalidate(promoBannersProvider)
+      ..invalidate(unreadNotificationsProvider)
       ..invalidate(serverRecentlyViewedProvider);
     try {
       await ref.read(catalogDataProvider.future);

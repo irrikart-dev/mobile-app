@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../components/ui/ui.dart';
 import '../../../../core/auth/auth_service.dart';
+import '../../../../models/notification_data.dart';
 import '../../../../models/wishlist_state.dart';
 import '../../../../route/route_constants.dart';
 
-/// Home's greeting row: "Hello, {first name}" + prompt, and the wishlist
-/// shortcut with a live count.
+/// Home's greeting row: "Hello, {first name}" + prompt, then the
+/// notification bell (signed in) and the wishlist shortcut, with live counts.
 class HomeHeader extends ConsumerWidget {
   const HomeHeader({super.key});
 
@@ -23,6 +24,7 @@ class HomeHeader extends ConsumerWidget {
     final user = ref.watch(authStateProvider).valueOrNull;
     final firstName = _firstName(user?.displayName);
     final wishlistCount = ref.watch(wishlistControllerProvider).length;
+    final unread = ref.watch(unreadNotificationsProvider).valueOrNull ?? 0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -54,7 +56,21 @@ class HomeHeader extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.smd),
+          if (user != null) ...[
+            const SizedBox(width: AppSpacing.smd),
+            AppIconButton(
+              size: 48,
+              icon: unread > 0
+                  ? Icons.notifications_rounded
+                  : Icons.notifications_none_rounded,
+              tooltip: 'Notifications',
+              filled: true,
+              badgeCount: unread,
+              onPressed: () =>
+                  Navigator.pushNamed(context, notificationsScreenRoute),
+            ),
+          ],
+          const SizedBox(width: AppSpacing.sm),
           AppIconButton(
             size: 48,
             icon: wishlistCount > 0

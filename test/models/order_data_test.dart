@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:irrikart/core/payments/saved_payment_methods.dart';
 import 'package:irrikart/models/order_data.dart';
+import 'package:irrikart/models/returns_data.dart';
+import 'package:irrikart/screens/order/views/return_request_screen.dart';
 
 OrderSummary _summary(
   OrderStatus status, {
@@ -326,6 +328,102 @@ void main() {
         {'id': 't4', 'method': 'netbanking', 'bank': 'SBIN'},
       );
       expect(bank.title, 'SBIN');
+    });
+  });
+
+  group('returns', () {
+    Order delivered({
+      required DateTime until,
+      List<Map<String, dynamic>> returns = const [],
+    }) =>
+        Order.fromJson({
+          'id': 'o1',
+          'orderNumber': 'ORD-1',
+          'status': 'DELIVERED',
+          'amount': 1500,
+          'createdAt': '2026-10-01T10:00:00.000Z',
+          'deliveredAt': '2026-10-03T10:00:00.000Z',
+          'returnableUntil': until.toUtc().toIso8601String(),
+          'items': [
+            {
+              'id': 'oi1',
+              'variantId': 'v1',
+              'productId': 'p1',
+              'name': 'Valve',
+              'slug': 'valve',
+              'quantity': 3,
+              'unitPrice': 500,
+              'totalPrice': 1500,
+            },
+          ],
+          'shipment': {
+            'status': 'DELIVERED',
+            'awbNumber': '141',
+            'trackingEvents': [
+              {
+                'status': 'DELIVERED',
+                'description': null,
+                'occurredAt': '2026-10-03T09:00:00.000Z',
+              },
+            ],
+          },
+          'returns': returns,
+        });
+
+    Map<String, dynamic> request(String status, int qty) => {
+          'id': 'r-$status',
+          'type': 'RETURN',
+          'status': status,
+          'reason': 'Damaged',
+          'createdAt': '2026-10-04T10:00:00.000Z',
+          'items': [
+            {'orderItemId': 'oi1', 'quantity': qty, 'name': 'Valve'},
+          ],
+        };
+
+    final now = DateTime(2026, 10, 5);
+    final open = now.add(const Duration(days: 1));
+
+    test('offered while delivered, in the window, with nothing open', () {
+      expect(delivered(until: open).canReturn(now), isTrue);
+      expect(
+        delivered(until: now.subtract(const Duration(minutes: 1)))
+            .canReturn(now),
+        isFalse,
+      );
+      expect(
+        delivered(until: open, returns: [request('APPROVED', 1)])
+            .canReturn(now),
+        isFalse,
+      );
+      expect(
+        delivered(until: open, returns: [request('REJECTED', 1)])
+            .canReturn(now),
+        isTrue,
+      );
+    });
+
+    test('returnable quantity ignores rejected requests', () {
+      final order = delivered(
+        until: open,
+        returns: [request('COMPLETED', 2), request('REJECTED', 1)],
+      );
+      expect(returnableQuantity(order, order.items.single), 1);
+    });
+
+    test('parses shipment and return details', () {
+      final order = delivered(until: open, returns: [request('REQUESTED', 1)]);
+      expect(order.shipment!.awbNumber, '141');
+      expect(order.shipment!.events.single.status, 'DELIVERED');
+      expect(order.returns.single.status, ReturnStatus.requested);
+      expect(order.returns.single.isOpen, isTrue);
+    });
+
+    test('offer headline reads FLAT in rupees, PERCENT in percent', () {
+      CouponOffer offer(String type, num value) =>
+          CouponOffer.fromJson({'code': 'X', 'type': type, 'value': value});
+      expect(offer('FLAT', 50).headline, '₹50 off');
+      expect(offer('PERCENT', 10).headline, '10% off');
     });
   });
 }

@@ -11,6 +11,7 @@ import '../../../components/ui/ui.dart';
 import '../../../core/auth/auth_service.dart';
 import '../../../core/auth/auth_validators.dart';
 import '../../../core/config/support_config.dart';
+import '../../../core/push/push_service.dart';
 import '../../../core/storage/local_store.dart';
 import '../../../core/theme/theme_mode_controller.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
@@ -73,6 +74,18 @@ class ProfileScreen extends ConsumerWidget {
                     context,
                     savedPaymentMethodsScreenRoute,
                   ),
+                ),
+                SettingsTile(
+                  icon: Icons.notifications_rounded,
+                  title: 'Notifications',
+                  onTap: () =>
+                      Navigator.pushNamed(context, notificationsScreenRoute),
+                ),
+                SettingsTile(
+                  icon: Icons.request_quote_rounded,
+                  title: 'Bulk quote requests',
+                  onTap: () =>
+                      Navigator.pushNamed(context, quoteRequestsScreenRoute),
                 ),
               ],
               SettingsTile(
@@ -148,6 +161,13 @@ class ProfileScreen extends ConsumerWidget {
               onTap: () => _confirmSignOut(context, ref),
             ),
             SettingsTile(
+              icon: Icons.devices_rounded,
+              title: 'Log out of all devices',
+              subtitle: 'Ends every session, including this one',
+              destructive: true,
+              onTap: () => _confirmLogoutAll(context, ref),
+            ),
+            SettingsTile(
               icon: Icons.delete_forever_rounded,
               title: 'Delete account',
               subtitle: 'Permanently erase your account and data',
@@ -217,7 +237,33 @@ Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
   if (!confirmed || !context.mounted) return;
 
   try {
+    await ref.read(pushServiceProvider).stop();
     await ref.read(authServiceProvider).signOut();
+  } catch (e) {
+    if (context.mounted) AppSnack.error(context, friendlyError(e));
+    return;
+  }
+  if (!context.mounted) return;
+  unawaited(
+    Navigator.pushNamedAndRemoveUntil(context, logInScreenRoute, (_) => false),
+  );
+}
+
+/// `POST /auth/logout-all` revokes every session server-side (and drops
+/// every push device), then this device signs out locally.
+Future<void> _confirmLogoutAll(BuildContext context, WidgetRef ref) async {
+  final confirmed = await showConfirmDialog(
+    context,
+    title: 'Log out of all devices?',
+    message: 'You will be signed out everywhere, including this phone.',
+    confirmLabel: 'Log out all',
+    destructive: true,
+    icon: Icons.devices_rounded,
+  );
+  if (!confirmed || !context.mounted) return;
+
+  try {
+    await logoutAllDevices(ref);
   } catch (e) {
     if (context.mounted) AppSnack.error(context, friendlyError(e));
     return;

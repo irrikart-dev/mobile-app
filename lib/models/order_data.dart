@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/network/api_client.dart';
 import '../core/network/api_envelope.dart';
+import 'returns_data.dart';
 
 /// How long an unpaid online order (`PLACED` / `PAYMENT_FAILED`) keeps its
 /// stock held before the backend cancels it (`cancelledBy: "system"`).
@@ -346,6 +347,50 @@ class OrderAddress {
   }
 }
 
+/// Courier tracking from `shipment` on `GET /orders/{id}` — null until a
+/// shipment is booked. Its [status] is independent of the order's.
+class Shipment {
+  const Shipment({
+    required this.status,
+    this.awbNumber,
+    this.events = const [],
+  });
+
+  /// `CREATED` / `IN_TRANSIT` / `DELIVERED` / `RTO` / `FAILED`.
+  final String status;
+  final String? awbNumber;
+
+  /// Oldest first.
+  final List<TrackingEvent> events;
+
+  factory Shipment.fromJson(Map<String, dynamic> json) => Shipment(
+        status: json['status'] as String? ?? '',
+        awbNumber: json['awbNumber'] as String?,
+        events: ((json['trackingEvents'] as List?) ?? const [])
+            .map((e) => TrackingEvent.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+class TrackingEvent {
+  const TrackingEvent({
+    required this.status,
+    required this.occurredAt,
+    this.description,
+  });
+
+  /// Shiprocket's raw uppercase string, e.g. `OUT FOR DELIVERY`.
+  final String status;
+  final String? description;
+  final DateTime occurredAt;
+
+  factory TrackingEvent.fromJson(Map<String, dynamic> json) => TrackingEvent(
+        status: json['status'] as String? ?? '',
+        description: json['description'] as String?,
+        occurredAt: _parseDate(json['occurredAt']),
+      );
+}
+
 /// Full order detail from `GET /orders/{id}`. `vendorAmount` /
 /// `platformAmount` are the internal split and deliberately not parsed.
 class Order with OrderRules {
@@ -368,6 +413,10 @@ class Order with OrderRules {
     this.cancelledAt,
     this.cancelledBy,
     this.cancelReason,
+    this.deliveredAt,
+    this.returnableUntil,
+    this.returns = const [],
+    this.shipment,
   });
 
   final String id;
@@ -406,6 +455,24 @@ class Order with OrderRules {
   final String? cancelledBy;
   final String? cancelReason;
 
+  final DateTime? deliveredAt;
+
+  /// Last moment a return can be requested. Non-null only while `DELIVERED`.
+  final DateTime? returnableUntil;
+
+  /// Return requests on this order, newest first.
+  final List<ReturnRequest> returns;
+
+  final Shipment? shipment;
+
+  /// "Return items" is offered: delivered, inside the window, and no other
+  /// request still open.
+  bool canReturn([DateTime? now]) =>
+      status == OrderStatus.delivered &&
+      returnableUntil != null &&
+      (now ?? DateTime.now()).isBefore(returnableUntil!) &&
+      !returns.any((r) => r.isOpen);
+
   num get itemsTotal =>
       subtotal ?? items.fold<num>(0, (sum, i) => sum + i.totalPrice);
 
@@ -437,6 +504,14 @@ class Order with OrderRules {
       cancelledAt: _parseDateOrNull(json['cancelledAt']),
       cancelledBy: json['cancelledBy'] as String?,
       cancelReason: json['cancelReason'] as String?,
+      deliveredAt: _parseDateOrNull(json['deliveredAt']),
+      returnableUntil: _parseDateOrNull(json['returnableUntil']),
+      returns: ((json['returns'] as List?) ?? const [])
+          .map((e) => ReturnRequest.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      shipment: json['shipment'] == null
+          ? null
+          : Shipment.fromJson(json['shipment'] as Map<String, dynamic>),
     );
   }
 }
@@ -522,6 +597,49 @@ class ReorderResult {
         skipped: ((json['skipped'] as List?) ?? const [])
             .map((e) => SkippedLine.fromJson(e as Map<String, dynamic>))
             .toList(),
+      );
+}
+
+/// A coupon from `GET /discounts/offers` — one the caller can apply now.
+class CouponOffer {
+  const CouponOffer({
+    required this.code,
+    required this.type,
+    required this.value,
+    this.description,
+    this.minCartValue,
+    this.expiresAt,
+    this.firstOrderOnly = false,
+    this.personal = false,
+  });
+
+  final String code;
+  final String? description;
+
+  /// `FLAT` (rupees off) or `PERCENT` (of the subtotal).
+  final String type;
+  final num value;
+  final num? minCartValue;
+  final DateTime? expiresAt;
+  final bool firstOrderOnly;
+
+  /// Issued to this customer alone.
+  final bool personal;
+
+  /// "₹50 off" / "10% off".
+  String get headline => type == 'PERCENT'
+      ? '${value % 1 == 0 ? value.toInt() : value}% off'
+      : '₹${value % 1 == 0 ? value.toInt() : value} off';
+
+  factory CouponOffer.fromJson(Map<String, dynamic> json) => CouponOffer(
+        code: json['code'] as String,
+        description: json['description'] as String?,
+        type: json['type'] as String? ?? 'FLAT',
+        value: (json['value'] as num?) ?? 0,
+        minCartValue: json['minCartValue'] as num?,
+        expiresAt: _parseDateOrNull(json['expiresAt']),
+        firstOrderOnly: json['firstOrderOnly'] as bool? ?? false,
+        personal: json['personal'] as bool? ?? false,
       );
 }
 
@@ -615,6 +733,13 @@ class OrdersRepository {
         (data) => CancelResult.fromJson(data as Map<String, dynamic>),
       );
 
+  Future<List<CouponOffer>> listOffers() => _call(
+        () => _dio.get<dynamic>('/discounts/offers'),
+        (data) => (data as List)
+            .map((e) => CouponOffer.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+
   Future<ReorderResult> reorder(String orderId) => _call(
         () => _dio.post<dynamic>('/orders/$orderId/reorder'),
         (data) => ReorderResult.fromJson(data as Map<String, dynamic>),
@@ -688,6 +813,10 @@ final orderHistoryProvider = FutureProvider<List<OrderSummary>>(
 
 final orderDetailProvider = FutureProvider.family<Order, String>(
   (ref, orderId) => ref.watch(ordersRepositoryProvider).getOrder(orderId),
+);
+
+final couponOffersProvider = FutureProvider.autoDispose<List<CouponOffer>>(
+  (ref) => ref.watch(ordersRepositoryProvider).listOffers(),
 );
 
 /// The `refundStatus` of orders cancelled in this session, by order id —

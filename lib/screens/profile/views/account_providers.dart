@@ -75,3 +75,11 @@ Future<void> deleteAccount(WidgetRef ref) async {
   // local session and Google's cached account.
   await ref.read(authServiceProvider).signOut().catchError((_) {});
 }
+
+/// `POST /auth/logout-all`, then drops this device's session. The server
+/// also forgets every push device, so no unregister call is needed.
+Future<void> logoutAllDevices(WidgetRef ref) async {
+  final dio = ref.read(dioProvider);
+  await apiRequest(() => dio.post<dynamic>('/auth/logout-all'), (_) {});
+  await ref.read(authServiceProvider).signOut().catchError((_) {});
+}

@@ -398,3 +398,51 @@ final brandsProvider = FutureProvider<List<CatalogBrand>>((ref) async {
     return data.derivedBrands;
   }
 });
+
+/// A home hero banner from `GET /catalog/banners`, managed in the admin
+/// dashboard. [link] is an app route (see `openAppLink`), not a web URL.
+class PromoBanner {
+  const PromoBanner({
+    required this.id,
+    required this.title,
+    this.eyebrow = '',
+    this.subtitle = '',
+    this.ctaLabel = '',
+    this.link,
+    this.imageUrl,
+  });
+
+  final String id;
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+  final String ctaLabel;
+  final String? link;
+  final String? imageUrl;
+
+  factory PromoBanner.fromJson(Map<String, dynamic> json) => PromoBanner(
+        id: json['id'] as String,
+        eyebrow: json['eyebrow'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        subtitle: json['subtitle'] as String? ?? '',
+        ctaLabel: json['ctaLabel'] as String? ?? '',
+        link: json['link'] as String?,
+        imageUrl: json['imageUrl'] as String?,
+      );
+}
+
+/// Active banners in display order. Empty on any failure, which keeps the
+/// built-in slides.
+final promoBannersProvider = FutureProvider<List<PromoBanner>>((ref) async {
+  try {
+    return await apiRequest(
+      () => ref.watch(dioProvider).get<dynamic>('/catalog/banners'),
+      (data) => (data as List)
+          .map((e) => PromoBanner.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  } catch (error) {
+    debugPrint('IrriKart: banners unavailable ($error) — using built-ins.');
+    return const [];
+  }
+});

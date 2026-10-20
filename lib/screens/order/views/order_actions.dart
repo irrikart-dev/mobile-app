@@ -148,7 +148,7 @@ class _CancelOrderSheetState extends ConsumerState<_CancelOrderSheet> {
         ),
         const SizedBox(height: AppSpacing.sm),
         for (final reason in [...cancelReasonPresets, _other])
-          _ReasonRow(
+          ReasonRow(
             label: reason,
             selected: _choice == reason,
             onTap: _busy ? null : () => setState(() => _choice = reason),
@@ -189,9 +189,11 @@ class _CancelOrderSheetState extends ConsumerState<_CancelOrderSheet> {
   }
 }
 
-/// Flat radio row — no box, just the control and the label.
-class _ReasonRow extends StatelessWidget {
-  const _ReasonRow({
+/// Flat radio row — no box, just the control and the label. Shared by the
+/// cancel and return forms.
+class ReasonRow extends StatelessWidget {
+  const ReasonRow({
+    super.key,
     required this.label,
     required this.selected,
     required this.onTap,

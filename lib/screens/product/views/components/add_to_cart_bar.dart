@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../components/product/add_to_cart.dart';
 import '../../../../components/ui/ui.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_envelope.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../../../models/cart_state.dart';
 import '../../../../models/catalog_data.dart';
 import '../../../../models/catalog_product.dart';
 import '../../../../route/route_constants.dart';
@@ -92,11 +92,15 @@ class _AddToCartBarState extends ConsumerState<AddToCartBar> {
         return;
       }
 
-      await ref
-          .read(cartControllerProvider.notifier)
-          .add(freshVariant.id, quantity: widget.qty);
-
       if (!mounted) return;
+      final added = await addToCart(
+        context,
+        ref,
+        freshVariant.id,
+        quantity: widget.qty,
+      );
+
+      if (!added || !mounted) return;
       unawaited(HapticFeedback.mediumImpact());
       setState(() => _added = true);
       AppSnack.show(
